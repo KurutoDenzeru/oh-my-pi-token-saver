@@ -96,6 +96,7 @@ async function writeIfChanged(dest, content) {
 
 async function stepPonytail(pluginsDir, userDir) {
   console.log("\n[1/4] Installing Ponytail plugin...");
+  await fs.mkdir(pluginsDir, { recursive: true });
   const pkgPath = path.join(pluginsDir, "package.json");
   let pkg = {};
   const existing = await readIfExists(pkgPath);

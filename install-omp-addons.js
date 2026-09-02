@@ -192,13 +192,10 @@ async function stepPonytail(pluginsDir, userDir, options = {}) {
 
   if (options.dryRun) {
     console.log(`  [dry-run] would write ${pkgPath}`);
-  } else {
-    await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
-    console.log(`  [write] package.json`);
-  }
-
-  if (options.dryRun) {
     console.log("  [dry-run] would run: omp plugin install github:DietrichGebert/ponytail");
+    const ponytailExtPath = path.join(pluginsDir, "node_modules", "@dietrichgebert", "ponytail", "pi-extension", "index.js");
+    const configPath = path.join(userDir, "config.yml");
+    await ensureExtensionInConfig(configPath, ponytailExtPath, "ponytail", options);
     return;
   }
 
@@ -308,13 +305,16 @@ async function stepRtk(binDir, options = {}) {
 
     // Also download checksums.txt for verification
     const checksumsAsset = (release.assets || []).find((a) => a.name === "checksums.txt");
+    if (!checksumsAsset) {
+      console.log(`  [fail] checksums.txt missing in release ${tag}`);
+      return;
+    }
     let checksumsText = null;
-    if (checksumsAsset) {
-      try {
-        checksumsText = await httpsGet(checksumsAsset.browser_download_url);
-      } catch (e) {
-        debug(`Could not download checksums.txt: ${e.message}`);
-      }
+    try {
+      checksumsText = await httpsGet(checksumsAsset.browser_download_url);
+    } catch (e) {
+      console.log(`  [fail] Could not download checksums.txt: ${e.message}`);
+      return;
     }
 
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "omp-rtk-"));
@@ -323,22 +323,21 @@ async function stepRtk(binDir, options = {}) {
     await httpsDownload(asset.browser_download_url, archivePath);
 
     // Verify checksum
-    if (checksumsText) {
-      const expected = parseChecksum(checksumsText, asset.name);
-      const actual = await sha256File(archivePath);
-      if (!expected) {
-        console.log(`  [warn] checksums.txt missing entry for ${asset.name} — skipping verification`);
-      } else if (actual !== expected) {
-        console.log(`  [fail] Checksum mismatch for ${asset.name}`);
-        console.log(`  [fail] Expected: ${expected}`);
-        console.log(`  [fail] Got:      ${actual}`);
-        await fs.rm(tmpDir, { recursive: true, force: true });
-        return;
-      } else {
-        console.log(`  [ok] Checksum verified for ${asset.name}`);
-      }
+    const expected = parseChecksum(checksumsText, asset.name);
+    if (!expected) {
+      console.log(`  [fail] checksums.txt has no entry for ${asset.name}`);
+      await fs.rm(tmpDir, { recursive: true, force: true });
+      return;
+    }
+    const actual = await sha256File(archivePath);
+    if (actual !== expected) {
+      console.log(`  [fail] Checksum mismatch for ${asset.name}`);
+      console.log(`  [fail] Expected: ${expected}`);
+      console.log(`  [fail] Got:      ${actual}`);
+      await fs.rm(tmpDir, { recursive: true, force: true });
+      return;
     } else {
-      console.log(`  [warn] No checksums.txt available — skipping verification`);
+      console.log(`  [ok] Checksum verified for ${asset.name}`);
     }
 
     // Extract by extension (not OS)

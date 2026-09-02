@@ -162,7 +162,6 @@ async function updatePonytail(pi, ctx, dryRun = false) {
   notify(ctx, "Ponytail update finished. " + RELOAD_MSG, "info");
   return m;
 }
-
 async function updateRtk(ctx, dryRun = false) {
   let release;
   try {
@@ -174,26 +173,58 @@ async function updateRtk(ctx, dryRun = false) {
   }
   const tag = release.tag_name || "unknown";
   const assets = Array.isArray(release.assets) ? release.assets : [];
-  const zipAsset = assets.find((a) => /rtk-x86_64-pc-windows-msvc\.zip$/i.test(a.name) || /rtk.*windows.*x86_64.*\.zip$/i.test(a.name));
+
+  // Cross-platform asset selection (mirrors installer stepRtk)
+  const PLATFORM = process.platform;
+  const ARCH = process.arch;
+  let assetTriple;
+  let assetExt;
+  let binaryName;
+  if (PLATFORM === "win32" && ARCH === "x64") {
+    assetTriple = "x86_64-pc-windows-msvc";
+    assetExt = ".zip";
+    binaryName = "rtk.exe";
+  } else if (PLATFORM === "linux" && ARCH === "x64") {
+    assetTriple = "x86_64-unknown-linux-musl";
+    assetExt = ".tar.gz";
+    binaryName = "rtk";
+  } else if (PLATFORM === "linux" && ARCH === "arm64") {
+    assetTriple = "aarch64-unknown-linux-gnu";
+    assetExt = ".tar.gz";
+    binaryName = "rtk";
+  } else if (PLATFORM === "darwin" && ARCH === "x64") {
+    assetTriple = "x86_64-apple-darwin";
+    assetExt = ".tar.gz";
+    binaryName = "rtk";
+  } else if (PLATFORM === "darwin" && ARCH === "arm64") {
+    assetTriple = "aarch64-apple-darwin";
+    assetExt = ".tar.gz";
+    binaryName = "rtk";
+  } else {
+    const m = `RTK: unsupported platform ${PLATFORM}/${ARCH}`;
+    notify(ctx, m, "warning"); return m;
+  }
+
+  const asset = assets.find((a) => a.name === `rtk-${assetTriple}${assetExt}`);
   const checksAsset = assets.find((a) => a.name === "checksums.txt");
-  if (!zipAsset || !checksAsset) {
-    const m = `RTK: required assets not found in release ${tag} (need *rtk-x86_64-pc-windows-msvc.zip and checksums.txt)`;
+  if (!asset || !checksAsset) {
+    const m = `RTK: required assets not found in release ${tag} (need rtk-${assetTriple}${assetExt} and checksums.txt)`;
     notify(ctx, m, "warning"); return m;
   }
 
   if (dryRun) {
-    const m = `RTK dry-run: would download ${zipAsset.name} (${tag}), verify checksums.txt, and replace ${RTK_BINARY}.`;
+    const m = `RTK dry-run: would download ${asset.name} (${tag}), verify checksums.txt, and replace ${RTK_BINARY}.`;
     notify(ctx, m, "info");
     return m;
   }
 
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "rtk-update-"));
-  const zipPath = path.join(tmp, zipAsset.name);
+  const archivePath = path.join(tmp, asset.name);
   const checksPath = path.join(tmp, "checksums.txt");
 
   try {
-    notify(ctx, `RTK: downloading ${zipAsset.name} (${tag})…`, "info");
-    await httpsDownload(zipAsset.browser_download_url, zipPath);
+    notify(ctx, `RTK: downloading ${asset.name} (${tag})…`, "info");
+    await httpsDownload(asset.browser_download_url, archivePath);
     notify(ctx, "RTK: downloading checksums.txt…", "info");
     await httpsDownload(checksAsset.browser_download_url, checksPath);
 
@@ -203,33 +234,47 @@ async function updateRtk(ctx, dryRun = false) {
       let hit = null;
       for (const line of checks.split(/\r?\n/)) {
         const m = line.match(/^[0-9a-fA-F]{64}\s+\*?(.+)$/);
-        if (m && path.basename(m[2]) === zipAsset.name) { hit = m[1].toLowerCase(); break; }
+        if (m && path.basename(m[2]) === asset.name) { hit = m[1].toLowerCase(); break; }
       }
       return hit;
     })();
     if (!expected) {
-      const m = `RTK: checksums.txt has no entry for ${zipAsset.name}`;
+      const m = `RTK: checksums.txt has no entry for ${asset.name}`;
       notify(ctx, m, "warning"); return m;
     }
-    const zipBuf = await fs.readFile(zipPath);
-    const actual = createHash("sha256").update(zipBuf).digest("hex").toLowerCase();
+    const archiveBuf = await fs.readFile(archivePath);
+    const actual = createHash("sha256").update(archiveBuf).digest("hex").toLowerCase();
     if (actual !== expected) {
       const m = `RTK: checksum mismatch! expected=${expected.slice(0,12)}… actual=${actual.slice(0,12)}…`;
       notify(ctx, m, "warning"); return m;
     }
     notify(ctx, "RTK: checksum verified.", "info");
 
-    // Expand-Archive then copy rtk.exe
+    // Extract by archive format
     const extractDir = path.join(tmp, "extracted");
     await fs.mkdir(extractDir, { recursive: true });
-    // ponytail: invoke powershell directly rather than shelling out to zip libs — Windows-only, explicitly requested.
-    execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command",
-      `Expand-Archive -LiteralPath "${zipPath}" -DestinationPath "${extractDir}" -Force`],
-      { encoding: "utf8", windowsHide: true, shell: false });
 
-    const rtkExtracted = await findFile(extractDir, "rtk.exe");
+    if (asset.name.endsWith(".zip")) {
+      if (IS_WINDOWS) {
+        execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command",
+          `Expand-Archive -LiteralPath "${archivePath}" -DestinationPath "${extractDir}" -Force`],
+          { encoding: "utf8", windowsHide: true, shell: false });
+      } else {
+        execFileSync("unzip", [archivePath, "-d", extractDir], { encoding: "utf8", shell: false });
+      }
+    } else if (asset.name.endsWith(".tar.gz") || asset.name.endsWith(".tgz")) {
+      try {
+        execFileSync("tar", ["xzf", archivePath, "-C", extractDir], { encoding: "utf8", shell: false });
+      } catch (e) {
+        execFileSync("sh", ["-c", `gunzip < "${archivePath}" | tar xf - -C "${extractDir}"`], { encoding: "utf8", shell: false });
+      }
+    } else {
+      throw new Error(`Unknown archive format: ${asset.name}`);
+    }
+
+    const rtkExtracted = await findFile(extractDir, binaryName);
     if (!rtkExtracted) {
-      const m = "RTK: rtk.exe not found in extracted archive";
+      const m = `RTK: ${binaryName} not found in extracted archive`;
       notify(ctx, m, "warning"); return m;
     }
     const backupPath = `${RTK_BINARY}.bak`;
@@ -242,16 +287,22 @@ async function updateRtk(ctx, dryRun = false) {
     }
 
     await fs.copyFile(rtkExtracted, RTK_BINARY);
+
+    // Set executable bit on Unix
+    if (!IS_WINDOWS) {
+      await fs.chmod(RTK_BINARY, 0o755);
+    }
+
     let versionOut = "";
     try {
       versionOut = execFileSync(RTK_BINARY, ["--version"], { encoding: "utf8", windowsHide: true, shell: false, timeout: 10000 }).trim();
     } catch (e) {
       if (backedUp) await fs.copyFile(backupPath, RTK_BINARY);
-      throw new Error(`new rtk.exe failed --version${backedUp ? "; restored backup" : ""}: ${e.message}`);
+      throw new Error(`new ${binaryName} failed --version${backedUp ? "; restored backup" : ""}: ${e.message}`);
     }
     if (normalizeRtkVersion(versionOut) !== normalizeRtkVersion(tag)) {
       if (backedUp) await fs.copyFile(backupPath, RTK_BINARY);
-      throw new Error(`new rtk.exe reports ${versionOut}, expected ${tag}${backedUp ? "; restored backup" : ""}`);
+      throw new Error(`new ${binaryName} reports ${versionOut}, expected ${tag}${backedUp ? "; restored backup" : ""}`);
     }
     const m = `RTK updated to ${tag} → ${RTK_BINARY}\nbackup=${backedUp ? backupPath : "—"}\n${RELOAD_MSG}`;
     notify(ctx, "RTK update finished. " + RELOAD_MSG, "info");

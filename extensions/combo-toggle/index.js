@@ -113,6 +113,10 @@ export default function comboToggleExtension(pi) {
         `Combo ${level} applied: ${levelSummary(level)}`,
         "info"
       );
+
+      if (ctx?.reload) {
+        await ctx.reload();
+      }
     },
   });
 

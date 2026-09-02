@@ -40,7 +40,7 @@ function context(entries = [], hasUI = false) {
     notifications,
     sessionManager: { getBranch: () => entries },
     ui: {
-      setStatus(name, value) { statuses.set(name, value); },
+      setStatus(name, value) { if (value === undefined) statuses.delete(name); else statuses.set(name, value); },
       notify(message) { notifications.push(message); },
     },
     async reload() {},
@@ -189,7 +189,7 @@ test("individual Caveman change immediately makes Combo CUSTOM and children inhe
   assert.deepEqual(getSharedComboState(), {
     level: "custom", caveman: "lite", rtk: "on", ponytail: "ultra",
   });
-  assert.equal(comboCtx.statuses.get("combo"), "");
+  assert.equal(comboCtx.statuses.get("combo"), undefined);
   assert.match(instruction(await inject(instantiate(cavemanSessionExtension), MARKED_PROMPT)), /Caveman lite active/);
   assert.match(instruction(await inject(instantiate(rtkSessionExtension), MARKED_PROMPT)), /RTK mode active/);
   assert.match(
@@ -199,7 +199,7 @@ test("individual Caveman change immediately makes Combo CUSTOM and children inhe
 
   await command(caveman, "caveman", "ultra", context(entries, true));
   assert.equal(getSharedComboState().level, "custom");
-  assert.equal(comboCtx.statuses.get("combo"), "");
+  assert.equal(comboCtx.statuses.get("combo"), undefined);
 });
 
 test("individual RTK change keeps Combo CUSTOM even after values realign", async () => {
@@ -215,12 +215,12 @@ test("individual RTK change keeps Combo CUSTOM even after values realign", async
   assert.deepEqual(getSharedComboState(), {
     level: "custom", caveman: "ultra", rtk: "off", ponytail: "ultra",
   });
-  assert.equal(comboCtx.statuses.get("combo"), "");
+  assert.equal(comboCtx.statuses.get("combo"), undefined);
   assert.equal(await inject(instantiate(rtkSessionExtension), MARKED_PROMPT), undefined);
 
   await command(rtk, "rtk", "on", context(entries, true));
   assert.equal(getSharedComboState().level, "custom");
-  assert.equal(comboCtx.statuses.get("combo"), "");
+  assert.equal(comboCtx.statuses.get("combo"), undefined);
 });
 
 test("individually matching max values never activates Combo", async () => {
@@ -239,7 +239,7 @@ test("individually matching max values never activates Combo", async () => {
   assert.deepEqual(getSharedComboState(), {
     level: "custom", caveman: "ultra", rtk: "on", ponytail: "ultra",
   });
-  assert.equal(comboCtx.statuses.get("combo"), "");
+  assert.equal(comboCtx.statuses.get("combo"), undefined);
 });
 
 test("Combo status reconciles the latest persisted Ponytail mode without activating its indicator", async () => {
@@ -273,7 +273,7 @@ test("Combo indicator appears only after a Combo preset", async () => {
 
   entries.push({ type: "custom", customType: "ponytail-mode", data: { mode: "ultra" } });
   await command(combo, "combo", "status", ctx);
-  assert.equal(ctx.statuses.get("combo"), "");
+  assert.equal(ctx.statuses.get("combo"), undefined);
 });
 
 test("mode reinforcement follows each top-level turn without persisting duplicates", async () => {

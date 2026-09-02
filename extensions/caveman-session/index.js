@@ -67,11 +67,11 @@ export default function cavemanSessionExtension(pi) {
     if (!c?.ui?.setStatus) return;
     // Combo owns the bar when a preset is active; keep ours empty to avoid duplication.
     if (getSharedComboState().level === "medium" || getSharedComboState().level === "max") {
-      c.ui.setStatus("caveman", "");
+      c.ui.setStatus("caveman", undefined);
       return;
     }
     if (currentMode === "off") {
-      c.ui.setStatus("caveman", "");
+      c.ui.setStatus("caveman", undefined);
       return;
     }
     const theme = c.ui.theme;

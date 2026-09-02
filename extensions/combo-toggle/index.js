@@ -69,7 +69,7 @@ export default function comboToggleExtension(pi) {
     // Single unified bar replaces the three per-extension bars while a preset is
     // active. In custom/off, the individual bars come back and combo stays clear.
     if (currentState.level !== "medium" && currentState.level !== "max") {
-      c.ui.setStatus("combo", "");
+      c.ui.setStatus("combo", undefined);
       return;
     }
     const theme = c.ui.theme;
@@ -81,9 +81,9 @@ export default function comboToggleExtension(pi) {
     c.ui.setStatus("combo", theme?.fg ? `${theme.fg("accent", "🧩")} ${theme.fg("muted", label)}` : `🧩 ${label}`);
     // Clobber any sibling bars another extension may have painted in a race
     // during session_start — our bar is canonical for the duration of the preset.
-    c.ui.setStatus("caveman", "");
-    c.ui.setStatus("rtk", "");
-    c.ui.setStatus("ponytail", "");
+    c.ui.setStatus("caveman", undefined);
+    c.ui.setStatus("rtk", undefined);
+    c.ui.setStatus("ponytail", undefined);
   }
 
   function useState(state, ctx) {

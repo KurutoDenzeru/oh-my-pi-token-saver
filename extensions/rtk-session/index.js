@@ -112,11 +112,23 @@ export default function rtkSessionExtension(pi) {
     if (t === "rtk off" || t === "stop rtk") setEnabled(false);
   });
 
-  pi.on("session_start", async (_event, ctx) => {
+  function restoreEnabled(ctx) {
     const entries = ctx?.sessionManager?.getBranch?.() || ctx?.sessionManager?.getEntries?.() || [];
     enabled = resolveEnabled(entries);
     syncStatus(ctx);
+  }
+
+  pi.on("session_start", async (_event, ctx) => {
+    restoreEnabled(ctx);
     ctx?.ui?.notify?.(`RTK loaded: ${enabled ? "on" : "off"}`, "info");
+  });
+
+  pi.on("session_branch", async (_event, ctx) => {
+    restoreEnabled(ctx);
+  });
+
+  pi.on("session_tree", async (_event, ctx) => {
+    restoreEnabled(ctx);
   });
 
   pi.on("agent_start", async (_event, ctx) => {

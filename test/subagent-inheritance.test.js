@@ -307,3 +307,33 @@ test("Combo does not duplicate existing Ponytail guidance", async () => {
 
   assert.equal(await inject(instantiate(comboToggleExtension), prompt), undefined);
 });
+
+test("caveman restores mode from session_branch instead of using stale in-memory state", async () => {
+  const pi = instantiate(cavemanSessionExtension);
+  await pi.handlers.get("session_start")(
+    {},
+    context([{ type: "custom", customType: "caveman-mode", data: { mode: "full" } }], true)
+  );
+
+  await pi.handlers.get("session_branch")(
+    {},
+    context([{ type: "custom", customType: "caveman-mode", data: { mode: "off" } }], true)
+  );
+
+  assert.equal(await inject(pi, UNMARKED_PROMPT), undefined);
+});
+
+test("rtk restores enabled state from session_branch instead of using stale in-memory state", async () => {
+  const pi = instantiate(rtkSessionExtension);
+  await pi.handlers.get("session_start")(
+    {},
+    context([{ type: "custom", customType: "rtk-mode", data: { enabled: true } }], true)
+  );
+
+  await pi.handlers.get("session_branch")(
+    {},
+    context([{ type: "custom", customType: "rtk-mode", data: { enabled: false } }], true)
+  );
+
+  assert.equal(await inject(pi, UNMARKED_PROMPT), undefined);
+});

@@ -111,11 +111,23 @@ export default function cavemanSessionExtension(pi) {
     if (currentMode !== "off" && isOffCommand(event?.text)) setMode("off");
   });
 
-  pi.on("session_start", async (_event, ctx) => {
+  function restoreMode(ctx) {
     const entries = ctx?.sessionManager?.getBranch?.() || ctx?.sessionManager?.getEntries?.() || [];
     currentMode = resolveMode(entries);
     syncStatus(ctx);
+  }
+
+  pi.on("session_start", async (_event, ctx) => {
+    restoreMode(ctx);
     ctx?.ui?.notify?.(`Caveman loaded: ${currentMode}`, "info");
+  });
+
+  pi.on("session_branch", async (_event, ctx) => {
+    restoreMode(ctx);
+  });
+
+  pi.on("session_tree", async (_event, ctx) => {
+    restoreMode(ctx);
   });
 
   pi.on("agent_start", async (_event, ctx) => {

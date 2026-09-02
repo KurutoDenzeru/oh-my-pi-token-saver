@@ -1,3 +1,7 @@
+## v1.3.10
+- Restore Caveman, RTK, and Combo state from persisted session entries on `session_branch` and `session_tree`, so branching or tree navigation no longer injects a stale mode; branch/tree restores stay silent (no reload notification).
+- Add regression tests covering branch-time restore for the Caveman and RTK extensions.
+
 ## v1.3.9
 - Reassert active Caveman, RTK, and Ponytail modes after Ponytail on every top-level turn, so long conversations and compaction cannot dilute their guidance.
 

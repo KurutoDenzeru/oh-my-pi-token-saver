@@ -152,6 +152,16 @@ export default function comboToggleExtension(pi) {
     else syncStatus(ctx);
   });
 
+  pi.on("session_branch", async (_event, ctx) => {
+    listen(ctx);
+    if (ctx?.hasUI) reconcile(ctx);
+  });
+
+  pi.on("session_tree", async (_event, ctx) => {
+    listen(ctx);
+    if (ctx?.hasUI) reconcile(ctx);
+  });
+
   pi.on("agent_start", async (_event, ctx) => {
     listen(ctx);
     if (ctx?.hasUI) reconcile(ctx);

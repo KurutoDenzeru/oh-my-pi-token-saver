@@ -20,10 +20,10 @@ const ask = (q) => new Promise((res) => RL.question(q, (a) => { RL.close(); res(
 // Paths to extension source files (relative to this script)
 const SCRIPT_DIR = path.dirname(new URL(import.meta.url).pathname).replace(/^\/[a-z]:/i, "");
 const EXT_DIR = path.join(SCRIPT_DIR, "extensions");
-const CAVEAN_INDEX = path.join(EXT_DIR, "caveman-session", "index.js");
+const CAVEMAN_INDEX = path.join(EXT_DIR, "caveman-session", "index.js");
 const RTK_SESSION_INDEX = path.join(EXT_DIR, "rtk-session", "index.js");
 const UPDATER_INDEX = path.join(EXT_DIR, "ai-addons-updater", "index.js");
-const CAVERAN_REMOTE_RULE = "https://raw.githubusercontent.com/JuliusBrssee/caveman/main/src/rules/caveman-activate.md";
+const CAVEMAN_REMOTE_RULE = "https://raw.githubusercontent.com/JuliusBrussee/caveman/main/src/rules/caveman-activate.md";
 const RTK_RELEASE_API = "https://api.github.com/repos/rtk-ai/rtk/releases/latest";
 
 // --- Helpers ---
@@ -190,20 +190,20 @@ async function stepRtkSession(extDir) {
 
 async function stepCaveman(extDir) {
   console.log("\n[4/4] Installing Caveman session extension...");
-  const caVeranDir = path.join(extDir, "caveman-session");
-  await fs.mkdir(caVeranDir, { recursive: true });
+  const cavemanDir = path.join(extDir, "caveman-session");
+  await fs.mkdir(cavemanDir, { recursive: true });
 
   // Fetch upstream rule
-  const rule = await httpsGet(CAVERAN_REMOTE_RULE);
-  await writeIfChanged(path.join(caVeranDir, "rule.md"), rule);
+  const rule = await httpsGet(CAVEMAN_REMOTE_RULE);
+  await writeIfChanged(path.join(cavemanDir, "rule.md"), rule);
 
   // Write index.js
-  const src = await readIfExists(CAVERAN_INDEX);
+  const src = await readIfExists(CAVEMAN_INDEX);
   if (!src) {
     console.log("  [skip] caveman-session/index.js not found in repo");
     return;
   }
-  await writeIfChanged(path.join(caVeranDir, "index.js"), src);
+  await writeIfChanged(path.join(cavemanDir, "index.js"), src);
 
   // Write updater
   const updaterSrc = await readIfExists(UPDATER_INDEX);

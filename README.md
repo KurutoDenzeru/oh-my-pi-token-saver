@@ -27,7 +27,7 @@ Individual toggles: `/caveman full` · `/rtk on` · `/ponytail full`
 | **RTK** | Routes noisy shell commands through the RTK binary for compact output |
 | **Ponytail** | Favors standard-library, minimal, YAGNI-oriented code decisions |
 | **Updater** | Checks and updates Ponytail, RTK, and Caveman in-session, with dry-run and backup support |
-| **Combo** | Switches Caveman, RTK, and Ponytail together. Levels: `off`, `medium`, and `max` |
+| **Combo** | Switches Caveman, RTK, and Ponytail together. Presets: `off`, `medium`, and `max`; mixed individual modes display as `custom` |
 
 All three token-saving modes start off until you enable them.
 
@@ -115,6 +115,8 @@ rtk lint
 ```
 
 `/combo` persists each add-on's state and reloads OMP so the new modes apply immediately, without emitting separate `/caveman`, `/rtk`, or `/ponytail` command messages.
+
+Active Combo modes are inherited by OMP task subagents created from the session. If you change Caveman, RTK, or Ponytail individually after applying a preset, Combo reconciles the actual modes and displays `CUSTOM` instead of a stale preset label; subagents inherit that actual mixed state.
 
 ## File locations
 

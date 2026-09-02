@@ -84,6 +84,7 @@ function closeRL() { if (rlOpen) { RL.close(); rlOpen = false; } }
 // Paths to extension source files (relative to this script)
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const EXT_DIR = path.join(SCRIPT_DIR, "extensions");
+const SHARED_SESSION_STATE = path.join(EXT_DIR, "shared", "session-state.js");
 const CAVEMAN_INDEX = path.join(EXT_DIR, "caveman-session", "index.js");
 const RTK_SESSION_INDEX = path.join(EXT_DIR, "rtk-session", "index.js");
 const UPDATER_INDEX = path.join(EXT_DIR, "ai-addons-updater", "index.js");
@@ -524,6 +525,15 @@ async function stepRtk(binDir, options = {}) {
   }
 }
 
+async function stepSharedSessionState(extDir, options = {}) {
+  const src = await readIfExists(SHARED_SESSION_STATE);
+  if (!src) {
+    console.log("  [skip] shared/session-state.js not found in repo");
+    return;
+  }
+  await writeIfChanged(path.join(extDir, "shared", "session-state.js"), src, options);
+}
+
 async function stepRtkSession(extDir, options = {}) {
   console.log("\n[3/5] Installing RTK session extension...");
   const src = await readIfExists(RTK_SESSION_INDEX);
@@ -540,8 +550,8 @@ async function stepCaveman(extDir, options = {}) {
   const cavemanDir = path.join(extDir, "caveman-session");
   if (!options.dryRun) await fs.mkdir(cavemanDir, { recursive: true });
 
-  // Fetch upstream rule
-  const rule = await httpsGet(CAVEMAN_REMOTE_RULE);
+  // Dry runs stay offline; the bundled rule is enough to preview its destination.
+  const rule = options.dryRun ? await readIfExists(path.join(path.dirname(CAVEMAN_INDEX), "rule.md")) || "" : await httpsGet(CAVEMAN_REMOTE_RULE);
   await writeIfChanged(path.join(cavemanDir, "rule.md"), rule, options);
 
   // Write index.js
@@ -608,6 +618,9 @@ async function runDoctor() {
 
   const extOk = (await fs.readdir(extDir).catch(() => null)) !== null;
   console.log(`  OMP extensions dir: ${extOk ? "ok" : "MISSING"} ${extDir}`);
+
+  const sharedState = path.join(extDir, "shared", "session-state.js");
+  console.log(`  Shared session bridge: ${(await readIfExists(sharedState)) !== null ? "installed" : "MISSING"}`);
 
   const configOk = (await readIfExists(configPath)) !== null;
   console.log(`  OMP config.yml: ${configOk ? "ok" : "MISSING"} ${configPath}`);
@@ -682,6 +695,7 @@ async function runUninstall(options = {}) {
     path.join(extDir, "rtk-session"),
     path.join(extDir, "ai-addons-updater"),
     path.join(extDir, "combo-toggle"),
+    path.join(extDir, "shared"),
   ];
 
   console.log("Will remove:");
@@ -895,6 +909,7 @@ async function main() {
   // Install per scope
   if (scope === "1" || scope === "3") {
     console.log("\n--- User-level install ---");
+    await stepSharedSessionState(userExtDir, options);
     await stepPonytail(userPluginsDir, userDir, options);
     await stepRtk(bunBinDir, options);
     await stepRtkSession(userExtDir, options);
@@ -904,6 +919,7 @@ async function main() {
 
   if (scope === "2" || scope === "3") {
     console.log("\n--- Project-level install ---");
+    await stepSharedSessionState(projectExtDir, options);
     await stepRtkSession(projectExtDir, options);
     await stepCaveman(projectExtDir, options);
     console.log("  [note] Ponytail, RTK binary, and Combo toggle require user-level (global) install");

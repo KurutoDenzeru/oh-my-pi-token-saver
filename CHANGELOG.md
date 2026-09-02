@@ -1,3 +1,9 @@
+## v1.3.6
+- Inherit active Caveman, RTK, and Ponytail modes into OMP task subagents without persisting state into child sessions.
+- Reconcile individual mode changes after a Combo preset and display `CUSTOM` with the actual Caveman/RTK/Ponytail mix.
+- Install a discovery-safe shared session bridge used by the bundled extensions; doctor, dry-run, uninstall, and reinstall cover its lifecycle.
+- Add regression coverage for parent/child inheritance, mixed-state reconciliation, prompt marker gating, and installer bridge handling.
+
 ## v1.3.5
 - Add explicit `install`, `reinstall`, `doctor`, `uninstall`, `version`, and `help` CLI commands while preserving legacy flags.
 - Make `reinstall` cleanly refresh the managed extensions, RTK binary, and Ponytail package.

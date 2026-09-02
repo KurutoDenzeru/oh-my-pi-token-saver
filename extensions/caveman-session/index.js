@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { getSharedComboState, isOmpSubagentPrompt, setSharedComboMode } from "../shared/session-state.js";
 
 const CAVERN_DIR = dirname(fileURLToPath(import.meta.url));
 const RULE_PATH = join(CAVERN_DIR, "rule.md");
@@ -79,6 +80,7 @@ export default function cavemanSessionExtension(pi) {
     if (!normalized) return false;
     currentMode = normalized;
     pi.appendEntry("caveman-mode", { mode: normalized });
+    setSharedComboMode("caveman", normalized);
     syncStatus(ctx);
     ctx?.ui?.notify?.(`Caveman mode ${normalized === "off" ? "off" : `set to ${normalized}`}.`, "info");
     return true;
@@ -127,8 +129,9 @@ export default function cavemanSessionExtension(pi) {
   });
 
   pi.on("before_agent_start", async (event) => {
-    if (!currentMode || currentMode === "off") return;
-    const instruction = typeof INSTRUCTIONS[currentMode] === "function" ? INSTRUCTIONS[currentMode]() : INSTRUCTIONS[currentMode];
+    const mode = isOmpSubagentPrompt(event.systemPrompt) ? getSharedComboState().caveman : currentMode;
+    if (!mode || mode === "off") return;
+    const instruction = typeof INSTRUCTIONS[mode] === "function" ? INSTRUCTIONS[mode]() : INSTRUCTIONS[mode];
     const base = Array.isArray(event.systemPrompt) ? event.systemPrompt : [event.systemPrompt];
     return { systemPrompt: [...base, instruction] };
   });

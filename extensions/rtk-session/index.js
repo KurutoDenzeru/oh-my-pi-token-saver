@@ -1,5 +1,6 @@
 import os from "node:os";
 import path from "node:path";
+import { getSharedComboState, isOmpSubagentPrompt, setSharedComboMode } from "../shared/session-state.js";
 
 const DEFAULT_ENABLED = false;
 
@@ -51,6 +52,7 @@ export default function rtkSessionExtension(pi) {
   function setEnabled(next, ctx) {
     enabled = Boolean(next);
     pi.appendEntry("rtk-mode", { enabled });
+    setSharedComboMode("rtk", enabled);
     syncStatus(ctx);
     ctx?.ui?.notify?.(`RTK mode ${enabled ? "on" : "off"}.`, "info");
   }
@@ -128,7 +130,8 @@ export default function rtkSessionExtension(pi) {
   });
 
   pi.on("before_agent_start", async (event) => {
-    if (!enabled) return;
+    const active = isOmpSubagentPrompt(event.systemPrompt) ? getSharedComboState().rtk === "on" : enabled;
+    if (!active) return;
     const base = Array.isArray(event.systemPrompt) ? event.systemPrompt : [event.systemPrompt];
     return { systemPrompt: [...base, RTK_PROMPT] };
   });

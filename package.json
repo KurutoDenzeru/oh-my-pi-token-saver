@@ -1,6 +1,6 @@
 {
   "name": "@fernado03/oh-my-pi-supreme-token-saver",
-  "version": "1.3.5",
+  "version": "1.3.6",
   "description": "Three toggleable OMP extensions that save tokens: terse replies, compact shell output, and minimal code decisions — with a manual updater and dry-run support.",
   "keywords": [
     "omp",
@@ -32,7 +32,7 @@
     "extensions/**/*"
   ],
   "scripts": {
-    "check": "node --check install-omp-addons.js && node --check extensions/caveman-session/index.js && node --check extensions/rtk-session/index.js && node --check extensions/ai-addons-updater/index.js && node --check extensions/combo-toggle/index.js",
+    "check": "node --check install-omp-addons.js && node --check extensions/shared/session-state.js && node --check extensions/caveman-session/index.js && node --check extensions/rtk-session/index.js && node --check extensions/ai-addons-updater/index.js && node --check extensions/combo-toggle/index.js",
     "doctor": "node install-omp-addons.js --doctor",
     "dry-run": "node install-omp-addons.js --dry-run --scope user --yes",
     "test": "node --test"

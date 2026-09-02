@@ -1,3 +1,8 @@
+## v2.2.0
+- Optional Headroom integration: `install --with-headroom` checks for the [Headroom](https://github.com/headroomlabs-ai/headroom) compression proxy and prints setup steps (`headroom wrap omp` / `headroom unwrap omp`). The installer never mutates `models.yml` — routing stays with Headroom's own reversible commands.
+- `doctor` reports the Headroom wrap state and whether the proxy is running.
+- `uninstall --remove-headroom` undoes the Headroom wrap (restores `models.yml` from its backup) when the file is wrap-managed; unmanaged files are never touched.
+
 ## v2.1.0
 - Session-start mode defaults. Set them with the installer (`install --combo-default balanced`, `--caveman-default lite`, `--rtk-default on`, or the interactive prompt) or through OMP plugin settings (`omp plugin config set oh-my-pi-token-saver comboDefault max`). All default off.
 - Declares `omp.settings` (typed enum/boolean settings) in `package.json` so the same knobs are manageable from OMP's plugin manager without the installer.

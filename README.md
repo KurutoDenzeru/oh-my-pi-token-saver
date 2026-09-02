@@ -49,6 +49,23 @@ Defaults apply only to fresh sessions — anything you persist with `/combo`, `/
 
 Individual toggles: `/caveman full` · `/rtk on` · `/ponytail full`
 
+### Headroom (optional)
+
+[Headroom](https://github.com/headroomlabs-ai/headroom) is a local-first compression proxy that shrinks tool outputs, JSON, and logs before they reach the model — a different layer from this package's prompt-level add-ons, and the two stack. Pass `--with-headroom` to have the installer check for it:
+
+```bash
+oh-my-pi-token-saver install --with-headroom
+```
+
+The installer never writes OMP's `models.yml` itself. Routing OMP through the proxy is one command from Headroom's own CLI (reversible, with a byte-for-byte backup):
+
+```bash
+headroom wrap omp      # route omp through the compression proxy
+headroom unwrap omp    # undo
+```
+
+`oh-my-pi-token-saver doctor` reports the wrap state and whether the proxy is running. To remove the override during uninstall, add `--remove-headroom`.
+
 ## What it installs
 
 | Add-on | What it does |

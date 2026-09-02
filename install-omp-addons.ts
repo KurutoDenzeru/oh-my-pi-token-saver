@@ -4,6 +4,7 @@
 // Requires: node/npm and omp CLI
 
 import { execFile } from "node:child_process";
+import https from "node:https";
 import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import os from "node:os";
@@ -85,6 +86,8 @@ const doctor = command === "doctor" || args.includes("--doctor");
 const uninstall = command === "uninstall" || args.includes("--uninstall");
 const removePonytail = args.includes("--remove-ponytail");
 const removeRtk = args.includes("--remove-rtk");
+const withHeadroom = args.includes("--with-headroom");
+const removeHeadroom = args.includes("--remove-headroom");
 
 const scopeFlag = (() => {
   const i = args.indexOf("--scope");
@@ -120,6 +123,8 @@ Commands:
 
 Options:
   --scope user|project|both
+  --with-headroom                check for the Headroom compression proxy and print setup steps
+  --remove-headroom              during uninstall: undo the headroom wrap (restores models.yml)
   --combo-default off|medium|balanced|max
   --caveman-default off|lite|full|ultra|wenyan
   --rtk-default on|off
@@ -733,6 +738,72 @@ async function stepUpdater(extDir: string, options: WriteOptions): Promise<void>
   await writeIfChanged(path.join(extDir, "ai-addons-updater", "index.js"), updaterSrc, options);
 }
 
+// --- Headroom (optional compression proxy) ---
+
+// Headroom's `wrap omp` owns the only config mutation involved: a marker-fenced
+// `providers.anthropic.baseUrl` override in ~/.omp/agent/models.yml (backup at
+// models.yml.headroom-backup; `headroom unwrap omp` restores it). We never write
+// that file ourselves — we detect, instruct, and report.
+const HEADROOM_MARKER = "# managed by `headroom wrap omp`";
+
+function headroomAgentDir(): string {
+  const base = process.env.PI_CODING_AGENT_DIR?.trim();
+  return base ? path.resolve(base) : path.join(HOME, ".omp", "agent");
+}
+
+function headroomModelsPath(): string {
+  return path.join(headroomAgentDir(), "models.yml");
+}
+
+interface HeadroomWrapState {
+  wrapped: boolean;
+  port: number | null;
+}
+
+function headroomWrapState(modelsRaw: string | null): HeadroomWrapState {
+  if (!modelsRaw || !modelsRaw.includes(HEADROOM_MARKER)) return { wrapped: false, port: null };
+  const match = modelsRaw.match(/baseUrl:\s*https?:\/\/127\.0\.0\.1:(\d+)/);
+  return { wrapped: true, port: match ? Number(match[1]) : null };
+}
+
+async function headroomProxyHealthy(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const req = https.get({ host: "127.0.0.1", port, path: "/health", timeout: 2000 }, (res) => {
+      res.resume();
+      resolve(res.statusCode !== undefined && res.statusCode < 500);
+    });
+    req.on("timeout", () => { req.destroy(); resolve(false); });
+    req.on("error", () => resolve(false));
+  });
+}
+
+async function stepHeadroom(options: WriteOptions): Promise<void> {
+  console.log("\n[9/8] Checking Headroom compression proxy...");
+  if (options.dryRun) {
+    // Everything below is read-only (file peek + which-equivalent probe), so
+    // dry-run reports the real findings instead of a placeholder line.
+    console.log("  [dry-run] no changes will be written; reporting current headroom state:");
+  }
+  const state = headroomWrapState(await readTextIfExists(headroomModelsPath()));
+  if (state.wrapped) {
+    const healthy = state.port !== null && await headroomProxyHealthy(state.port);
+    console.log(`  [ok] models.yml is headroom-wrapped (proxy http://127.0.0.1:${state.port ?? 8787}${healthy ? ", running" : " — NOT running; start: headroom proxy"})`);
+    console.log("  [hint] No action needed. Undo anytime with: headroom unwrap omp");
+    return;
+  }
+  try {
+    await execP("headroom", ["--version"]);
+    console.log("  [ok] headroom CLI found. To route OMP through it, run:");
+    console.log("         headroom wrap omp      # starts the proxy + writes a reversible models.yml override");
+    console.log("         headroom unwrap omp    # undo");
+  } catch {
+    console.log("  [skip] headroom CLI not found — install with:");
+    console.log("           uv tool install --python 3.13 \"headroom-ai[all]\"");
+    console.log("           pip install \"headroom-ai[all]\"   # alternative");
+    console.log("         then run: headroom wrap omp");
+  }
+}
+
 async function stepCombo(extDir: string, options: WriteOptions): Promise<void> {
   console.log("\n[6/8] Installing Combo toggle extension...");
   const src = await readTextIfExists(COMBO_TOGGLE_INDEX);
@@ -810,7 +881,16 @@ async function runDoctor(): Promise<void> {
   const configOk = (await readTextIfExists(configPath)) !== null;
   console.log(`  OMP config.yml: ${configOk ? "ok" : "MISSING"} ${configPath}`);
 
-  // Ponytail
+
+  // Headroom proxy wrap state
+  const hwState = headroomWrapState(await readTextIfExists(headroomModelsPath()));
+  if (!hwState.wrapped) {
+    console.log("  Headroom: not wrapped (optional; see --with-headroom)");
+  } else {
+    const healthy = hwState.port !== null && await headroomProxyHealthy(hwState.port);
+    console.log(`  Headroom: wrapped (proxy http://127.0.0.1:${hwState.port ?? 8787}${healthy ? ", running" : " — NOT running"})`);
+  }
+
   const ponytailPkg = path.join(pluginsDir, "node_modules", "@dietrichgebert", "ponytail", "package.json");
   const ponytailExt = path.join(pluginsDir, "node_modules", "@dietrichgebert", "ponytail", "pi-extension", "index.js");
   const ponytailInstalled = (await readTextIfExists(ponytailPkg)) !== null;
@@ -1005,6 +1085,23 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
       }
     } catch {
       debug(`Could not remove ${rtkBin}`);
+    }
+  }
+
+  // Undo the Headroom models.yml override if requested and wrap-managed.
+  if (removeHeadroom) {
+    const modelsRaw = await readTextIfExists(headroomModelsPath());
+    if (!headroomWrapState(modelsRaw).wrapped) {
+      console.log("  Headroom: models.yml not wrap-managed — nothing to undo");
+    } else if (shouldDryRun) {
+      console.log("  [dry-run] would run: headroom unwrap omp");
+    } else {
+      try {
+        const out = await execP("headroom", ["unwrap", "omp"]);
+        console.log(`  [ok] headroom unwrap omp: ${(out.stdout || out.stderr).trim().split("\n").filter(Boolean).at(-1) || "done"}`);
+      } catch (e) {
+        console.log(`  [warn] headroom unwrap omp failed: ${(e as Error).message}. Restore manually: mv ~/.omp/agent/models.yml.headroom-backup ~/.omp/agent/models.yml`);
+      }
     }
   }
 
@@ -1237,6 +1334,7 @@ async function main(): Promise<void> {
     await stepUpdater(userExtDir, options);
     await stepAmanaiReward(userExtDir, options, selfPlugin);
     if (selfPlugin) await writePluginSettings(profile, options);
+    if (withHeadroom) await stepHeadroom(options);
   }
 
   if (scope === "2" || scope === "3") {
@@ -1247,6 +1345,7 @@ async function main(): Promise<void> {
     await stepUpdater(projectExtDir, options);
     await stepAmanaiReward(projectExtDir, options);
     console.log("  [note] Ponytail, RTK binary, and Combo toggle require user-level (global) install");
+    if (withHeadroom && scope === "2") await stepHeadroom(options);
   }
 
   console.log("\n=== Installation complete ===");

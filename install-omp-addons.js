@@ -4,6 +4,7 @@
 // Requires: node, omp CLI, bun (for rtk binary)
 
 import https from "node:https";
+import { fileURLToPath } from "node:url";
 import { createHash, createWriteStream } from "node:fs";
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -18,7 +19,7 @@ const RL = readline.createInterface({ input: process.stdin, output: process.stdo
 const ask = (q) => new Promise((res) => RL.question(q, (a) => { RL.close(); res(a); }));
 
 // Paths to extension source files (relative to this script)
-const SCRIPT_DIR = path.dirname(new URL(import.meta.url).pathname).replace(/^\/[a-z]:/i, "");
+const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const EXT_DIR = path.join(SCRIPT_DIR, "extensions");
 const CAVEMAN_INDEX = path.join(EXT_DIR, "caveman-session", "index.js");
 const RTK_SESSION_INDEX = path.join(EXT_DIR, "rtk-session", "index.js");

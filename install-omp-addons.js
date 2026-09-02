@@ -105,6 +105,7 @@ async function stepPonytail(pluginsDir, userDir) {
   pkg.private = true;
   pkg.dependencies = pkg.dependencies || {};
   pkg.dependencies["@dietrichgebert/ponytail"] = "github:DietrichGebert/ponytail";
+  await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
   console.log(`  [write] package.json`);
 
   // Try omp plugin install first

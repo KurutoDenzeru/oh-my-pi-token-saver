@@ -25,6 +25,33 @@ cd oh-my-pi-supreme-token-saver
 node install-omp-addons.js
 ```
 
+
+### Update (re-run to overwrite old versions)
+
+```bash
+npx @fernado03/oh-my-pi-supreme-token-saver
+```
+
+Or if installed globally:
+
+```bash
+oh-my-pi-supreme-token-saver
+```
+
+Re-running the installer overwrites old extension files and fetches the latest versions. Backups of the previous files are created automatically (`.bak` suffix).
+
+For in-session updates without re-running the installer:
+
+```text
+/ai-addons update all
+```
+
+Dry run first to see what would change:
+
+```text
+/ai-addons update all --dry-run
+```
+
 You'll be asked to choose an install scope:
 
 1. **User-level** — applies to all OMP sessions (recommended)
@@ -166,6 +193,25 @@ Copy `extensions/ai-addons-updater/` to `~/.omp/agent/extensions/ai-addons-updat
 - [Bun](https://bun.sh) installed (for RTK binary path)
 - Node.js 18+
 
-## License
+
+## Troubleshooting
+
+### /ponytail command not found (skill loads but command missing)
+
+Ponytail's extension module may not be discovered by OMP on some setups. The install script handles this automatically by adding the extension path to `config.yml`, but if you installed manually:
+
+Add this to `~/.omp/agent/config.yml`:
+
+```yaml
+extensions:
+  - ~/.omp/plugins/node_modules/@dietrichgebert/ponytail/pi-extension/index.js
+```
+
+Then restart OMP. Verify with:
+
+```text
+/ponytail status
+```
+
 
 MIT

@@ -94,7 +94,7 @@ async function writeIfChanged(dest, content) {
 
 // --- Steps ---
 
-async function stepPonytail(pluginsDir) {
+async function stepPonytail(pluginsDir, userDir) {
   console.log("\n[1/4] Installing Ponytail plugin...");
   const pkgPath = path.join(pluginsDir, "package.json");
   let pkg = {};
@@ -109,11 +109,47 @@ async function stepPonytail(pluginsDir) {
   try {
     await execP(IS_WINDOWS ? "omp.cmd" : "omp", ["plugin", "install", "github:DietrichGebert/ponytail"],
       { cwd: pluginsDir });
-    console.log("  [ok] Ponytail installed");
+    console.log("  [ok] Ponytail plugin installed");
   } catch (e) {
-    console.log(`  [fail] Ponytail: ${e.message}`);
+    console.log(`  [fail] Ponytail plugin: ${e.message}`);
     console.log(`  [hint] Manual: cd ~/.omp/plugins && omp plugin install github:DietrichGebert/ponytail`);
   }
+
+  // Wire extension into config.yml so /ponytail command loads
+  const ponytailExtPath = path.join(pluginsDir, "node_modules", "@dietrichgebert", "ponytail", "pi-extension", "index.js");
+  const ponytailExtExists = await readIfExists(ponytailExtPath);
+  if (!ponytailExtExists) {
+    console.log("  [skip] Ponytail pi-extension/index.js not found — skill-only mode");
+    return;
+  }
+
+  const configPath = path.join(userDir, "config.yml");
+  let configRaw = await readIfExists(configPath);
+  let configLines = (configRaw || "").split("\n");
+
+  // Check if extensions key already exists
+  const extLineIdx = configLines.findIndex((l) => /^extensions\s*:/i.test(l.trim()));
+  const ponytailLine = `  - ${ponytailExtPath.replace(/\\/g, "/")}`;
+
+  if (extLineIdx === -1) {
+    // No extensions key — add it
+    configLines.push("extensions:");
+    configLines.push(ponytailLine);
+    configLines.push("");
+    console.log(`  [write] Added extensions key + ponytail path to config.yml`);
+  } else {
+    // Check if ponytail is already listed
+    const alreadyListed = configLines.some((l) => l.includes("ponytail") && l.includes("pi-extension"));
+    if (alreadyListed) {
+      console.log(`  [skip] Ponytail extension already in config.yml`);
+    } else {
+      // Insert after the extensions: line
+      configLines.splice(extLineIdx + 1, 0, ponytailLine);
+      console.log(`  [write] Added ponytail path to existing extensions in config.yml`);
+    }
+  }
+
+  await fs.writeFile(configPath, configLines.join("\n"), "utf8");
 }
 
 async function stepRtk(binDir) {
@@ -257,7 +293,7 @@ async function main() {
   // Install per scope
   if (scope === "1" || scope === "3") {
     console.log("\n--- User-level install ---");
-    await stepPonytail(userPluginsDir);
+    await stepPonytail(userPluginsDir, userDir);
     await stepRtk(bunBinDir);
     await stepRtkSession(userExtDir);
     await stepCaveman(userExtDir);

@@ -13,6 +13,7 @@ import {
   setSharedComboLevel,
   setSharedComboListener,
 } from "../shared/session-state.js";
+import { readComboDefault } from "../shared/plugin-settings.js";
 import type { ComboState, ExtensionApi, ExtensionCtx, SessionEntry, SystemPromptEvent } from "../shared/types.js";
 
 const require = createRequire(import.meta.url);
@@ -159,6 +160,15 @@ export default function comboToggleExtension(pi: ExtensionApi): void {
     listen(ctx);
     if (ctx?.hasUI) reconcile(ctx);
     else syncStatus(ctx);
+    // Installer/user-configured default applies only to a fresh session with
+    // no persisted state — real session state always wins.
+    if (getSharedComboState().level === "off" && !(ctx?.sessionManager?.getBranch?.() || ctx?.sessionManager?.getEntries?.() || []).length) {
+      const fallback = readComboDefault();
+      if (fallback !== "off") {
+        useState(setSharedComboLevel(fallback), ctx);
+        ctx?.ui?.notify?.(`Combo default applied: ${fallback}`, "info");
+      }
+    }
   });
 
   pi.on("session_branch", async (_event, ctx) => {

@@ -1,25 +1,26 @@
 import os from "node:os";
 import path from "node:path";
 import { getSharedComboState, isOmpSubagentPrompt, setSharedComboMode } from "../shared/session-state.js";
+import { readRtkDefault } from "../shared/plugin-settings.js";
 import type { ExtensionApi, ExtensionCtx, InputEvent, SessionEntry, SystemPromptEvent } from "../shared/types.js";
 
 const DEFAULT_ENABLED = false;
 
-function asBoolean(value: unknown, fallback: boolean = DEFAULT_ENABLED): boolean {
+function asBoolean(value: unknown): boolean | null {
   if (typeof value === "boolean") return value;
   if (value === "on" || value === "true") return true;
   if (value === "off" || value === "false") return false;
-  return fallback;
+  return null;
 }
 
-function resolveEnabled(entries: SessionEntry[] | null | undefined, fallback: boolean = DEFAULT_ENABLED): boolean {
-  if (!Array.isArray(entries)) return fallback;
+function resolveEnabled(entries: SessionEntry[] | null | undefined): boolean | null {
+  if (!Array.isArray(entries)) return null;
   for (let i = entries.length - 1; i >= 0; i -= 1) {
     const entry = entries[i];
     if (entry?.type !== "custom" || entry?.customType !== "rtk-mode") continue;
-    return asBoolean(entry?.data?.enabled, fallback);
+    return asBoolean(entry?.data?.enabled);
   }
-  return fallback;
+  return null;
 }
 
 const IS_WINDOWS = process.platform === "win32";
@@ -122,10 +123,12 @@ export default function rtkSessionExtension(pi: ExtensionApi): void {
     if (t === "rtk on" || t === "use rtk") setEnabled(true);
     if (t === "rtk off" || t === "stop rtk") setEnabled(false);
   });
-
   function restoreEnabled(ctx?: ExtensionCtx): void {
     const entries = ctx?.sessionManager?.getBranch?.() || ctx?.sessionManager?.getEntries?.() || [];
-    enabled = resolveEnabled(entries);
+    // Persisted session state wins; a fresh session falls back to the
+    // installer/user-configured default (off unless configured).
+    const persisted = resolveEnabled(entries);
+    enabled = typeof persisted === "boolean" ? persisted : readRtkDefault();
     syncStatus(ctx);
   }
 

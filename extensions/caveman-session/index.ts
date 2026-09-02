@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { getSharedComboState, isOmpSubagentPrompt, setSharedComboMode } from "../shared/session-state.js";
+import { readCavemanDefault } from "../shared/plugin-settings.js";
 import type { ExtensionApi, ExtensionCtx, InputEvent, SessionEntry, SystemPromptEvent } from "../shared/types.js";
 
 const CAVERN_DIR = dirname(fileURLToPath(import.meta.url));
@@ -119,7 +120,10 @@ export default function cavemanSessionExtension(pi: ExtensionApi): void {
 
   function restoreMode(ctx?: ExtensionCtx): void {
     const entries = ctx?.sessionManager?.getBranch?.() || ctx?.sessionManager?.getEntries?.() || [];
-    currentMode = resolveMode(entries);
+    // Persisted session state wins; a fresh session falls back to the
+    // installer/user-configured default (off unless configured).
+    const persisted = resolveMode(entries, "");
+    currentMode = persisted || readCavemanDefault();
     syncStatus(ctx);
   }
 

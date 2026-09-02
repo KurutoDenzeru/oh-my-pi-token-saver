@@ -30,9 +30,55 @@
     "oh-my-pi-token-saver": "install-omp-addons.js"
   },
   "omp": {
+    "name": "Token Saver",
+    "description": "Amanai reward detector plus toggleable Caveman/RTK/Ponytail session modes with Combo presets",
     "extensions": [
       "./extensions/amanai-reward/index.js"
-    ]
+    ],
+    "features": {
+      "caveman": {
+        "description": "Caveman terse-reply session mode (/caveman)",
+        "default": true,
+        "extensions": ["./extensions/caveman-session/index.js"]
+      },
+      "rtk": {
+        "description": "RTK compact shell-output session mode (/rtk)",
+        "default": true,
+        "extensions": ["./extensions/rtk-session/index.js"]
+      },
+      "ponytail": {
+        "description": "Combo toggle bar and Ponytail mode reinforcement (/combo, mode reinforcement)",
+        "default": true,
+        "extensions": [
+          "./extensions/combo-toggle/index.js",
+          "./extensions/shared/mode-reinforcement.js"
+        ]
+      },
+      "updater": {
+        "description": "In-session /ai-addons updater for Ponytail, RTK, and Caveman",
+        "default": true,
+        "extensions": ["./extensions/ai-addons-updater/index.js"]
+      }
+    },
+    "settings": {
+      "comboDefault": {
+        "type": "enum",
+        "description": "Combo preset applied on session start when no session state exists",
+        "values": ["off", "medium", "balanced", "max"],
+        "default": "off"
+      },
+      "cavemanDefault": {
+        "type": "enum",
+        "description": "Caveman mode applied on session start when no session state exists",
+        "values": ["off", "lite", "full", "ultra", "wenyan"],
+        "default": "off"
+      },
+      "rtkDefault": {
+        "type": "boolean",
+        "description": "RTK mode applied on session start when no session state exists",
+        "default": false
+      }
+    }
   },
   "pi": {
     "extensions": [

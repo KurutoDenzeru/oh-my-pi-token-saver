@@ -115,6 +115,8 @@ Restart OMP, then:
 /combo medium
 ```
 
+By default, this installer sets Ponytail's default mode to `off` so fresh OMP sessions start clean. Use `/combo medium`, `/combo max`, or `/ponytail full` to enable it per session.
+
 ## Commands reference
 
 ### Caveman — terse replies

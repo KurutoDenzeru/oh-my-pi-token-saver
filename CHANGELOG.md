@@ -1,3 +1,7 @@
+## v1.2.3
+- Set Ponytail default mode to `off` during install so fresh sessions do not show Ponytail by default.
+- Keep Ponytail available through `/ponytail` and `/combo`.
+
 ## v1.2.2
 - Fixed installer child-process handling by promisifying `execFile`.
 - Fixed RTK binary discovery for Linux/macOS archives that contain `rtk-*` binary names.

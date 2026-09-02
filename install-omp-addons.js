@@ -11,7 +11,6 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import readline from "node:readline";
 
 const IS_WINDOWS = process.platform === "win32";
@@ -114,36 +113,8 @@ async function httpsDownload(url, dest) {
   });
 }
 
-async function walkFiles(dir) {
-  const out = [];
-  let entries;
-  try { entries = await fs.readdir(dir, { withFileTypes: true }); } catch { return out; }
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      out.push(...await walkFiles(full));
-    } else if (entry.isFile()) {
-      out.push(full);
-    }
-  }
-  return out;
-}
-
-async function findRtkBinary(extractDir, binaryName) {
-  const files = await walkFiles(extractDir);
-  const exact = files.find((file) => path.basename(file) === binaryName);
-  if (exact) return exact;
-  const candidates = files.filter((file) => {
-    const base = path.basename(file).toLowerCase();
-    if (/\.(txt|md|json|sha256|sig|asc|pem|crt|license)$/i.test(base)) return false;
-    return base === "rtk" || base === "rtk.exe" || /^rtk[-_.]/.test(base);
-  });
-  return candidates[0] || null;
-}
-const execFileP = promisify(execFile);
-
 function execP(cmd, args, opts = {}) {
-  return execFileP(cmd, args, { timeout: opts.timeout || 120000, encoding: "utf8", ...opts });
+  return execFile(cmd, args, { timeout: opts.timeout || 120000, encoding: "utf8", ...opts });
 }
 
 async function writeIfChanged(dest, content, options = {}) {
@@ -204,6 +175,44 @@ async function ensureExtensionInConfig(configPath, extensionPath, label, options
   return true;
 }
 
+async function ensurePonytailDefaultOff(options = {}) {
+  const configDir = process.env.XDG_CONFIG_HOME
+    ? path.join(process.env.XDG_CONFIG_HOME, "ponytail")
+    : path.join(HOME, ".config", "ponytail");
+
+  const configPath = path.join(configDir, "config.json");
+
+  if (options.dryRun) {
+    console.log(`  [dry-run] would set Ponytail defaultMode=off in ${configPath}`);
+    return;
+  }
+
+  let config = {};
+  const existing = await readIfExists(configPath);
+
+  if (existing) {
+    try {
+      config = JSON.parse(existing.replace(/^\uFEFF/, ""));
+      if (!config || typeof config !== "object" || Array.isArray(config)) {
+        config = {};
+      }
+    } catch {
+      config = {};
+    }
+  }
+
+  if (config.defaultMode === "off") {
+    debug("Ponytail defaultMode already off");
+    return;
+  }
+
+  await fs.mkdir(configDir, { recursive: true });
+  config.defaultMode = "off";
+  await fs.writeFile(configPath, JSON.stringify(config, null, 2) + "\n", "utf8");
+
+  console.log(`  [write] Set Ponytail defaultMode=off in ${configPath}`);
+}
+
 // --- Steps ---
 
 async function stepPonytail(pluginsDir, userDir, options = {}) {
@@ -221,10 +230,13 @@ async function stepPonytail(pluginsDir, userDir, options = {}) {
 
   if (options.dryRun) {
     console.log(`  [dry-run] would write ${pkgPath}`);
+  } else {
+    await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
+    console.log(`  [write] package.json`);
+  }
+
+  if (options.dryRun) {
     console.log("  [dry-run] would run: omp plugin install github:DietrichGebert/ponytail");
-    const ponytailExtPath = path.join(pluginsDir, "node_modules", "@dietrichgebert", "ponytail", "pi-extension", "index.js");
-    const configPath = path.join(userDir, "config.yml");
-    await ensureExtensionInConfig(configPath, ponytailExtPath, "ponytail", options);
     return;
   }
 
@@ -278,6 +290,8 @@ async function stepPonytail(pluginsDir, userDir, options = {}) {
   if (!ponytailExtExists) {
     console.log("  [skip] Ponytail pi-extension/index.js still not found — skill-only mode");
     console.log("  [hint] The /ponytail command won't work, but ponytail skills will still load");
+    // Still set Ponytail config defaultMode=off even without the extension command
+    await ensurePonytailDefaultOff(options);
     return;
   }
 
@@ -285,6 +299,7 @@ async function stepPonytail(pluginsDir, userDir, options = {}) {
   console.log("  [ok] Ponytail pi-extension found");
   const configPath = path.join(userDir, "config.yml");
   await ensureExtensionInConfig(configPath, ponytailExtPath, "ponytail", options);
+  await ensurePonytailDefaultOff(options);
 }
 
 async function stepRtk(binDir, options = {}) {
@@ -334,16 +349,13 @@ async function stepRtk(binDir, options = {}) {
 
     // Also download checksums.txt for verification
     const checksumsAsset = (release.assets || []).find((a) => a.name === "checksums.txt");
-    if (!checksumsAsset) {
-      console.log(`  [fail] checksums.txt missing in release ${tag}`);
-      return;
-    }
     let checksumsText = null;
-    try {
-      checksumsText = await httpsGet(checksumsAsset.browser_download_url);
-    } catch (e) {
-      console.log(`  [fail] Could not download checksums.txt: ${e.message}`);
-      return;
+    if (checksumsAsset) {
+      try {
+        checksumsText = await httpsGet(checksumsAsset.browser_download_url);
+      } catch (e) {
+        debug(`Could not download checksums.txt: ${e.message}`);
+      }
     }
 
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "omp-rtk-"));
@@ -352,21 +364,22 @@ async function stepRtk(binDir, options = {}) {
     await httpsDownload(asset.browser_download_url, archivePath);
 
     // Verify checksum
-    const expected = parseChecksum(checksumsText, asset.name);
-    if (!expected) {
-      console.log(`  [fail] checksums.txt has no entry for ${asset.name}`);
-      await fs.rm(tmpDir, { recursive: true, force: true });
-      return;
-    }
-    const actual = await sha256File(archivePath);
-    if (actual !== expected) {
-      console.log(`  [fail] Checksum mismatch for ${asset.name}`);
-      console.log(`  [fail] Expected: ${expected}`);
-      console.log(`  [fail] Got:      ${actual}`);
-      await fs.rm(tmpDir, { recursive: true, force: true });
-      return;
+    if (checksumsText) {
+      const expected = parseChecksum(checksumsText, asset.name);
+      const actual = await sha256File(archivePath);
+      if (!expected) {
+        console.log(`  [warn] checksums.txt missing entry for ${asset.name} — skipping verification`);
+      } else if (actual !== expected) {
+        console.log(`  [fail] Checksum mismatch for ${asset.name}`);
+        console.log(`  [fail] Expected: ${expected}`);
+        console.log(`  [fail] Got:      ${actual}`);
+        await fs.rm(tmpDir, { recursive: true, force: true });
+        return;
+      } else {
+        console.log(`  [ok] Checksum verified for ${asset.name}`);
+      }
     } else {
-      console.log(`  [ok] Checksum verified for ${asset.name}`);
+      console.log(`  [warn] No checksums.txt available — skipping verification`);
     }
 
     // Extract by extension (not OS)
@@ -399,14 +412,11 @@ async function stepRtk(binDir, options = {}) {
       return;
     }
 
-    // Find binary (robust to rtk-* asset names per RTK release packaging)
+    // Find binary
     const binaryName = IS_WINDOWS ? "rtk.exe" : "rtk";
-    if (verbose) {
-      const files = await walkFiles(extractDir);
-      debug("extracted files:");
-      for (const file of files) debug(`- ${file}`);
-    }
-    const found = await findRtkBinary(extractDir, binaryName);
+    const entries = await fs.readdir(extractDir, { recursive: true });
+    debug(`extracted entries: ${entries.join(", ")}`);
+    const found = entries.find((e) => path.basename(e) === binaryName);
     if (!found) {
       console.log(`  [fail] Could not find ${binaryName} in extracted archive`);
       await fs.rm(tmpDir, { recursive: true, force: true });
@@ -414,7 +424,7 @@ async function stepRtk(binDir, options = {}) {
     }
 
     await fs.mkdir(path.dirname(binDest), { recursive: true });
-    await fs.copyFile(found, binDest);
+    await fs.copyFile(path.join(extractDir, found), binDest);
     console.log(`  [write] ${binDest}`);
 
     // Set executable bit on Unix

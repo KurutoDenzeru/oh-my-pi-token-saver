@@ -296,7 +296,7 @@ async function ensurePonytailDefaultOff(options = {}) {
 // --- Steps ---
 
 async function stepPonytail(pluginsDir, userDir, options = {}) {
-  console.log("\n[1/7] Installing Ponytail plugin...");
+  console.log("\n[1/8] Installing Ponytail plugin...");
   await fs.mkdir(pluginsDir, { recursive: true });
   const pkgPath = path.join(pluginsDir, "package.json");
   let pkg = {};
@@ -414,8 +414,56 @@ async function stepPonytail(pluginsDir, userDir, options = {}) {
   await ensurePonytailDefaultOff(options);
 }
 
+// Registers this package in ~/.omp/plugins so OMP lists it on the
+// Settings → Plugins page (OMP enumerates plugins/package.json dependencies).
+// Returns true when the package is verified in plugins/node_modules — the
+// Amanai detector then loads via the plugin's `omp.extensions` manifest, so
+// the caller must skip copying it into agent/extensions to avoid a double load.
+async function stepSelfPlugin(pluginsDir, options = {}) {
+  console.log("\n[2/8] Registering oh-my-pi-token-saver as OMP plugin...");
+  const pkgPath = path.join(pluginsDir, "package.json");
+  let pkg = {};
+  const existing = await readIfExists(pkgPath);
+  if (existing) {
+    try { pkg = JSON.parse(existing); } catch { pkg = {}; }
+  }
+  pkg.name = pkg.name || "omp-plugins";
+  pkg.private = true;
+  pkg.dependencies = pkg.dependencies || {};
+  pkg.dependencies[PACKAGE_NAME] = `^${PACKAGE_VERSION}`;
+
+  if (options.dryRun) {
+    console.log(`  [dry-run] would add ${PACKAGE_NAME}@^${PACKAGE_VERSION} to ${pkgPath}`);
+    console.log(`  [dry-run] would run: npm install --no-audit --no-fund (in ${pluginsDir})`);
+    return false;
+  }
+
+  await fs.mkdir(pluginsDir, { recursive: true });
+  await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf8");
+
+  try {
+    await execP("npm", ["install", "--no-audit", "--no-fund"], { cwd: pluginsDir, timeout: 180000 });
+  } catch {
+    try {
+      await execP("bun", ["install"], { cwd: pluginsDir, timeout: 180000 });
+    } catch (e) {
+      console.log(`  [fail] Could not install ${PACKAGE_NAME} into plugins dir: ${e.message}`);
+      console.log(`  [hint] Manual: cd ~/.omp/plugins && npm install ${PACKAGE_NAME}@^${PACKAGE_VERSION} --save --no-audit --no-fund`);
+      return false;
+    }
+  }
+
+  const installedPkg = path.join(pluginsDir, "node_modules", PACKAGE_NAME, "package.json");
+  if ((await readIfExists(installedPkg)) === null) {
+    console.log(`  [warn] ${PACKAGE_NAME} not found in plugins/node_modules after install`);
+    return false;
+  }
+  console.log("  [ok] Listed in OMP Settings → Plugins as oh-my-pi-token-saver");
+  return true;
+}
+
 async function stepRtk(binDir, options = {}) {
-  console.log("\n[2/7] Installing RTK binary...");
+  console.log("\n[3/8] Installing RTK binary...");
   try {
     const raw = await httpsGet(RTK_RELEASE_API);
     const release = JSON.parse(raw);
@@ -571,7 +619,7 @@ async function stepSharedSessionState(extDir, options = {}) {
 }
 
 async function stepModeReinforcement(extDir, ponytailExtPath, options = {}) {
-  console.log("\n[6/7] Installing mode reinforcement extension...");
+  console.log("\n[7/8] Installing mode reinforcement extension...");
   const src = await readIfExists(MODE_REINFORCEMENT_INDEX);
   if (!src) {
     console.log("  [skip] shared/mode-reinforcement.js not found in repo");
@@ -583,7 +631,7 @@ async function stepModeReinforcement(extDir, ponytailExtPath, options = {}) {
 }
 
 async function stepRtkSession(extDir, options = {}) {
-  console.log("\n[3/7] Installing RTK session extension...");
+  console.log("\n[4/8] Installing RTK session extension...");
   const src = await readIfExists(RTK_SESSION_INDEX);
   if (!src) {
     console.log("  [skip] rtk-session/index.js not found in repo");
@@ -594,7 +642,7 @@ async function stepRtkSession(extDir, options = {}) {
 }
 
 async function stepCaveman(extDir, options = {}) {
-  console.log("\n[4/7] Installing Caveman session extension...");
+  console.log("\n[5/8] Installing Caveman session extension...");
   const cavemanDir = path.join(extDir, "caveman-session");
   if (!options.dryRun) await fs.mkdir(cavemanDir, { recursive: true });
 
@@ -621,7 +669,7 @@ async function stepCaveman(extDir, options = {}) {
 }
 
 async function stepCombo(extDir, options = {}) {
-  console.log("\n[5/7] Installing Combo toggle extension...");
+  console.log("\n[6/8] Installing Combo toggle extension...");
   const src = await readIfExists(COMBO_TOGGLE_INDEX);
   if (!src) {
     console.log("  [skip] combo-toggle/index.js not found in repo");
@@ -635,14 +683,28 @@ async function stepCombo(extDir, options = {}) {
   await ensureExtensionInConfig(configPath, dest, "combo", options);
 }
 
-async function stepAmanaiReward(extDir, options = {}) {
-  console.log("\n[7/7] Installing Amanai reward detector...");
+async function stepAmanaiReward(extDir, options = {}, pluginProvided = false) {
+  console.log("\n[8/8] Installing Amanai reward detector...");
+  const destDir = path.join(extDir, "amanai-reward");
+  if (pluginProvided) {
+    // The plugin's omp.extensions manifest loads the detector from
+    // plugins/node_modules; a copied agent/extensions entry would double-load.
+    if ((await readIfExists(path.join(destDir, "index.js"))) !== null) {
+      if (options.dryRun) console.log(`  [dry-run] would remove ${destDir} (now provided by the plugin)`);
+      else {
+        await fs.rm(destDir, { recursive: true, force: true });
+        console.log(`  [rm] ${destDir} (now provided by the plugin)`);
+      }
+    }
+    console.log("  [ok] detector loads via the oh-my-pi-token-saver plugin manifest");
+    return;
+  }
   const src = await readIfExists(AMANAI_REWARD_INDEX);
   if (!src) {
     console.log("  [skip] amanai-reward/index.js not found in repo");
     return;
   }
-  await writeIfChanged(path.join(extDir, "amanai-reward", "index.js"), src, options);
+  await writeIfChanged(path.join(destDir, "index.js"), src, options);
 }
 
 // --- Doctor ---
@@ -697,6 +759,16 @@ async function runDoctor() {
     console.log(`  Ponytail in config.yml: ${hasPonytailPath ? "registered" : "MISSING"}`);
   }
 
+  // Self plugin registration (Settings → Plugins listing)
+  const pluginsPkgRaw = await readIfExists(path.join(pluginsDir, "package.json"));
+  let selfDep = false;
+  if (pluginsPkgRaw) {
+    try { selfDep = PACKAGE_NAME in (JSON.parse(pluginsPkgRaw).dependencies || {}); } catch { /* ignore */ }
+  }
+  console.log(`  Self plugin in plugins/package.json: ${selfDep ? "registered" : "MISSING"}`);
+  const selfPkg = path.join(pluginsDir, "node_modules", PACKAGE_NAME, "package.json");
+  console.log(`  Self plugin package: ${(await readIfExists(selfPkg)) !== null ? "installed" : "MISSING"}`);
+
   // RTK
   const rtkExists = (await readIfExists(rtkBin)) !== null;
   console.log(`  RTK binary: ${rtkExists ? "installed" : "MISSING"} ${rtkBin}`);
@@ -732,7 +804,9 @@ async function runDoctor() {
 
   // Amanai reward detector
   const amanaiRewardIndex = path.join(extDir, "amanai-reward", "index.js");
-  console.log(`  Amanai reward detector: ${(await readIfExists(amanaiRewardIndex)) !== null ? "installed" : "MISSING"}`);
+  const amanaiViaPlugin = selfDep && (await readIfExists(selfPkg)) !== null;
+  const amanaiState = (await readIfExists(amanaiRewardIndex)) !== null ? "installed" : amanaiViaPlugin ? "installed (via plugin manifest)" : "MISSING";
+  console.log(`  Amanai reward detector: ${amanaiState}`);
 
   if (configOk) {
     const configText = await readIfExists(configPath);
@@ -762,6 +836,9 @@ async function runUninstall(options = {}) {
     path.join(extDir, "combo-toggle"),
     path.join(extDir, "shared"),
     path.join(extDir, "amanai-reward"),
+    // Legacy always-on combo helper; imports shared/session-state.js, so it
+    // breaks with a module-not-found warning once the shared dir is removed.
+    path.join(extDir, "aaa-combo-boot"),
   ];
 
   console.log("Will remove:");
@@ -811,6 +888,38 @@ async function runUninstall(options = {}) {
         await fs.writeFile(configPath, lines.join("\n"), "utf8");
         console.log(`  [write] Updated config.yml (removed ${before - lines.length} entries)`);
       }
+    }
+  }
+
+  // Remove our plugin registration from ~/.omp/plugins
+  const pluginsDir = path.join(HOME, ".omp", "plugins");
+  const pluginsPkgPath = path.join(pluginsDir, "package.json");
+  const pluginsPkgRaw = await readIfExists(pluginsPkgPath);
+  if (pluginsPkgRaw) {
+    try {
+      const pkg = JSON.parse(pluginsPkgRaw);
+      if (pkg.dependencies && PACKAGE_NAME in pkg.dependencies) {
+        if (shouldDryRun) console.log(`  [dry-run] would remove ${PACKAGE_NAME} from ${pluginsPkgPath}`);
+        else {
+          delete pkg.dependencies[PACKAGE_NAME];
+          await fs.writeFile(pluginsPkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf8");
+          console.log(`  [write] Removed ${PACKAGE_NAME} from plugins/package.json`);
+        }
+      }
+    } catch {
+      debug("Could not update plugins/package.json");
+    }
+  }
+  const selfPluginDir = path.join(pluginsDir, "node_modules", PACKAGE_NAME);
+  if ((await readIfExists(path.join(selfPluginDir, "package.json"))) !== null) {
+    try {
+      if (shouldDryRun) console.log(`  [dry-run] would remove ${selfPluginDir}`);
+      else {
+        await fs.rm(selfPluginDir, { recursive: true, force: true });
+        console.log(`  [rm] ${selfPluginDir}`);
+      }
+    } catch {
+      debug(`Could not remove ${selfPluginDir}`);
     }
   }
 
@@ -977,13 +1086,14 @@ async function main() {
     console.log("\n--- User-level install ---");
     await stepSharedSessionState(userExtDir, options);
     await stepPonytail(userPluginsDir, userDir, options);
+    const selfPlugin = await stepSelfPlugin(userPluginsDir, options);
     const ponytailExtPath = path.join(userPluginsDir, "node_modules", "@dietrichgebert", "ponytail", "pi-extension", "index.js");
     await stepRtk(bunBinDir, options);
     await stepRtkSession(userExtDir, options);
     await stepCaveman(userExtDir, options);
     await stepCombo(userExtDir, options);
     await stepModeReinforcement(userExtDir, ponytailExtPath, options);
-    await stepAmanaiReward(userExtDir, options);
+    await stepAmanaiReward(userExtDir, options, selfPlugin);
   }
 
   if (scope === "2" || scope === "3") {

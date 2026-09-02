@@ -92,6 +92,7 @@ test("user dry-run installs mode reinforcement after Ponytail", () => {
   assert.ok(ponytail >= 0, result.stdout);
   assert.ok(reinforcement > ponytail, result.stdout);
   assert.match(result.stdout, /would place mode reinforcement after Ponytail/);
+  assert.match(result.stdout, /\[dry-run\] would add oh-my-pi-token-saver/);
 });
 
 test("uninstall dry-run previews shared bridge removal", () => {
@@ -110,4 +111,5 @@ test("uninstall dry-run previews shared bridge removal", () => {
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /\[dry-run\] would remove .*extensions[\\/]shared(?:\r?\n|$)/);
   assert.match(result.stdout, /\[dry-run\] would remove .*extensions[\\/]amanai-reward(?:\r?\n|$)/);
+  assert.match(result.stdout, /\[dry-run\] would remove .*extensions[\\/]aaa-combo-boot(?:\r?\n|$)/);
 });

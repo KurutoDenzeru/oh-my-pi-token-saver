@@ -32,6 +32,8 @@ Individual toggles: `/caveman full` · `/rtk on` · `/ponytail full`
 | **Combo** | Switches Caveman, RTK, and Ponytail together. Presets: `off`, `medium`, and `max`; mixed individual modes display as `custom` |
 | **Amanai reward detector** | Locally notifies you when a final successful response contains a footer-shaped `AMANAI-GACHA-…` key; it never changes output, stores or sends the key, redeems it, opens a browser, or creates requests |
 
+User-level installs also register the package in `~/.omp/plugins`, so it appears as `oh-my-pi-token-saver` in OMP **Settings → Plugins**. In that state the Amanai reward detector loads through the plugin manifest instead of a copied extension entry.
+
 All three token-saving modes start off until you enable them.
 
 For long sessions, the package reasserts active modes after Ponytail's prompt block on every top-level turn, including after OMP compacts earlier history.
@@ -52,7 +54,7 @@ After the global install, use these short commands for routine maintenance:
 | `oh-my-pi-token-saver update` | Fetch the latest release and refresh the user installation |
 | `oh-my-pi-token-saver reinstall` | Remove the bundled extension directories and RTK binary, then install fresh at user scope; the separate Ponytail package is preserved and refreshed |
 | `oh-my-pi-token-saver doctor` | Check OMP, extension, Ponytail, and RTK installation health |
-| `oh-my-pi-token-saver uninstall` | Remove bundled extensions; add `--remove-rtk` to remove the RTK binary or `--remove-ponytail` to unregister Ponytail's extension path (the Ponytail package remains installed) |
+| `oh-my-pi-token-saver uninstall` | Remove bundled extensions, the legacy `aaa-combo-boot` helper, and the plugin registration; add `--remove-rtk` to remove the RTK binary or `--remove-ponytail` to unregister Ponytail's extension path (the Ponytail package remains installed) |
 | `oh-my-pi-token-saver version` | Print the package version (`--version` or `-v` also works) |
 | `oh-my-pi-token-saver help` | Show usage (`--help` or `-h` also works) |
 

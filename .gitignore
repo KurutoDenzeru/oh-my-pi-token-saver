@@ -1,2 +1,8 @@
 node
 .DS_Store
+node_modules
+dist
+*.tsbuildinfo
+install-omp-addons.js
+extensions/**/*.js
+test/definitely-missing-home/.omp/logs/

@@ -5,6 +5,7 @@ export const OMP_SUBAGENT_MARKER = "You are operating on a piece of work assigne
 export const COMBO_LEVELS = Object.freeze({
   off: Object.freeze({ level: "off", caveman: "off", rtk: "off", ponytail: "off" }),
   medium: Object.freeze({ level: "medium", caveman: "lite", rtk: "on", ponytail: "lite" }),
+  balanced: Object.freeze({ level: "balanced", caveman: "full", rtk: "on", ponytail: "full" }),
   max: Object.freeze({ level: "max", caveman: "ultra", rtk: "on", ponytail: "ultra" }),
 });
 

@@ -29,7 +29,7 @@ Individual toggles: `/caveman full` · `/rtk on` · `/ponytail full`
 | **RTK** | Routes noisy shell commands through the RTK binary for compact output |
 | **Ponytail** | Favors standard-library, minimal, YAGNI-oriented code decisions |
 | **Updater** | Checks and updates Ponytail, RTK, and Caveman in-session, with dry-run and backup support |
-| **Combo** | Switches Caveman, RTK, and Ponytail together. Presets: `off`, `medium`, and `max`; mixed individual modes display as `custom` |
+| **Combo** | Switches Caveman, RTK, and Ponytail together. Presets: `off`, `medium`, `balanced`, and `max`; mixed individual modes display as `custom` |
 | **Amanai reward detector** | Locally notifies you when a final successful response contains a footer-shaped `AMANAI-GACHA-…` key; it never changes output, stores or sends the key, redeems it, opens a browser, or creates requests |
 
 User-level installs also register the package in `~/.omp/plugins`, so it appears as `oh-my-pi-token-saver` in OMP **Settings → Plugins**. In that state the Amanai reward detector loads through the plugin manifest instead of a copied extension entry.
@@ -122,6 +122,7 @@ rtk lint
 ```text
 /combo off            all three off (default)
 /combo medium         caveman=lite, rtk=on, ponytail=lite
+/combo balanced       caveman=full, rtk=on, ponytail=full
 /combo max            caveman=ultra, rtk=on, ponytail=ultra
 /combo status         show the level and underlying modes
 /combo help           show available levels
@@ -129,7 +130,7 @@ rtk lint
 
 `/combo` persists each add-on's state and reloads OMP so the new modes apply immediately, without emitting separate `/caveman`, `/rtk`, or `/ponytail` command messages.
 
-Active Combo presets are inherited by OMP task subagents created from the session. `/combo medium` or `/combo max` is the only way to activate a preset and show the Combo footer indicator. Individual `/caveman`, `/rtk`, and `/ponytail` commands leave Combo inactive; `/combo status` reports their actual mixed state without turning the indicator on.
+Active Combo presets are inherited by OMP task subagents created from the session. `/combo medium`, `/combo balanced`, or `/combo max` is the only way to activate a preset and show the Combo footer indicator. Individual `/caveman`, `/rtk`, and `/ponytail` commands leave Combo inactive; `/combo status` reports their actual mixed state without turning the indicator on.
 
 ## File locations
 

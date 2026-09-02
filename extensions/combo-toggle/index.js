@@ -1,5 +1,5 @@
 // /combo session toggle — set all three (caveman, rtk, ponytail) at once.
-// Modes: off | medium | max
+// Modes: off | medium | balanced | max
 
 import os from "node:os";
 import path from "node:path";
@@ -68,7 +68,7 @@ export default function comboToggleExtension(pi) {
     if (!c?.ui?.setStatus) return;
     // Single unified bar replaces the three per-extension bars while a preset is
     // active. In custom/off, the individual bars come back and combo stays clear.
-    if (currentState.level !== "medium" && currentState.level !== "max") {
+    if (currentState.level !== "medium" && currentState.level !== "balanced" && currentState.level !== "max") {
       c.ui.setStatus("combo", undefined);
       return;
     }
@@ -102,7 +102,7 @@ export default function comboToggleExtension(pi) {
 
 
   pi.registerCommand("combo", {
-    description: "Toggle all 3 OMP add-ons at once. Usage: /combo <off|medium|max|status>",
+    description: "Toggle all 3 OMP add-ons at once. Usage: /combo <off|medium|balanced|max|status>",
     handler: async (args, ctx) => {
       listen(ctx);
       const arg = String(args || "").trim().toLowerCase();
@@ -118,9 +118,10 @@ export default function comboToggleExtension(pi) {
 
       if (arg === "help") {
         ctx?.ui?.notify?.(
-          "/combo off    — disables all 3 (caveman, rtk, ponytail)\n" +
-          "/combo medium — light: caveman=lite, rtk=on, ponytail=lite\n" +
-          "/combo max    — aggressive: caveman=ultra, rtk=on, ponytail=ultra",
+          "/combo off      — disables all 3 (caveman, rtk, ponytail)\n" +
+          "/combo medium   — light: caveman=lite, rtk=on, ponytail=lite\n" +
+          "/combo balanced — middle: caveman=full, rtk=on, ponytail=full\n" +
+          "/combo max      — aggressive: caveman=ultra, rtk=on, ponytail=ultra",
           "info"
         );
         return;
@@ -129,7 +130,7 @@ export default function comboToggleExtension(pi) {
       const level = normalizeComboLevel(arg);
       if (!level) {
         ctx?.ui?.notify?.(
-          `Unknown combo level: ${arg}. Use: off | medium | max`,
+          `Unknown combo level: ${arg}. Use: off | medium | balanced | max`,
           "warning"
         );
         return;

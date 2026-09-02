@@ -11,6 +11,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import readline from "node:readline";
 
 const IS_WINDOWS = process.platform === "win32";
@@ -113,8 +114,14 @@ async function httpsDownload(url, dest) {
   });
 }
 
+const execFileP = promisify(execFile);
+
 function execP(cmd, args, opts = {}) {
-  return execFile(cmd, args, { timeout: opts.timeout || 120000, encoding: "utf8", ...opts });
+  return execFileP(cmd, args, {
+    timeout: opts.timeout || 120000,
+    encoding: "utf8",
+    ...opts,
+  });
 }
 
 async function writeIfChanged(dest, content, options = {}) {
@@ -237,6 +244,19 @@ async function stepPonytail(pluginsDir, userDir, options = {}) {
 
   if (options.dryRun) {
     console.log("  [dry-run] would run: omp plugin install github:DietrichGebert/ponytail");
+
+    const ponytailExtPath = path.join(
+      pluginsDir,
+      "node_modules",
+      "@dietrichgebert",
+      "ponytail",
+      "pi-extension",
+      "index.js"
+    );
+
+    const configPath = path.join(userDir, "config.yml");
+    await ensureExtensionInConfig(configPath, ponytailExtPath, "ponytail", options);
+    await ensurePonytailDefaultOff(options);
     return;
   }
 

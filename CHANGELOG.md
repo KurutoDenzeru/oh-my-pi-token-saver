@@ -1,3 +1,7 @@
+## v1.2.4
+- Restore `execP` promisify fix accidentally dropped in v1.2.3.
+- Dry-run now previews Ponytail `defaultMode=off` config before returning.
+
 ## v1.2.3
 - Set Ponytail default mode to `off` during install so fresh sessions do not show Ponytail by default.
 - Keep Ponytail available through `/ponytail` and `/combo`.

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // install-omp-addons.js — Install caveman/rtk/ponytail add-ons on any OMP device.
 // Usage: node install-omp-addons.js [update] [--dry-run] [--scope user|project|both] [--yes] [--verbose] [--doctor] [--uninstall]
-// Requires: node, omp CLI, bun (for rtk binary)
+// Requires: node/npm and omp CLI
 
 import https from "node:https";
 import { fileURLToPath } from "node:url";

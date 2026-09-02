@@ -1,3 +1,8 @@
+## Unreleased
+- Make `/ai-addons update ponytail` use npm directly so OMP installations without Bun can update Ponytail.
+- Fix RTK checksum parsing and create its conventional `~/.bun/bin` destination when Bun is absent.
+- Add regression coverage for checksum parsing and the npm-based Ponytail update.
+
 ## v1.3.2
 - Replace every one-off runner example with cache-safe `npm exec` commands.
 - Synchronize README defaults, activation, backup, and checksum guidance with current behavior.

@@ -244,13 +244,14 @@ Copy `extensions/caveman-session/` to `~/.omp/agent/extensions/caveman-session/`
 
 1. Copy `extensions/rtk-session/index.js` to `~/.omp/agent/extensions/rtk-session/index.js`
 2. Download RTK binary from [github.com/rtk-ai/rtk/releases](https://github.com/rtk-ai/rtk/releases)
-3. Place at `~/.bun/bin/rtk.exe` (Windows) or `~/.bun/bin/rtk` (Unix)
+3. Place at `~/.bun/bin/rtk.exe` (Windows) or `~/.bun/bin/rtk` (Unix). This is only a conventional install path; Bun itself is not required.
 
 ### Ponytail
 
 ```bash
+mkdir -p ~/.omp/plugins
 cd ~/.omp/plugins
-omp plugin install github:DietrichGebert/ponytail
+npm install @dietrichgebert/ponytail@latest --save --no-audit --no-fund
 ```
 
 ### Updater
@@ -264,8 +265,9 @@ Copy `extensions/combo-toggle/` to `~/.omp/agent/extensions/combo-toggle/`
 ## Prerequisites
 
 - [OMP (Oh My Pi)](https://github.com/oh-my-pi/pi) installed
-- [Bun](https://bun.sh) installed (for RTK binary path)
-- Node.js 18+
+- Node.js 18+ with npm
+
+The installer and `/ai-addons update all` create `~/.bun/bin` for RTK compatibility even when Bun is not installed.
 
 ## Troubleshooting
 

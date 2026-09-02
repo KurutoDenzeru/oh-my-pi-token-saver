@@ -69,6 +69,15 @@ function sha256Hex(text) {
   return createHash("sha256").update(text, "utf8").digest("hex");
 }
 
+function parseChecksum(checksumsText, assetName) {
+  const target = path.basename(assetName);
+  for (const line of checksumsText.split(/\r?\n/)) {
+    const m = line.match(/^([0-9a-fA-F]{64})\s+\*?(.+)$/);
+    if (m && path.basename(m[2]) === target) return m[1].toLowerCase();
+  }
+  return null;
+}
+
 function normalizeRtkVersion(value) {
   return String(value || "").replace(/^rtk\s+/i, "").replace(/^v/i, "").trim();
 }
@@ -142,17 +151,26 @@ async function checkAddons(ctx) {
 }
 
 async function updatePonytail(pi, ctx, dryRun = false) {
+  const pluginsDir = path.join(HOME, ".omp", "plugins");
   if (dryRun) {
-    const m = "Ponytail dry-run: would run `omp plugin install github:DietrichGebert/ponytail`.";
+    const m = `Ponytail dry-run: would run \`npm install @dietrichgebert/ponytail@latest --save --no-audit --no-fund\` in ${pluginsDir}.`;
     notify(ctx, m, "info");
     return m;
   }
-  notify(ctx, "Ponytail: running omp plugin install…", "info");
+  notify(ctx, "Ponytail: ensuring plugin directory exists…", "info");
+  try {
+    await fs.mkdir(pluginsDir, { recursive: true });
+  } catch (e) {
+    const m = `Ponytail update failed: failed to create ${pluginsDir}: ${e.message}`;
+    notify(ctx, m, "warning");
+    return m;
+  }
+  notify(ctx, "Ponytail: running npm install…", "info");
   let out = "";
   try {
-    const r = await pi.exec("omp", ["plugin", "install", "github:DietrichGebert/ponytail"], { cwd: ctx?.cwd || pi.cwd });
+    const r = await pi.exec("npm", ["install", "@dietrichgebert/ponytail@latest", "--save", "--no-audit", "--no-fund"], { cwd: pluginsDir });
     out = [r.stdout, r.stderr].filter(Boolean).join("\n").trim();
-    if (r.code !== 0) throw new Error(r.stderr || `omp exited ${r.code}`);
+    if (r.code !== 0) throw new Error(r.stderr || `npm exited ${r.code}`);
   } catch (e) {
     const m = `Ponytail update failed: ${e.message}`;
     notify(ctx, m, "warning");
@@ -227,17 +245,9 @@ async function updateRtk(ctx, dryRun = false) {
     await httpsDownload(asset.browser_download_url, archivePath);
     notify(ctx, "RTK: downloading checksums.txt…", "info");
     await httpsDownload(checksAsset.browser_download_url, checksPath);
-
     // Verify SHA256 against checksums.txt
     const checks = await fs.readFile(checksPath, "utf8");
-    const expected = (() => {
-      let hit = null;
-      for (const line of checks.split(/\r?\n/)) {
-        const m = line.match(/^[0-9a-fA-F]{64}\s+\*?(.+)$/);
-        if (m && path.basename(m[2]) === asset.name) { hit = m[1].toLowerCase(); break; }
-      }
-      return hit;
-    })();
+    const expected = parseChecksum(checks, asset.name);
     if (!expected) {
       const m = `RTK: checksums.txt has no entry for ${asset.name}`;
       notify(ctx, m, "warning"); return m;
@@ -271,12 +281,12 @@ async function updateRtk(ctx, dryRun = false) {
     } else {
       throw new Error(`Unknown archive format: ${asset.name}`);
     }
-
     const rtkExtracted = await findFile(extractDir, binaryName);
     if (!rtkExtracted) {
       const m = `RTK: ${binaryName} not found in extracted archive`;
       notify(ctx, m, "warning"); return m;
     }
+    await fs.mkdir(path.dirname(RTK_BINARY), { recursive: true });
     const backupPath = `${RTK_BINARY}.bak`;
     let backedUp = false;
     try {
@@ -421,3 +431,4 @@ export default function aiAddonsUpdaterExtension(pi) {
   });
 }
 
+export { parseChecksum };

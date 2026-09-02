@@ -1,3 +1,7 @@
+## v1.3.2
+- Replace every one-off runner example with cache-safe `npm exec` commands.
+- Synchronize README defaults, activation, backup, and checksum guidance with current behavior.
+
 ## v1.3.1
 - Show the package version in the installer startup header.
 

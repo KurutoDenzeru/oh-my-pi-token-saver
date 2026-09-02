@@ -1,19 +1,19 @@
 # oh-my-pi-supreme-token-saver
 
-Three toggleable OMP extensions that save tokens: terse replies, compact shell output, and minimal code decisions — with a manual updater and dry-run support.
+Three toggleable OMP extensions that save tokens: terse replies, compact shell output, and minimal code decisions — with cache-safe CLI updates, in-session updates, and dry-run support.
 
 ## Install
 
-### Option 1: npx (recommended)
+### Option 1: npm exec (recommended)
 
 ```bash
-npx @fernado03/oh-my-pi-supreme-token-saver
+npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver
 ```
 
 ### Option 2: npm install global
 
 ```bash
-npm install -g @fernado03/oh-my-pi-supreme-token-saver
+npm install -g @fernado03/oh-my-pi-supreme-token-saver@latest
 oh-my-pi-supreme-token-saver
 ```
 
@@ -25,18 +25,24 @@ cd oh-my-pi-supreme-token-saver
 node install-omp-addons.js
 ```
 
+The installer prints the package version it is running:
+
+```text
+=== OMP Supreme Token Saver v<version> ===
+```
+
 ### Update to the latest package
 
 One-off update:
 
 ```bash
-npx @fernado03/oh-my-pi-supreme-token-saver update
+npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver update
 ```
 
 Or, after a global install:
 
 ```bash
-npm install -g @fernado03/oh-my-pi-supreme-token-saver
+npm install -g @fernado03/oh-my-pi-supreme-token-saver@latest
 oh-my-pi-supreme-token-saver update
 ```
 
@@ -58,34 +64,40 @@ Dry run first to see what would change:
 
 ```bash
 # Fetch the latest package and update the user install
-npx @fernado03/oh-my-pi-supreme-token-saver update
+npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver update
 
 # Preview a latest-package update
-npx @fernado03/oh-my-pi-supreme-token-saver update --dry-run
+npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver update --dry-run
 
 # Non-interactive install (user scope, no prompts)
-npx @fernado03/oh-my-pi-supreme-token-saver --scope user --yes
+npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --scope user --yes
 
 # Project-level install
-npx @fernado03/oh-my-pi-supreme-token-saver --scope project --yes
+npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --scope project --yes
 
 # Both user and project
-npx @fernado03/oh-my-pi-supreme-token-saver --scope both --yes
+npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --scope both --yes
 
 # Dry run — shows planned changes without writing
-npx @fernado03/oh-my-pi-supreme-token-saver --dry-run --scope user --yes
+npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --dry-run --scope user --yes
 
 # Doctor — check installation health
-npx @fernado03/oh-my-pi-supreme-token-saver --doctor
+npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --doctor
 
 # Uninstall — removes installed extensions (prompts for confirmation)
-npx @fernado03/oh-my-pi-supreme-token-saver --uninstall
+npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --uninstall
 
 # Uninstall without prompt
-npx @fernado03/oh-my-pi-supreme-token-saver --uninstall --yes
+npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --uninstall --yes
+
+# Also remove the RTK binary during uninstall
+npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --uninstall --yes --remove-rtk
+
+# Unregister Ponytail's extension path during uninstall (keeps the plugin package)
+npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --uninstall --yes --remove-ponytail
 
 # Verbose output (debug details)
-npx @fernado03/oh-my-pi-supreme-token-saver --verbose
+npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --verbose
 ```
 
 ### Scope options
@@ -99,7 +111,7 @@ npx @fernado03/oh-my-pi-supreme-token-saver --verbose
 ### Dry run
 
 ```bash
-npx @fernado03/oh-my-pi-supreme-token-saver --dry-run
+npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --dry-run
 ```
 
 ## What it installs
@@ -109,22 +121,26 @@ npx @fernado03/oh-my-pi-supreme-token-saver --dry-run
 | **Caveman** | `/caveman full` | Shorter replies. Drops filler, keeps technical substance. Modes: `lite`, `full`, `ultra`, `wenyan` |
 | **RTK** | `/rtk on` | Compact shell output. Routes `git status`, `git diff`, `test` through RTK binary |
 | **Ponytail** | `/ponytail full` | Minimal code decisions. Prefers stdlib, avoids over-engineering |
-| **Updater** | `/ai-addons check` | Manual update command with dry-run support. Backs up before replacing |
+| **Updater** | `/ai-addons check` | In-session updates for Ponytail, RTK, and Caveman, with dry-run and backup support |
 | **Combo** | `/combo medium` | Toggle all 3 at once. Levels: `off`, `medium`, `max`. Off by default |
 
 ## After install
 
-Restart OMP, then:
+Restart OMP. Fresh sessions start with all three modes off. Enable them together:
+
+```text
+/combo medium
+```
+
+Or configure them individually:
 
 ```text
 /caveman full
 /rtk on
 /ponytail full
-/ai-addons check
-/combo medium
 ```
 
-By default, this installer sets Ponytail's default mode to `off` so fresh OMP sessions start clean. Use `/combo medium`, `/combo max`, or `/ponytail full` to enable it per session.
+Check installed add-on versions with `/ai-addons check`. Use `/combo max` for the most aggressive combined modes.
 
 ## Commands reference
 
@@ -132,17 +148,17 @@ By default, this installer sets Ponytail's default mode to `off` so fresh OMP se
 
 ```text
 /caveman lite         concise, drops pleasantries
-/caveman full         terse caveman style (default)
+/caveman full         terse caveman style
 /caveman ultra        maximum terse, fragments only
 /caveman wenyan       classical-Chinese-style where clear
 /caveman off          normal mode
 /caveman status       show current mode
 ```
 
-Natural language also works:
+Natural language can turn Caveman off:
 
 ```text
-"caveman full"
+"caveman off"
 "stop caveman"
 "normal mode"
 ```
@@ -171,7 +187,7 @@ rtk lint
 
 ```text
 /ponytail lite        light guidance
-/ponytail full        full YAGNI enforcement (default)
+/ponytail full        full YAGNI enforcement
 /ponytail ultra       aggressive simplification
 /ponytail off         disable
 /ponytail status      show current state
@@ -199,7 +215,7 @@ rtk lint
 /combo help           show available levels
 ```
 
-**Fixed in v1.2.0:** `/combo` no longer sends visible `/caveman`, `/rtk`, `/ponytail` messages. It persists state directly and shows its own status indicator.
+`/combo` persists each extension's state, reloads so the new modes apply immediately, and does not emit visible `/caveman`, `/rtk`, or `/ponytail` command messages.
 
 ## File locations
 
@@ -213,10 +229,10 @@ rtk lint
 
 ## Backup behavior
 
-All updates back up before replacing:
+When the installer replaces an existing extension source file, it first writes `<file>.bak`. The in-session updater also creates:
 
-- RTK binary → `rtk.exe.bak` (restored if `--version` check fails)
-- Caveman `rule.md` → `rule.md.bak` (restored if hash mismatch)
+- RTK binary → `rtk.exe.bak` or `rtk.bak` (restored if the new binary fails validation)
+- Caveman `rule.md` → `rule.md.bak` (restored if the written hash is invalid)
 
 ## Manual install (without the script)
 
@@ -252,6 +268,20 @@ Copy `extensions/combo-toggle/` to `~/.omp/agent/extensions/combo-toggle/`
 - Node.js 18+
 
 ## Troubleshooting
+
+### Installer shows no version or `update` still prompts
+
+An older one-off command selected a cached release. Cancel the prompt and force a registry freshness check:
+
+```bash
+npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver update
+```
+
+Check the latest published version with:
+
+```bash
+npm view @fernado03/oh-my-pi-supreme-token-saver version
+```
 
 ### /ponytail command not found (skill loads but command missing)
 
@@ -299,7 +329,7 @@ Run these to diagnose:
 Or run the installer doctor:
 
 ```bash
-npx @fernado03/oh-my-pi-supreme-token-saver --doctor
+npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --doctor
 ```
 
 ### RTK not executable on Linux/macOS
@@ -310,9 +340,9 @@ The installer now sets `chmod +x` automatically. If manually installed:
 chmod +x ~/.bun/bin/rtk
 ```
 
-### Checksum verification failed
+### Checksum warnings or failures
 
-The installer downloads and verifies RTK against `checksums.txt` from the GitHub release. If verification fails, it aborts safely — no binary is installed.
+The installer verifies RTK against `checksums.txt` when checksum metadata is available, and aborts on a mismatch. If the file or asset entry is unavailable, the installer warns and continues. `/ai-addons update rtk` is stricter and aborts when checksum metadata is missing.
 
 
 MIT

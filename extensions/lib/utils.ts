@@ -15,9 +15,18 @@ export interface HttpDownloadOptions {
   maxRedirects?: number;
 }
 
+// Promise.withResolvers is Node 22+; the package supports Node 18+.
+// ponytail: swap for the built-in when engines bumps to >=22.
+function withResolvers<T>(): { promise: Promise<T>; resolve: (value: T | PromiseLike<T>) => void; reject: (reason?: unknown) => void } {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
+  return { promise, resolve, reject };
+}
+
 export function httpsGet(url: string, opts: HttpGetOptions = {}): Promise<string> {
+  const { promise, resolve, reject } = withResolvers<string>();
   const maxRedirects = opts.maxRedirects ?? 5;
-  const { promise, resolve, reject } = Promise.withResolvers<string>();
   const req = https.get(url, { headers: { "User-Agent": "omp-token-saver", Accept: "application/json,*/*" } }, (res) => {
     if (res.statusCode !== undefined && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
       if (maxRedirects <= 0) { res.resume(); reject(new Error(`Too many redirects fetching ${url}`)); return; }
@@ -39,8 +48,8 @@ export function httpsGet(url: string, opts: HttpGetOptions = {}): Promise<string
 }
 
 export function httpsDownload(url: string, dest: string, opts: HttpDownloadOptions = {}): Promise<void> {
+  const { promise, resolve, reject } = withResolvers<void>();
   const maxRedirects = opts.maxRedirects ?? 5;
-  const { promise, resolve, reject } = Promise.withResolvers<void>();
   const req = https.get(url, { headers: { "User-Agent": "omp-token-saver", Accept: "*/*" } }, (res) => {
     if (res.statusCode !== undefined && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
       if (maxRedirects <= 0) { res.resume(); reject(new Error(`Too many redirects downloading ${url}`)); return; }

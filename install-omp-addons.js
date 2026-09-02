@@ -18,7 +18,7 @@ import readline from "node:readline";
 const IS_WINDOWS = process.platform === "win32";
 const HOME = process.env.HOME || process.env.USERPROFILE || "";
 
-const PACKAGE_NAME = "@fernado03/oh-my-pi-supreme-token-saver";
+const PACKAGE_NAME = "oh-my-pi-token-saver";
 const PACKAGE_BIN = "oh-my-pi-supreme-token-saver";
 const { version: PACKAGE_VERSION } = createRequire(import.meta.url)("./package.json");
 

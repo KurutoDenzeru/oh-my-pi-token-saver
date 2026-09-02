@@ -1,5 +1,5 @@
 {
-  "name": "@fernado03/oh-my-pi-supreme-token-saver",
+  "name": "oh-my-pi-token-saver",
   "version": "1.3.10",
   "description": "Amanai reward detector and three toggleable OMP extensions for terse replies, compact shell output, and minimal code decisions — with a manual updater and dry-run support.",
   "keywords": [
@@ -16,14 +16,14 @@
     "pi-package"
   ],
   "license": "MIT",
-  "author": "Fernado03",
+  "author": "KurutoDenzeru",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Fernado03/oh-my-pi-supreme-token-saver.git"
+    "url": "git+https://github.com/KurutoDenzeru/oh-my-pi-token-saver.git"
   },
-  "homepage": "https://github.com/Fernado03/oh-my-pi-supreme-token-saver",
+  "homepage": "https://github.com/KurutoDenzeru/oh-my-pi-token-saver",
   "bugs": {
-    "url": "https://github.com/Fernado03/oh-my-pi-supreme-token-saver/issues"
+    "url": "https://github.com/KurutoDenzeru/oh-my-pi-token-saver/issues"
   },
   "type": "module",
   "bin": {

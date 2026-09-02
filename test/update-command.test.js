@@ -38,7 +38,7 @@ test("update delegates to the latest package non-interactively", () => {
     assert.equal(result.status, 0, result.stderr);
     assert.match(
       result.stdout,
-      /fake-npm exec --yes --prefer-online --package=@fernado03\/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --apply-update --yes --scope project --dry-run/
+      /fake-npm exec --yes --prefer-online --package=oh-my-pi-token-saver@latest -- oh-my-pi-supreme-token-saver --apply-update --yes --scope project --dry-run/
     );
     assert.match(result.stdout, /=== Update complete ===/);
   } finally {

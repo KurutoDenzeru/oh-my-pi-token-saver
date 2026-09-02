@@ -1,11 +1,13 @@
-# oh-my-pi-supreme-token-saver
+# oh-my-pi-token-saver
+
+> Maintained fork of the unmaintained [Fernado03/oh-my-pi-supreme-token-saver](https://github.com/Fernado03/oh-my-pi-supreme-token-saver). Original author: Fernado03.
 
 A passive Amanai reward detector plus three toggleable [Oh My Pi (OMP)](https://github.com/can1357/oh-my-pi) add-ons for terse replies, compact shell output, and minimal code decisions. It also includes combined toggles, health checks, updates, and dry-run support.
 
 ## Install
 
 ```bash
-npm install -g @fernado03/oh-my-pi-supreme-token-saver@latest
+npm install -g oh-my-pi-token-saver@latest
 oh-my-pi-supreme-token-saver install
 ```
 
@@ -169,7 +171,7 @@ It must resolve to a Linux path such as `~/.nvm/versions/node/.../bin/npm`, not 
 Without keeping the package globally installed, run the latest release once:
 
 ```bash
-npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver install
+npm exec --yes --prefer-online --package=oh-my-pi-token-saver@latest -- oh-my-pi-supreme-token-saver install
 ```
 
 ## Troubleshooting

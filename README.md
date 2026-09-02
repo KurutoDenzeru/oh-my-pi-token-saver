@@ -8,7 +8,7 @@ A passive Amanai reward detector plus three toggleable [Oh My Pi (OMP)](https://
 
 ```bash
 npm install -g oh-my-pi-token-saver@latest
-oh-my-pi-supreme-token-saver install
+oh-my-pi-token-saver install
 ```
 
 The first command installs the CLI globally with npm; the second installs its add-ons into your OMP home, so both are required.
@@ -48,13 +48,13 @@ After the global install, use these short commands for routine maintenance:
 
 | Command | Purpose |
 |---|---|
-| `oh-my-pi-supreme-token-saver install` | Install non-interactively to user scope by default; use `--scope project` or `--scope both` for another scope |
-| `oh-my-pi-supreme-token-saver update` | Fetch the latest release and refresh the user installation |
-| `oh-my-pi-supreme-token-saver reinstall` | Remove the bundled extension directories and RTK binary, then install fresh at user scope; the separate Ponytail package is preserved and refreshed |
-| `oh-my-pi-supreme-token-saver doctor` | Check OMP, extension, Ponytail, and RTK installation health |
-| `oh-my-pi-supreme-token-saver uninstall` | Remove bundled extensions; add `--remove-rtk` to remove the RTK binary or `--remove-ponytail` to unregister Ponytail's extension path (the Ponytail package remains installed) |
-| `oh-my-pi-supreme-token-saver version` | Print the package version (`--version` or `-v` also works) |
-| `oh-my-pi-supreme-token-saver help` | Show usage (`--help` or `-h` also works) |
+| `oh-my-pi-token-saver install` | Install non-interactively to user scope by default; use `--scope project` or `--scope both` for another scope |
+| `oh-my-pi-token-saver update` | Fetch the latest release and refresh the user installation |
+| `oh-my-pi-token-saver reinstall` | Remove the bundled extension directories and RTK binary, then install fresh at user scope; the separate Ponytail package is preserved and refreshed |
+| `oh-my-pi-token-saver doctor` | Check OMP, extension, Ponytail, and RTK installation health |
+| `oh-my-pi-token-saver uninstall` | Remove bundled extensions; add `--remove-rtk` to remove the RTK binary or `--remove-ponytail` to unregister Ponytail's extension path (the Ponytail package remains installed) |
+| `oh-my-pi-token-saver version` | Print the package version (`--version` or `-v` also works) |
+| `oh-my-pi-token-saver help` | Show usage (`--help` or `-h` also works) |
 
 Useful flags are `--scope user|project|both`, `--dry-run`, `--yes`/`-y`, and `--verbose`. The original no-subcommand install and legacy `--doctor` and `--uninstall` forms remain supported.
 
@@ -171,18 +171,18 @@ It must resolve to a Linux path such as `~/.nvm/versions/node/.../bin/npm`, not 
 Without keeping the package globally installed, run the latest release once:
 
 ```bash
-npm exec --yes --prefer-online --package=oh-my-pi-token-saver@latest -- oh-my-pi-supreme-token-saver install
+npm exec --yes --prefer-online --package=oh-my-pi-token-saver@latest -- oh-my-pi-token-saver install
 ```
 
 ## Troubleshooting
 
 ### Ponytail or Combo command is missing
 
-Run `oh-my-pi-supreme-token-saver reinstall` in the same Windows, WSL, or Linux environment where OMP runs, restart OMP, then try `/ponytail status` and `/combo status`. If either is still missing, run `oh-my-pi-supreme-token-saver doctor`; the installer normally repairs both explicit registrations in `~/.omp/agent/config.yml`.
+Run `oh-my-pi-token-saver reinstall` in the same Windows, WSL, or Linux environment where OMP runs, restart OMP, then try `/ponytail status` and `/combo status`. If either is still missing, run `oh-my-pi-token-saver doctor`; the installer normally repairs both explicit registrations in `~/.omp/agent/config.yml`.
 
 ### RTK is missing or not executable
 
-Run `oh-my-pi-supreme-token-saver reinstall`, then `oh-my-pi-supreme-token-saver doctor`. On Linux or macOS, an older manually installed binary can be repaired with:
+Run `oh-my-pi-token-saver reinstall`, then `oh-my-pi-token-saver doctor`. On Linux or macOS, an older manually installed binary can be repaired with:
 
 ```bash
 chmod +x ~/.bun/bin/rtk

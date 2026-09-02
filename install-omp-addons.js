@@ -19,7 +19,7 @@ const IS_WINDOWS = process.platform === "win32";
 const HOME = process.env.HOME || process.env.USERPROFILE || "";
 
 const PACKAGE_NAME = "oh-my-pi-token-saver";
-const PACKAGE_BIN = "oh-my-pi-supreme-token-saver";
+const PACKAGE_BIN = "oh-my-pi-token-saver";
 const { version: PACKAGE_VERSION } = createRequire(import.meta.url)("./package.json");
 
 // --- CLI flags ---
@@ -121,7 +121,7 @@ function parseChecksum(checksumsText, assetName) {
 
 async function httpsGet(url) {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, { headers: { "User-Agent": "omp-supreme-token-saver" } }, (res) => {
+    const req = https.get(url, { headers: { "User-Agent": "omp-token-saver" } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         res.resume();
         httpsGet(new URL(res.headers.location, url).href).then(resolve).catch(reject);
@@ -138,7 +138,7 @@ async function httpsGet(url) {
 
 async function httpsDownload(url, dest) {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, { headers: { "User-Agent": "omp-supreme-token-saver" } }, (res) => {
+    const req = https.get(url, { headers: { "User-Agent": "omp-token-saver" } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         httpsDownload(new URL(res.headers.location, url).href, dest).then(resolve).catch(reject);
         return;
@@ -648,7 +648,7 @@ async function stepAmanaiReward(extDir, options = {}) {
 // --- Doctor ---
 
 async function runDoctor() {
-  console.log("\n=== OMP Supreme Token Saver Doctor ===\n");
+  console.log("\n=== OMP Token Saver Doctor ===\n");
 
   // Node
   console.log(`  Node: ok v${process.version}`);
@@ -749,7 +749,7 @@ async function runUninstall(options = {}) {
   const shouldRemoveRtk = options.removeRtk ?? removeRtk;
   const shouldDryRun = options.dryRun ?? dryRun;
 
-  console.log("\n=== OMP Supreme Token Saver Uninstall ===\n");
+  console.log("\n=== OMP Token Saver Uninstall ===\n");
 
   const extDir = path.join(HOME, ".omp", "agent", "extensions");
   const configPath = path.join(HOME, ".omp", "agent", "config.yml");
@@ -857,7 +857,7 @@ async function runLatestUpdate() {
   const npmCommand = IS_WINDOWS ? process.env.ComSpec || "cmd.exe" : "npm";
   const npmCommandArgs = IS_WINDOWS ? ["/d", "/s", "/c", "npm", ...npmArgs] : npmArgs;
 
-  console.log("=== Updating OMP Supreme Token Saver ===");
+  console.log("=== Updating OMP Token Saver ===");
   console.log(`  Running the latest ${PACKAGE_NAME} installer...\n`);
 
   try {
@@ -925,7 +925,7 @@ async function main() {
 
   if (dryRun) console.log("[dry-run] No changes will be written.\n");
 
-  console.log(`=== OMP Supreme Token Saver v${PACKAGE_VERSION} ===`);
+  console.log(`=== OMP Token Saver v${PACKAGE_VERSION} ===`);
   console.log(`  Platform: ${process.platform}`);
   console.log(`  Arch: ${process.arch}`);
   console.log(`  Home: ${HOME}`);

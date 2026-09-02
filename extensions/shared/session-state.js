@@ -1,4 +1,4 @@
-const BRIDGE_KEY = Symbol.for("@fernado03/oh-my-pi-supreme-token-saver/combo-session-state");
+const BRIDGE_KEY = Symbol.for("oh-my-pi-token-saver/combo-session-state");
 
 export const OMP_SUBAGENT_MARKER = "You are operating on a piece of work assigned to you by the main agent.";
 

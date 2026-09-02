@@ -18,7 +18,7 @@ function instruction(state) {
 }
 
 export default function modeReinforcementExtension(pi) {
-  pi.setLabel?.("Supreme Token Saver mode reinforcement");
+  pi.setLabel?.("Token Saver mode reinforcement");
 
   pi.on("before_agent_start", async (event, ctx) => {
     if (!ctx?.hasUI) return;

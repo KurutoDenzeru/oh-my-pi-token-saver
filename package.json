@@ -1,6 +1,6 @@
 {
   "name": "oh-my-pi-token-saver",
-  "version": "1.3.10",
+  "version": "1.0.0",
   "description": "Amanai reward detector and three toggleable OMP extensions for terse replies, compact shell output, and minimal code decisions — with a manual updater and dry-run support.",
   "keywords": [
     "omp",
@@ -27,7 +27,7 @@
   },
   "type": "module",
   "bin": {
-    "oh-my-pi-supreme-token-saver": "install-omp-addons.js"
+    "oh-my-pi-token-saver": "install-omp-addons.js"
   },
   "omp": {
     "extensions": [

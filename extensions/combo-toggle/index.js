@@ -67,7 +67,7 @@ export default function comboToggleExtension(pi) {
     const c = ctx || lastCtx;
     if (!c?.ui?.setStatus) return;
 
-    if (currentState.level === "off") {
+    if (currentState.level !== "medium" && currentState.level !== "max") {
       c.ui.setStatus("combo", "");
       return;
     }
@@ -102,7 +102,7 @@ export default function comboToggleExtension(pi) {
       if (!arg || arg === "status") {
         const state = reconcile(ctx);
         ctx?.ui?.notify?.(
-          `Combo: ${state.level.toUpperCase()} (${levelSummary(state)})`,
+          `Combo: ${state.level === "custom" ? "INACTIVE" : state.level.toUpperCase()} (${levelSummary(state)})`,
           "info"
         );
         return;

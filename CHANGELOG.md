@@ -1,3 +1,6 @@
+## v1.3.8
+- Keep the Combo footer indicator hidden for individual Caveman, RTK, and Ponytail modes; it now appears only for explicit `/combo medium` or `/combo max` presets.
+
 ## v1.3.7
 - Add a passive Amanai reward detector for OMP and original Pi: it notices final successful `AMANAI-GACHA-…` keys locally without retaining, exposing, sending, redeeming, or altering them; the installer, uninstaller, doctor, package manifests, and tests cover the OMP adapter.
 - Require an explicit `/combo medium` or `/combo max` command to activate a Combo preset; individual Caveman, RTK, and Ponytail commands now remain `CUSTOM`, even when their modes match a preset.

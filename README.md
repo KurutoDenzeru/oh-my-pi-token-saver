@@ -123,7 +123,7 @@ rtk lint
 
 `/combo` persists each add-on's state and reloads OMP so the new modes apply immediately, without emitting separate `/caveman`, `/rtk`, or `/ponytail` command messages.
 
-Active Combo modes are inherited by OMP task subagents created from the session. `/combo medium` or `/combo max` is the only way to activate a Combo preset. Individual `/caveman`, `/rtk`, and `/ponytail` commands always display `CUSTOM` while any individual mode is enabled—even if their values happen to equal a preset—and subagents inherit that actual mixed state.
+Active Combo presets are inherited by OMP task subagents created from the session. `/combo medium` or `/combo max` is the only way to activate a preset and show the Combo footer indicator. Individual `/caveman`, `/rtk`, and `/ponytail` commands leave Combo inactive; `/combo status` reports their actual mixed state without turning the indicator on.
 
 ## File locations
 

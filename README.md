@@ -72,6 +72,7 @@ npx @fernado03/oh-my-pi-supreme-token-saver --dry-run
 | **RTK** | `/rtk on` | Compact shell output. Routes `git status`, `git diff`, `test` through RTK binary |
 | **Ponytail** | `/ponytail full` | Minimal code decisions. Prefers stdlib, avoids over-engineering |
 | **Updater** | `/ai-addons check` | Manual update command with dry-run support. Backs up before replacing |
+| **Combo** | `/combo medium` | Toggle all 3 at once. Levels: `off`, `medium`, `max`. Off by default |
 
 ## After install
 
@@ -82,6 +83,7 @@ Restart OMP, then:
 /rtk on
 /ponytail full
 /ai-addons check
+/combo medium
 ```
 
 ## Commands reference
@@ -147,6 +149,16 @@ rtk lint
 /ai-addons update all --dry-run           dry run, no changes
 ```
 
+### Combo — toggle all 3 at once
+
+```text
+/combo off            all three off (default)
+/combo medium         caveman=lite, rtk=on, ponytail=lite
+/combo max            caveman=ultra, rtk=on, ponytail=ultra
+/combo status         show current level
+/combo help           show available levels
+```
+
 ## File locations
 
 | What | Path |
@@ -154,8 +166,8 @@ rtk lint
 | Caveman extension | `~/.omp/agent/extensions/caveman-session/` |
 | RTK extension | `~/.omp/agent/extensions/rtk-session/index.js` |
 | Ponytail | `~/.omp/plugins/node_modules/@dietrichgebert/ponytail/` |
-| RTK binary | `~/.bun/bin/rtk.exe` (Win) / `~/.bun/bin/rtk` (Unix) |
 | Updater | `~/.omp/agent/extensions/ai-addons-updater/index.js` |
+| Combo toggle | `~/.omp/agent/extensions/combo-toggle/index.js` |
 
 ## Backup behavior
 
@@ -186,6 +198,10 @@ omp plugin install github:DietrichGebert/ponytail
 ### Updater
 
 Copy `extensions/ai-addons-updater/` to `~/.omp/agent/extensions/ai-addons-updater/`
+
+### Combo toggle
+
+Copy `extensions/combo-toggle/` to `~/.omp/agent/extensions/combo-toggle/`
 
 ## Prerequisites
 

@@ -95,7 +95,7 @@ async function writeIfChanged(dest, content) {
 // --- Steps ---
 
 async function stepPonytail(pluginsDir, userDir) {
-  console.log("\n[1/4] Installing Ponytail plugin...");
+  console.log("\n[1/5] Installing Ponytail plugin...");
   await fs.mkdir(pluginsDir, { recursive: true });
   const pkgPath = path.join(pluginsDir, "package.json");
   let pkg = {};
@@ -191,7 +191,7 @@ async function stepPonytail(pluginsDir, userDir) {
 }
 
 async function stepRtk(binDir) {
-  console.log("\n[2/4] Installing RTK binary...");
+  console.log("\n[2/5] Installing RTK binary...");
   try {
     const raw = await httpsGet(RTK_RELEASE_API);
     const release = JSON.parse(raw);
@@ -283,7 +283,7 @@ async function stepRtk(binDir) {
 }
 
 async function stepRtkSession(extDir) {
-  console.log("\n[3/4] Installing RTK session extension...");
+  console.log("\n[3/5] Installing RTK session extension...");
   const src = await readIfExists(RTK_SESSION_INDEX);
   if (!src) {
     console.log("  [skip] rtk-session/index.js not found in repo");
@@ -294,7 +294,7 @@ async function stepRtkSession(extDir) {
 }
 
 async function stepCaveman(extDir) {
-  console.log("\n[4/4] Installing Caveman session extension...");
+  console.log("\n[4/5] Installing Caveman session extension...");
   const cavemanDir = path.join(extDir, "caveman-session");
   await fs.mkdir(cavemanDir, { recursive: true });
 
@@ -320,7 +320,20 @@ async function stepCaveman(extDir) {
   }
 }
 
-// --- Main ---
+// NOTE: combo-toggle follows the file-only install pattern (like stepCaveman/stepRtkSession),
+// assuming OMP auto-discovers ~/.omp/agent/extensions/*/index.js. If /combo doesn't load after
+// restart in your setup, the user must add ~/.omp/agent/extensions/combo-toggle/index.js to
+// ~/.omp/agent/config.yml under `extensions:` (same fix as ponytail).
+async function stepCombo(extDir) {
+  console.log("\n[5/5] Installing Combo toggle extension (off by default)...");
+  const src = await readIfExists(COMBO_TOGGLE_INDEX);
+  if (!src) {
+    console.log("  [skip] combo-toggle/index.js not found in repo");
+    return;
+  }
+  const dest = path.join(extDir, "combo-toggle", "index.js");
+  await writeIfChanged(dest, src);
+}
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
@@ -364,13 +377,15 @@ async function main() {
     await stepRtk(bunBinDir);
     await stepRtkSession(userExtDir);
     await stepCaveman(userExtDir);
+    await stepCombo(userExtDir);
   }
+
 
   if (scope === "2" || scope === "3") {
     console.log("\n--- Project-level install ---");
     await stepRtkSession(projectExtDir);
     await stepCaveman(projectExtDir);
-    console.log("  [note] Ponytail and RTK binary require user-level (global) install");
+    console.log("  [note] Ponytail, RTK binary, and Combo toggle require user-level (global) install");
   }
 
   console.log("\n=== Installation complete ===");
@@ -380,6 +395,7 @@ async function main() {
   console.log("  3. /rtk on");
   console.log("  4. /ponytail full");
   console.log("  5. /ai-addons check");
+  console.log("  6. /combo medium   (toggle all 3 at once — off by default)");
 }
 
 main().catch(console.error);

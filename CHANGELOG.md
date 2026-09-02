@@ -1,3 +1,6 @@
+## v1.3.1
+- Show the package version in the installer startup header.
+
 ## v1.3.0
 - Add `update` CLI command that delegates to the latest npm package and reapplies the installer non-interactively.
 

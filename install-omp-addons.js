@@ -5,6 +5,7 @@
 
 import https from "node:https";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 import { createWriteStream } from "node:fs";
 import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
@@ -19,6 +20,7 @@ const HOME = process.env.HOME || process.env.USERPROFILE || "";
 
 const PACKAGE_NAME = "@fernado03/oh-my-pi-supreme-token-saver";
 const PACKAGE_BIN = "oh-my-pi-supreme-token-saver";
+const { version: PACKAGE_VERSION } = createRequire(import.meta.url)("./package.json");
 
 // --- CLI flags ---
 
@@ -757,7 +759,7 @@ async function main() {
 
   if (dryRun) console.log("[dry-run] No changes will be written.\n");
 
-  console.log("=== OMP Supreme Token Saver ===");
+  console.log(`=== OMP Supreme Token Saver v${PACKAGE_VERSION} ===`);
   console.log(`  Platform: ${process.platform}`);
   console.log(`  Arch: ${process.arch}`);
   console.log(`  Home: ${HOME}`);

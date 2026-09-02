@@ -44,6 +44,7 @@
     "extensions/**/*.js"
   ],
   "scripts": {
+    "clean": "rm -f install-omp-addons.js extensions/**/*.js",
     "build": "tsc",
     "check": "tsc --noEmit",
     "doctor": "node install-omp-addons.js --doctor",

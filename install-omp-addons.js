@@ -25,6 +25,7 @@ const EXT_DIR = path.join(SCRIPT_DIR, "extensions");
 const CAVEMAN_INDEX = path.join(EXT_DIR, "caveman-session", "index.js");
 const RTK_SESSION_INDEX = path.join(EXT_DIR, "rtk-session", "index.js");
 const UPDATER_INDEX = path.join(EXT_DIR, "ai-addons-updater", "index.js");
+const COMBO_TOGGLE_INDEX = path.join(EXT_DIR, "combo-toggle", "index.js");
 const CAVEMAN_REMOTE_RULE = "https://raw.githubusercontent.com/JuliusBrussee/caveman/main/src/rules/caveman-activate.md";
 const RTK_RELEASE_API = "https://api.github.com/repos/rtk-ai/rtk/releases/latest";
 
@@ -245,15 +246,16 @@ async function stepRtk(binDir) {
       }
     } else if (asset.name.endsWith(".tar.gz") || asset.name.endsWith(".tgz")) {
       await execP("tar", ["xzf", archivePath, "-C", extractDir], { timeout: 60000 });
+      try { const s = await fs.stat(archivePath); console.log(`  [debug] tar ok; archiveBytes=${s.size}`); } catch {}
+      try { console.log(`  [debug] extractDir listing: ${JSON.stringify(await fs.readdir(extractDir))}`); } catch {}
     } else {
       console.log(`  [fail] Unknown archive format: ${asset.name}`);
       await fs.rm(tmpDir, { recursive: true, force: true });
       return;
     }
 
-    // Find binary
-    const binaryName = IS_WINDOWS ? "rtk.exe" : "rtk";
     const entries = await fs.readdir(extractDir, { recursive: true });
+    console.log(`  [debug] recursiveReaddir=${JSON.stringify(entries)} basenameMatch=${entries.find((e) => path.basename(e) === binaryName) || 'NONE'}`);
     const found = entries.find((e) => path.basename(e) === binaryName);
     if (!found) {
       console.log(`  [fail] Could not find ${binaryName} in extracted archive`);

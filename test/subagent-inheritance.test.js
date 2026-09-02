@@ -269,7 +269,7 @@ test("Combo indicator appears only after a Combo preset", async () => {
   const ctx = context(entries, true);
 
   await command(combo, "combo", "medium", ctx);
-  assert.match(ctx.statuses.get("combo"), /combo: 🪨caveman=LITE ⚡rtk=ON 🦥ponytail=LITE/);
+  assert.match(ctx.statuses.get("combo"), /combo MEDIUM: 🪨caveman=LITE ⚡rtk=ON 🦥ponytail=LITE/);
 
   entries.push({ type: "custom", customType: "ponytail-mode", data: { mode: "ultra" } });
   await command(combo, "combo", "status", ctx);

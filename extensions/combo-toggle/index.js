@@ -76,8 +76,14 @@ export default function comboToggleExtension(pi) {
     const c0 = currentState.caveman.toUpperCase();
     const r = currentState.rtk.toUpperCase();
     const p = currentState.ponytail.toUpperCase();
-    const label = `combo: 🪨caveman=${c0} ⚡rtk=${r} 🦥ponytail=${p}`;
+    const lvl = currentState.level.toUpperCase();
+    const label = `combo ${lvl}: 🪨caveman=${c0} ⚡rtk=${r} 🦥ponytail=${p}`;
     c.ui.setStatus("combo", theme?.fg ? `${theme.fg("accent", "🧩")} ${theme.fg("muted", label)}` : `🧩 ${label}`);
+    // Clobber any sibling bars another extension may have painted in a race
+    // during session_start — our bar is canonical for the duration of the preset.
+    c.ui.setStatus("caveman", "");
+    c.ui.setStatus("rtk", "");
+    c.ui.setStatus("ponytail", "");
   }
 
   function useState(state, ctx) {

@@ -323,8 +323,15 @@ async function findFile(dir, name) {
       if (e.isDirectory()) {
         const r = await findFile(full, name);
         if (r) return r;
-      } else if (e.name === name) {
-        return full;
+      } else if (e.isFile()) {
+        if (e.name === name) return full;
+        // Match rtk-* asset names (e.g. rtk-x86_64-unknown-linux-musl)
+        if (name === "rtk" || name === "rtk.exe") {
+          const base = e.name.toLowerCase();
+          if (!/\.(txt|md|json|sha256|sig|asc|pem|crt|license)$/i.test(base)) {
+            if (base === "rtk" || base === "rtk.exe" || /^rtk[-_.]/.test(base)) return full;
+          }
+        }
       }
     }
   } catch { /* ignore */ }

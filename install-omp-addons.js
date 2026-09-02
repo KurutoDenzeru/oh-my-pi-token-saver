@@ -11,6 +11,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import readline from "node:readline";
 
 const IS_WINDOWS = process.platform === "win32";
@@ -113,8 +114,36 @@ async function httpsDownload(url, dest) {
   });
 }
 
+async function walkFiles(dir) {
+  const out = [];
+  let entries;
+  try { entries = await fs.readdir(dir, { withFileTypes: true }); } catch { return out; }
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      out.push(...await walkFiles(full));
+    } else if (entry.isFile()) {
+      out.push(full);
+    }
+  }
+  return out;
+}
+
+async function findRtkBinary(extractDir, binaryName) {
+  const files = await walkFiles(extractDir);
+  const exact = files.find((file) => path.basename(file) === binaryName);
+  if (exact) return exact;
+  const candidates = files.filter((file) => {
+    const base = path.basename(file).toLowerCase();
+    if (/\.(txt|md|json|sha256|sig|asc|pem|crt|license)$/i.test(base)) return false;
+    return base === "rtk" || base === "rtk.exe" || /^rtk[-_.]/.test(base);
+  });
+  return candidates[0] || null;
+}
+const execFileP = promisify(execFile);
+
 function execP(cmd, args, opts = {}) {
-  return execFile(cmd, args, { timeout: opts.timeout || 120000, encoding: "utf8", ...opts });
+  return execFileP(cmd, args, { timeout: opts.timeout || 120000, encoding: "utf8", ...opts });
 }
 
 async function writeIfChanged(dest, content, options = {}) {
@@ -370,11 +399,14 @@ async function stepRtk(binDir, options = {}) {
       return;
     }
 
-    // Find binary
+    // Find binary (robust to rtk-* asset names per RTK release packaging)
     const binaryName = IS_WINDOWS ? "rtk.exe" : "rtk";
-    const entries = await fs.readdir(extractDir, { recursive: true });
-    debug(`extracted entries: ${entries.join(", ")}`);
-    const found = entries.find((e) => path.basename(e) === binaryName);
+    if (verbose) {
+      const files = await walkFiles(extractDir);
+      debug("extracted files:");
+      for (const file of files) debug(`- ${file}`);
+    }
+    const found = await findRtkBinary(extractDir, binaryName);
     if (!found) {
       console.log(`  [fail] Could not find ${binaryName} in extracted archive`);
       await fs.rm(tmpDir, { recursive: true, force: true });
@@ -382,7 +414,7 @@ async function stepRtk(binDir, options = {}) {
     }
 
     await fs.mkdir(path.dirname(binDest), { recursive: true });
-    await fs.copyFile(path.join(extractDir, found), binDest);
+    await fs.copyFile(found, binDest);
     console.log(`  [write] ${binDest}`);
 
     // Set executable bit on Unix

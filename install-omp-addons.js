@@ -293,6 +293,36 @@ async function ensurePonytailDefaultOff(options = {}) {
   console.log(`  [write] Set Ponytail defaultMode=off in ${configPath}`);
 }
 
+
+// Sets ~/.config/ponytail/config.json#hideStatus=true so the upstream ponytail
+// status bar doesn't render — the combo extension owns the bar instead.
+async function ensurePonytailHideStatus(options = {}) {
+  const configDir = process.env.XDG_CONFIG_HOME
+    ? path.join(process.env.XDG_CONFIG_HOME, "ponytail")
+    : path.join(HOME, ".config", "ponytail");
+  const configPath = path.join(configDir, "config.json");
+  if (options.dryRun) {
+    console.log(`  [dry-run] would set Ponytail hideStatus=true in ${configPath}`);
+    return;
+  }
+  let config = {};
+  const existing = await readIfExists(configPath);
+  if (existing) {
+    try {
+      config = JSON.parse(existing.replace(/^\uFEFF/, ""));
+      if (!config || typeof config !== "object" || Array.isArray(config)) config = {};
+    } catch { config = {}; }
+  }
+  if (config.hideStatus === true) {
+    debug("Ponytail hideStatus already true");
+    return;
+  }
+  await fs.mkdir(configDir, { recursive: true });
+  config.hideStatus = true;
+  await fs.writeFile(configPath, JSON.stringify(config, null, 2) + "\n", "utf8");
+  console.log(`  [write] Set Ponytail hideStatus=true in ${configPath}`);
+}
+
 // --- Steps ---
 
 async function stepPonytail(pluginsDir, userDir, options = {}) {
@@ -333,6 +363,7 @@ async function stepPonytail(pluginsDir, userDir, options = {}) {
     const configPath = path.join(userDir, "config.yml");
     await ensureExtensionInConfig(configPath, ponytailExtPath, "ponytail", options);
     await ensurePonytailDefaultOff(options);
+    await ensurePonytailHideStatus(options);
     return;
   }
 
@@ -404,6 +435,7 @@ async function stepPonytail(pluginsDir, userDir, options = {}) {
     console.log("  [hint] The /ponytail command won't work, but ponytail skills will still load");
     // Still set Ponytail config defaultMode=off even without the extension command
     await ensurePonytailDefaultOff(options);
+    await ensurePonytailHideStatus(options);
     return;
   }
 
@@ -412,6 +444,7 @@ async function stepPonytail(pluginsDir, userDir, options = {}) {
   const configPath = path.join(userDir, "config.yml");
   await ensureExtensionInConfig(configPath, ponytailExtPath, "ponytail", options);
   await ensurePonytailDefaultOff(options);
+  await ensurePonytailHideStatus(options);
 }
 
 // Registers this package in ~/.omp/plugins so OMP lists it on the

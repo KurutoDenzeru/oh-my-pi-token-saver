@@ -66,16 +66,18 @@ export default function comboToggleExtension(pi) {
     if (ctx) lastCtx = ctx;
     const c = ctx || lastCtx;
     if (!c?.ui?.setStatus) return;
-
+    // Single unified bar replaces the three per-extension bars while a preset is
+    // active. In custom/off, the individual bars come back and combo stays clear.
     if (currentState.level !== "medium" && currentState.level !== "max") {
       c.ui.setStatus("combo", "");
       return;
     }
-
     const theme = c.ui.theme;
-    const indicator = theme?.fg ? theme.fg("accent", "🧩") : "🧩";
-    const label = `combo: ${currentState.level.toUpperCase()} · caveman=${currentState.caveman.toUpperCase()} · rtk=${currentState.rtk.toUpperCase()} · ponytail=${currentState.ponytail.toUpperCase()}`;
-    c.ui.setStatus("combo", theme?.fg ? `${indicator} ${theme.fg("muted", label)}` : `${indicator} ${label}`);
+    const c0 = currentState.caveman.toUpperCase();
+    const r = currentState.rtk.toUpperCase();
+    const p = currentState.ponytail.toUpperCase();
+    const label = `combo: 🪨caveman=${c0} ⚡rtk=${r} 🦥ponytail=${p}`;
+    c.ui.setStatus("combo", theme?.fg ? `${theme.fg("accent", "🧩")} ${theme.fg("muted", label)}` : `🧩 ${label}`);
   }
 
   function useState(state, ctx) {

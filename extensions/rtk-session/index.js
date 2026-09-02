@@ -39,6 +39,11 @@ export default function rtkSessionExtension(pi) {
     if (ctx) lastCtx = ctx;
     const c = ctx || lastCtx;
     if (!c?.ui?.setStatus) return;
+    // Combo owns the bar when a preset is active; keep ours empty to avoid duplication.
+    if (getSharedComboState().level === "medium" || getSharedComboState().level === "max") {
+      c.ui.setStatus("rtk", "");
+      return;
+    }
     if (!enabled) {
       c.ui.setStatus("rtk", "");
       return;

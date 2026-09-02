@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": false,
+        "amount": 5
+    },
+    "auditLog": "/Users/kurtcalacday/Documents/Projects/Personal/oh-my-pi-token-saver/test/definitely-missing-home/.omp/logs/.omp.6303-audit.json",
+    "files": [
+        {
+            "date": 1788322344204,
+            "name": "/Users/kurtcalacday/Documents/Projects/Personal/oh-my-pi-token-saver/test/definitely-missing-home/.omp/logs/omp.2026-09-02.6303.log",
+            "hash": "00c7853624c163a3253ca39c37336a90f748ffcb69217ef4a71a8a101c740539"
+        }
+    ],
+    "hashType": "sha256"
+}

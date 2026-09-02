@@ -5,7 +5,8 @@
 
 import https from "node:https";
 import { fileURLToPath } from "node:url";
-import { createHash, createWriteStream } from "node:fs";
+import { createWriteStream } from "node:fs";
+import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import os from "node:os";

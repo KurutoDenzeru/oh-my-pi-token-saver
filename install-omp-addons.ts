@@ -39,6 +39,32 @@ interface InstallOptions {
   reinstall: boolean;
 }
 
+// Session-start mode defaults for fresh installs.
+const COMBO_DEFAULTS: Record<string, true> = { off: true, medium: true, balanced: true, max: true };
+const CAVEMAN_DEFAULTS: Record<string, true> = { off: true, lite: true, full: true, ultra: true, wenyan: true };
+
+interface Profile {
+  comboDefault: string;
+  cavemanDefault: string;
+  rtkDefault: boolean;
+}
+
+function parseEnum(value: string | undefined, valid: Record<string, true>, flag: string): string | undefined {
+  if (value === undefined) return undefined;
+  const v = value.trim().toLowerCase();
+  if (!(v in valid)) {
+    console.error(`[fail] Invalid ${flag}: ${value}. Valid: ${Object.keys(valid).join(", ")}`);
+    process.exit(1);
+  }
+  return v;
+}
+
+function flagValue(name: string): string | undefined {
+  const i = args.indexOf(name);
+  if (i === -1) return undefined;
+  return args[i + 1];
+}
+
 // --- CLI flags ---
 
 const COMMANDS: Record<string, true> = { install: true, update: true, reinstall: true, doctor: true, uninstall: true, version: true, help: true };
@@ -66,6 +92,20 @@ const scopeFlag = (() => {
   return args[i + 1]?.toLowerCase() || null;
 })();
 
+// --- Profile selection (session-start mode defaults) ---
+
+const comboDefaultFlag = parseEnum(flagValue("--combo-default"), COMBO_DEFAULTS, "--combo-default");
+const cavemanDefaultFlag = parseEnum(flagValue("--caveman-default"), CAVEMAN_DEFAULTS, "--caveman-default");
+const rtkDefaultFlag = flagValue("--rtk-default")?.toLowerCase();
+
+if (rtkDefaultFlag !== undefined && rtkDefaultFlag !== "on" && rtkDefaultFlag !== "off") {
+  console.error(`[fail] Invalid --rtk-default: ${rtkDefaultFlag}. Use: on, off`);
+  process.exit(1);
+}
+
+const profileFlagsGiven = comboDefaultFlag !== undefined
+  || cavemanDefaultFlag !== undefined || rtkDefaultFlag !== undefined;
+
 function printHelp(): void {
   console.log(`Usage: ${PACKAGE_BIN} [command] [options]
 
@@ -80,6 +120,9 @@ Commands:
 
 Options:
   --scope user|project|both
+  --combo-default off|medium|balanced|max
+  --caveman-default off|lite|full|ultra|wenyan
+  --rtk-default on|off
   --yes, -y
   --dry-run
   --verbose
@@ -110,6 +153,7 @@ const AMANAI_REWARD_INDEX = path.join(EXT_DIR, "amanai-reward", "index.js");
 const MODE_REINFORCEMENT_INDEX = path.join(EXT_DIR, "shared", "mode-reinforcement.js");
 const SHARED_TYPES = path.join(EXT_DIR, "shared", "types.js");
 const LIB_UTILS = path.join(EXT_DIR, "lib", "utils.js");
+const SHARED_PLUGIN_SETTINGS = path.join(EXT_DIR, "shared", "plugin-settings.js");
 const CAVEMAN_REMOTE_RULE = "https://raw.githubusercontent.com/JuliusBrussee/caveman/main/src/rules/caveman-activate.md";
 const RTK_RELEASE_API = "https://api.github.com/repos/rtk-ai/rtk/releases/latest";
 
@@ -634,6 +678,8 @@ async function stepSharedSessionState(extDir: string, options: WriteOptions): Pr
   if (typesSrc) await writeIfChanged(path.join(extDir, "shared", "types.js"), typesSrc, options);
   const utilsSrc = await readTextIfExists(LIB_UTILS);
   if (utilsSrc) await writeIfChanged(path.join(extDir, "lib", "utils.js"), utilsSrc, options);
+  const settingsSrc = await readTextIfExists(SHARED_PLUGIN_SETTINGS);
+  if (settingsSrc) await writeIfChanged(path.join(extDir, "shared", "plugin-settings.js"), settingsSrc, options);
 }
 
 async function stepModeReinforcement(extDir: string, ponytailExtPath: string, options: WriteOptions): Promise<void> {
@@ -676,14 +722,15 @@ async function stepCaveman(extDir: string, options: WriteOptions): Promise<void>
   }
   await writeIfChanged(path.join(cavemanDir, "index.js"), src, options);
 
-  // Write updater
+}
+
+async function stepUpdater(extDir: string, options: WriteOptions): Promise<void> {
   const updaterSrc = await readTextIfExists(UPDATER_INDEX);
-  if (updaterSrc) {
-    const updaterDest = path.join(extDir, "ai-addons-updater", "index.js");
-    await writeIfChanged(updaterDest, updaterSrc, options);
-  } else {
+  if (!updaterSrc) {
     console.log("  [skip] ai-addons-updater/index.js not found in repo");
+    return;
   }
+  await writeIfChanged(path.join(extDir, "ai-addons-updater", "index.js"), updaterSrc, options);
 }
 
 async function stepCombo(extDir: string, options: WriteOptions): Promise<void> {
@@ -1013,6 +1060,70 @@ async function runLatestUpdate(): Promise<void> {
   }
 }
 
+// --- Install profile (session-start mode defaults) ---
+
+function defaultProfile(): Profile {
+  return {
+    comboDefault: "off",
+    cavemanDefault: "off",
+    rtkDefault: false,
+  };
+}
+
+function tty(): boolean {
+  return Boolean(process.stdin.isTTY && process.stdout.isTTY);
+}
+
+async function resolveProfile(): Promise<Profile> {
+  const profile = defaultProfile();
+
+  // Interactive prompt: only for a real user at a terminal, only when no
+  // default flags were given, and never for --apply-update runs.
+  if (tty() && !profileFlagsGiven && !applyUpdate && (install || reinstall)) {
+    const comboAnswer = (await ask("  Default Combo preset on session start? [off/medium/balanced/max] (off): ")).trim().toLowerCase();
+    if (comboAnswer && comboAnswer in COMBO_DEFAULTS) profile.comboDefault = comboAnswer;
+    const cavemanAnswer = (await ask("  Default Caveman mode on session start? [off/lite/full/ultra/wenyan] (off): ")).trim().toLowerCase();
+    if (cavemanAnswer && cavemanAnswer in CAVEMAN_DEFAULTS) profile.cavemanDefault = cavemanAnswer;
+    const rtkAnswer = (await ask("  Default RTK state on session start? [on/off] (off): ")).trim().toLowerCase();
+    if (rtkAnswer === "on" || rtkAnswer === "off") profile.rtkDefault = rtkAnswer === "on";
+  }
+
+  // Explicit flags always win over the prompt.
+  if (comboDefaultFlag !== undefined) profile.comboDefault = comboDefaultFlag;
+  if (cavemanDefaultFlag !== undefined) profile.cavemanDefault = cavemanDefaultFlag;
+  if (rtkDefaultFlag !== undefined) profile.rtkDefault = rtkDefaultFlag === "on";
+
+  console.log(`  Profile: combo default=${profile.comboDefault} · caveman default=${profile.cavemanDefault} · rtk default=${profile.rtkDefault ? "on" : "off"}`);
+  return profile;
+}
+
+// Persist the profile as omp plugin settings so `omp plugin config get`
+// reflects the choice and the extensions pick it up on session start.
+async function writePluginSettings(profile: Profile, options: WriteOptions): Promise<void> {
+  const pluginsDir = path.join(HOME, ".omp", "plugins");
+  const lockPath = path.join(pluginsDir, "omp-plugins.lock.json");
+  let config: { plugins?: Record<string, unknown>; settings?: Record<string, Record<string, unknown>> } = {};
+  const existing = await readTextIfExists(lockPath);
+  if (existing) {
+    try { config = JSON.parse(existing); } catch { config = {}; }
+  }
+  config.plugins = config.plugins || {};
+  config.settings = config.settings || {};
+  const settings = { ...(config.settings[PACKAGE_NAME] || {}) };
+  settings.comboDefault = profile.comboDefault;
+  settings.cavemanDefault = profile.cavemanDefault;
+  settings.rtkDefault = profile.rtkDefault;
+  config.settings[PACKAGE_NAME] = settings;
+
+  if (options.dryRun) {
+    console.log(`  [dry-run] would write plugin settings (${PACKAGE_NAME}) to ${lockPath}`);
+    return;
+  }
+  await fs.mkdir(pluginsDir, { recursive: true });
+  await fs.writeFile(lockPath, JSON.stringify(config, null, 2) + "\n", "utf8");
+  console.log(`  [write] Plugin settings in ${lockPath}`);
+}
+
 // --- Main ---
 
 async function main(): Promise<void> {
@@ -1090,6 +1201,11 @@ async function main(): Promise<void> {
     scope = (await ask("\nChoose [1-3] (default 1): ")).trim() || "1";
   }
 
+
+  // Resolve session defaults: flags > interactive prompt > defaults.
+  const profile = await resolveProfile();
+
+
   const userDir = path.join(HOME, ".omp", "agent");
   const userExtDir = path.join(userDir, "extensions");
   const userPluginsDir = path.join(userDir, "..", "plugins");
@@ -1107,7 +1223,6 @@ async function main(): Promise<void> {
     console.log("  [fail] omp not found — ensure it's installed");
   }
 
-  // Install per scope
   if (scope === "1" || scope === "3") {
     console.log("\n--- User-level install ---");
     await stepSharedSessionState(userExtDir, options);
@@ -1119,7 +1234,9 @@ async function main(): Promise<void> {
     await stepCaveman(userExtDir, options);
     await stepCombo(userExtDir, options);
     await stepModeReinforcement(userExtDir, ponytailExtPath, options);
+    await stepUpdater(userExtDir, options);
     await stepAmanaiReward(userExtDir, options, selfPlugin);
+    if (selfPlugin) await writePluginSettings(profile, options);
   }
 
   if (scope === "2" || scope === "3") {
@@ -1127,6 +1244,7 @@ async function main(): Promise<void> {
     await stepSharedSessionState(projectExtDir, options);
     await stepRtkSession(projectExtDir, options);
     await stepCaveman(projectExtDir, options);
+    await stepUpdater(projectExtDir, options);
     await stepAmanaiReward(projectExtDir, options);
     console.log("  [note] Ponytail, RTK binary, and Combo toggle require user-level (global) install");
   }

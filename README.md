@@ -6,14 +6,42 @@ A passive Amanai reward detector plus three toggleable [Oh My Pi (OMP)](https://
 
 ## Install
 
+### OMP users: plugin install (recommended)
+
+If you use OMP, install the package as a managed plugin — no separate installer run, and OMP's plugin manager handles updates, enable/disable, and per-add-on features:
+
+```bash
+omp plugin install oh-my-pi-token-saver
+```
+
+Then start a new OMP session. Every add-on is on by default; trim the set with OMP's feature flags:
+
+```bash
+omp plugin install 'oh-my-pi-token-saver[caveman,ponytail]'   # only these two add-ons
+omp plugin features oh-my-pi-token-saver --disable rtk        # turn one off later
+```
+
+Features: `caveman`, `rtk`, `ponytail` (combo bar + mode reinforcement), `updater` (`/ai-addons`). The Amanai reward detector is the plugin base and is always loaded.
+
+### Installer (npm CLI)
+
 ```bash
 npm install -g oh-my-pi-token-saver@latest
 oh-my-pi-token-saver install
 ```
 
-The first command installs the CLI globally with npm; the second installs its add-ons into your OMP home, so both are required.
+The first command installs the CLI globally with npm; the second installs its add-ons into your OMP home, so both are required. At a terminal, `install` asks for optional session-start defaults; every prompt keeps its default on Enter. Non-interactive runs keep the classic behavior (all add-ons, modes off).
 
-**After install:** restart OMP, then enable the balanced preset:
+Default flags (also usable non-interactively):
+
+```bash
+oh-my-pi-token-saver install --combo-default balanced   # session-start Combo preset
+oh-my-pi-token-saver install --caveman-default lite --rtk-default on
+```
+
+Defaults apply only to fresh sessions — anything you persist with `/combo`, `/caveman`, or `/rtk` always wins. They are stored as plugin settings (`omp plugin config get oh-my-pi-token-saver comboDefault`) and can be changed later with `omp plugin config set`.
+
+**After install:** restart OMP, then enable a preset:
 
 ```text
 /combo medium
@@ -56,9 +84,8 @@ After the global install, use these short commands for routine maintenance:
 | `oh-my-pi-token-saver doctor` | Check OMP, extension, Ponytail, and RTK installation health |
 | `oh-my-pi-token-saver uninstall` | Remove bundled extensions, the legacy `aaa-combo-boot` helper, and the plugin registration; add `--remove-rtk` to remove the RTK binary or `--remove-ponytail` to unregister Ponytail's extension path (the Ponytail package remains installed) |
 | `oh-my-pi-token-saver version` | Print the package version (`--version` or `-v` also works) |
-| `oh-my-pi-token-saver help` | Show usage (`--help` or `-h` also works) |
+Useful flags are `--scope user|project|both`, `--combo-default`/`--caveman-default`/`--rtk-default` (session-start defaults), `--dry-run`, `--yes`/`-y`, and `--verbose`. The original no-subcommand install and legacy `--doctor` and `--uninstall` forms remain supported.
 
-Useful flags are `--scope user|project|both`, `--dry-run`, `--yes`/`-y`, and `--verbose`. The original no-subcommand install and legacy `--doctor` and `--uninstall` forms remain supported.
 
 ## Commands reference
 

@@ -198,11 +198,11 @@ test("individual Caveman change immediately makes Combo CUSTOM and children inhe
   );
 
   await command(caveman, "caveman", "ultra", context(entries, true));
-  assert.equal(getSharedComboState().level, "max");
-  assert.match(comboCtx.statuses.get("combo"), /combo: MAX/);
+  assert.equal(getSharedComboState().level, "custom");
+  assert.match(comboCtx.statuses.get("combo"), /combo: CUSTOM/);
 });
 
-test("individual RTK change makes Combo CUSTOM and realignment restores exact preset", async () => {
+test("individual RTK change keeps Combo CUSTOM even after values realign", async () => {
   resetSharedComboState();
   const entries = [];
   const combo = instantiate(comboToggleExtension, entries);
@@ -219,8 +219,27 @@ test("individual RTK change makes Combo CUSTOM and realignment restores exact pr
   assert.equal(await inject(instantiate(rtkSessionExtension), MARKED_PROMPT), undefined);
 
   await command(rtk, "rtk", "on", context(entries, true));
-  assert.equal(getSharedComboState().level, "max");
-  assert.match(comboCtx.statuses.get("combo"), /combo: MAX/);
+  assert.equal(getSharedComboState().level, "custom");
+  assert.match(comboCtx.statuses.get("combo"), /combo: CUSTOM/);
+});
+
+test("individually matching max values never activates Combo", async () => {
+  resetSharedComboState();
+  const entries = [
+    { type: "custom", customType: "caveman-mode", data: { mode: "ultra" } },
+    { type: "custom", customType: "ponytail-mode", data: { mode: "ultra" } },
+  ];
+  const combo = instantiate(comboToggleExtension, entries);
+  const comboCtx = context(entries, true);
+  const rtk = instantiate(rtkSessionExtension, entries);
+
+  await command(combo, "combo", "status", comboCtx);
+  await command(rtk, "rtk", "on", context(entries, true));
+
+  assert.deepEqual(getSharedComboState(), {
+    level: "custom", caveman: "ultra", rtk: "on", ponytail: "ultra",
+  });
+  assert.match(comboCtx.statuses.get("combo"), /combo: CUSTOM/);
 });
 
 test("Combo status reconciles latest persisted Ponytail mode and reports actual values", async () => {

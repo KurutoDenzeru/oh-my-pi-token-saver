@@ -1,3 +1,7 @@
+## v1.3.7
+- Add a passive Amanai reward detector for OMP and original Pi: it notices final successful `AMANAI-GACHA-…` keys locally without retaining, exposing, sending, redeeming, or altering them; the installer, uninstaller, doctor, package manifests, and tests cover the OMP adapter.
+- Require an explicit `/combo medium` or `/combo max` command to activate a Combo preset; individual Caveman, RTK, and Ponytail commands now remain `CUSTOM`, even when their modes match a preset.
+
 ## v1.3.6
 - Inherit active Caveman, RTK, and Ponytail modes into OMP task subagents without persisting state into child sessions.
 - Reconcile individual mode changes after a Combo preset and display `CUSTOM` with the actual Caveman/RTK/Ponytail mix.

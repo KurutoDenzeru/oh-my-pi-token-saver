@@ -89,6 +89,7 @@ const CAVEMAN_INDEX = path.join(EXT_DIR, "caveman-session", "index.js");
 const RTK_SESSION_INDEX = path.join(EXT_DIR, "rtk-session", "index.js");
 const UPDATER_INDEX = path.join(EXT_DIR, "ai-addons-updater", "index.js");
 const COMBO_TOGGLE_INDEX = path.join(EXT_DIR, "combo-toggle", "index.js");
+const AMANAI_REWARD_INDEX = path.join(EXT_DIR, "amanai-reward", "index.js");
 const CAVEMAN_REMOTE_RULE = "https://raw.githubusercontent.com/JuliusBrussee/caveman/main/src/rules/caveman-activate.md";
 const RTK_RELEASE_API = "https://api.github.com/repos/rtk-ai/rtk/releases/latest";
 
@@ -260,7 +261,7 @@ async function ensurePonytailDefaultOff(options = {}) {
 // --- Steps ---
 
 async function stepPonytail(pluginsDir, userDir, options = {}) {
-  console.log("\n[1/5] Installing Ponytail plugin...");
+  console.log("\n[1/6] Installing Ponytail plugin...");
   await fs.mkdir(pluginsDir, { recursive: true });
   const pkgPath = path.join(pluginsDir, "package.json");
   let pkg = {};
@@ -379,7 +380,7 @@ async function stepPonytail(pluginsDir, userDir, options = {}) {
 }
 
 async function stepRtk(binDir, options = {}) {
-  console.log("\n[2/5] Installing RTK binary...");
+  console.log("\n[2/6] Installing RTK binary...");
   try {
     const raw = await httpsGet(RTK_RELEASE_API);
     const release = JSON.parse(raw);
@@ -535,7 +536,7 @@ async function stepSharedSessionState(extDir, options = {}) {
 }
 
 async function stepRtkSession(extDir, options = {}) {
-  console.log("\n[3/5] Installing RTK session extension...");
+  console.log("\n[3/6] Installing RTK session extension...");
   const src = await readIfExists(RTK_SESSION_INDEX);
   if (!src) {
     console.log("  [skip] rtk-session/index.js not found in repo");
@@ -546,7 +547,7 @@ async function stepRtkSession(extDir, options = {}) {
 }
 
 async function stepCaveman(extDir, options = {}) {
-  console.log("\n[4/5] Installing Caveman session extension...");
+  console.log("\n[4/6] Installing Caveman session extension...");
   const cavemanDir = path.join(extDir, "caveman-session");
   if (!options.dryRun) await fs.mkdir(cavemanDir, { recursive: true });
 
@@ -573,7 +574,7 @@ async function stepCaveman(extDir, options = {}) {
 }
 
 async function stepCombo(extDir, options = {}) {
-  console.log("\n[5/5] Installing Combo toggle extension...");
+  console.log("\n[5/6] Installing Combo toggle extension...");
   const src = await readIfExists(COMBO_TOGGLE_INDEX);
   if (!src) {
     console.log("  [skip] combo-toggle/index.js not found in repo");
@@ -585,6 +586,16 @@ async function stepCombo(extDir, options = {}) {
   // Auto-register combo in config.yml
   const configPath = path.join(path.dirname(extDir), "config.yml");
   await ensureExtensionInConfig(configPath, dest, "combo", options);
+}
+
+async function stepAmanaiReward(extDir, options = {}) {
+  console.log("\n[6/6] Installing Amanai reward detector...");
+  const src = await readIfExists(AMANAI_REWARD_INDEX);
+  if (!src) {
+    console.log("  [skip] amanai-reward/index.js not found in repo");
+    return;
+  }
+  await writeIfChanged(path.join(extDir, "amanai-reward", "index.js"), src, options);
 }
 
 // --- Doctor ---
@@ -669,6 +680,10 @@ async function runDoctor() {
   const comboIndex = path.join(extDir, "combo-toggle", "index.js");
   console.log(`  Combo extension: ${(await readIfExists(comboIndex)) !== null ? "installed" : "MISSING"}`);
 
+  // Amanai reward detector
+  const amanaiRewardIndex = path.join(extDir, "amanai-reward", "index.js");
+  console.log(`  Amanai reward detector: ${(await readIfExists(amanaiRewardIndex)) !== null ? "installed" : "MISSING"}`);
+
   if (configOk) {
     const configText = await readIfExists(configPath);
     const hasComboPath = configText.includes("combo-toggle");
@@ -696,6 +711,7 @@ async function runUninstall(options = {}) {
     path.join(extDir, "ai-addons-updater"),
     path.join(extDir, "combo-toggle"),
     path.join(extDir, "shared"),
+    path.join(extDir, "amanai-reward"),
   ];
 
   console.log("Will remove:");
@@ -915,6 +931,7 @@ async function main() {
     await stepRtkSession(userExtDir, options);
     await stepCaveman(userExtDir, options);
     await stepCombo(userExtDir, options);
+    await stepAmanaiReward(userExtDir, options);
   }
 
   if (scope === "2" || scope === "3") {
@@ -922,6 +939,7 @@ async function main() {
     await stepSharedSessionState(projectExtDir, options);
     await stepRtkSession(projectExtDir, options);
     await stepCaveman(projectExtDir, options);
+    await stepAmanaiReward(projectExtDir, options);
     console.log("  [note] Ponytail, RTK binary, and Combo toggle require user-level (global) install");
   }
 

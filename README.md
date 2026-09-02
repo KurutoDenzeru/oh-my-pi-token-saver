@@ -1,6 +1,6 @@
 # oh-my-pi-supreme-token-saver
 
-Three toggleable [Oh My Pi (OMP)](https://github.com/can1357/oh-my-pi) add-ons that save tokens: terse replies, compact shell output, and minimal code decisions. It also includes combined toggles, health checks, updates, and dry-run support.
+A passive Amanai reward detector plus three toggleable [Oh My Pi (OMP)](https://github.com/can1357/oh-my-pi) add-ons for terse replies, compact shell output, and minimal code decisions. It also includes combined toggles, health checks, updates, and dry-run support.
 
 ## Install
 
@@ -28,8 +28,15 @@ Individual toggles: `/caveman full` · `/rtk on` · `/ponytail full`
 | **Ponytail** | Favors standard-library, minimal, YAGNI-oriented code decisions |
 | **Updater** | Checks and updates Ponytail, RTK, and Caveman in-session, with dry-run and backup support |
 | **Combo** | Switches Caveman, RTK, and Ponytail together. Presets: `off`, `medium`, and `max`; mixed individual modes display as `custom` |
+| **Amanai reward detector** | Locally notifies you when a final successful response contains a footer-shaped `AMANAI-GACHA-…` key; it never changes output, stores or sends the key, redeems it, opens a browser, or creates requests |
 
 All three token-saving modes start off until you enable them.
+
+### Amanai reward detector
+
+The detector only scans the completed final assistant response, then shows a local notice. Redeem any detected key yourself in the Amanai billing dashboard; the extension does not retain or expose it.
+
+The package also declares a Pi-native adapter through `pi.extensions`. It waits for Pi's final settled response before issuing the same local notice; the OMP installer installs only the OMP adapter.
 
 ## CLI
 
@@ -39,7 +46,7 @@ After the global install, use these short commands for routine maintenance:
 |---|---|
 | `oh-my-pi-supreme-token-saver install` | Install non-interactively to user scope by default; use `--scope project` or `--scope both` for another scope |
 | `oh-my-pi-supreme-token-saver update` | Fetch the latest release and refresh the user installation |
-| `oh-my-pi-supreme-token-saver reinstall` | Remove the four bundled extension directories and RTK binary, then install fresh at user scope; the separate Ponytail package is preserved and refreshed |
+| `oh-my-pi-supreme-token-saver reinstall` | Remove the bundled extension directories and RTK binary, then install fresh at user scope; the separate Ponytail package is preserved and refreshed |
 | `oh-my-pi-supreme-token-saver doctor` | Check OMP, extension, Ponytail, and RTK installation health |
 | `oh-my-pi-supreme-token-saver uninstall` | Remove bundled extensions; add `--remove-rtk` to remove the RTK binary or `--remove-ponytail` to unregister Ponytail's extension path (the Ponytail package remains installed) |
 | `oh-my-pi-supreme-token-saver version` | Print the package version (`--version` or `-v` also works) |
@@ -116,7 +123,7 @@ rtk lint
 
 `/combo` persists each add-on's state and reloads OMP so the new modes apply immediately, without emitting separate `/caveman`, `/rtk`, or `/ponytail` command messages.
 
-Active Combo modes are inherited by OMP task subagents created from the session. If you change Caveman, RTK, or Ponytail individually after applying a preset, Combo reconciles the actual modes and displays `CUSTOM` instead of a stale preset label; subagents inherit that actual mixed state.
+Active Combo modes are inherited by OMP task subagents created from the session. `/combo medium` or `/combo max` is the only way to activate a Combo preset. Individual `/caveman`, `/rtk`, and `/ponytail` commands always display `CUSTOM` while any individual mode is enabled—even if their values happen to equal a preset—and subagents inherit that actual mixed state.
 
 ## File locations
 
@@ -127,6 +134,7 @@ Active Combo modes are inherited by OMP task subagents created from the session.
 | Ponytail package | `~/.omp/plugins/node_modules/@dietrichgebert/ponytail/` |
 | Updater extension | `~/.omp/agent/extensions/ai-addons-updater/` |
 | Combo extension | `~/.omp/agent/extensions/combo-toggle/` |
+| Amanai detector extension | `~/.omp/agent/extensions/amanai-reward/` |
 | RTK binary | `~/.bun/bin/rtk` (`rtk.exe` on Windows) |
 | Explicit extension registrations | `~/.omp/agent/config.yml` |
 

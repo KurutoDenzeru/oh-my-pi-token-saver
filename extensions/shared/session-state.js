@@ -28,13 +28,21 @@ function deriveLevel(modes) {
   return "custom";
 }
 
-function normalizedState(modes) {
+function isKnownLevel(value) {
+  return value === "custom" || Object.prototype.hasOwnProperty.call(COMBO_LEVELS, value);
+}
+
+function levelForIndividualModes(modes) {
+  return modes.caveman === "off" && modes.rtk === "off" && modes.ponytail === "off" ? "off" : "custom";
+}
+
+function normalizedState(modes, level = deriveLevel(modes)) {
   const state = {
     caveman: normalizeMode("caveman", modes?.caveman) || "off",
     rtk: normalizeMode("rtk", modes?.rtk) || "off",
     ponytail: normalizeMode("ponytail", modes?.ponytail) || "off",
   };
-  return Object.freeze({ level: deriveLevel(state), ...state });
+  return Object.freeze({ level: isKnownLevel(level) ? level : deriveLevel(state), ...state });
 }
 
 function bridge() {
@@ -67,23 +75,28 @@ export function getSharedComboState() {
 
 export function setSharedComboLevel(value) {
   const level = normalizeComboLevel(value) || "off";
-  return publish(normalizedState(COMBO_LEVELS[level]));
+  return publish(normalizedState(COMBO_LEVELS[level], level));
 }
 
 export function setSharedComboMode(name, value) {
   const mode = normalizeMode(name, value);
   if (!mode) return getSharedComboState();
-  return publish(normalizedState({ ...getSharedComboState(), [name]: mode }));
+  const modes = { ...getSharedComboState(), [name]: mode };
+  return publish(normalizedState(modes, levelForIndividualModes(modes)));
 }
 
 export function reconcileSharedComboEntries(entries) {
   let modes = { ...COMBO_LEVELS.off };
+  let level = "off";
   if (Array.isArray(entries)) {
     for (const entry of entries) {
       if (entry?.type !== "custom") continue;
       if (entry.customType === "combo-level") {
-        const level = normalizeComboLevel(entry?.data?.level);
-        if (level) modes = { ...COMBO_LEVELS[level] };
+        const preset = normalizeComboLevel(entry?.data?.level);
+        if (preset) {
+          modes = { ...COMBO_LEVELS[preset] };
+          level = preset;
+        }
         continue;
       }
       const name = entry.customType === "caveman-mode"
@@ -96,10 +109,13 @@ export function reconcileSharedComboEntries(entries) {
       if (!name) continue;
       const value = name === "rtk" ? entry?.data?.enabled : entry?.data?.mode;
       const mode = normalizeMode(name, value);
-      if (mode) modes[name] = mode;
+      if (mode) {
+        modes[name] = mode;
+        level = levelForIndividualModes(modes);
+      }
     }
   }
-  return publish(normalizedState(modes));
+  return publish(normalizedState(modes, level));
 }
 
 export function setSharedComboListener(listener) {

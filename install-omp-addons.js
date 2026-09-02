@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // install-omp-addons.js — Install caveman/rtk/ponytail add-ons on any OMP device.
-// Usage: node install-omp-addons.js [update] [--dry-run] [--scope user|project|both] [--yes] [--verbose] [--doctor] [--uninstall]
+// Usage: node install-omp-addons.js [install|update|reinstall|doctor|uninstall|version|help] [options]
 // Requires: node/npm and omp CLI
 
 import https from "node:https";
@@ -25,14 +25,21 @@ const { version: PACKAGE_VERSION } = createRequire(import.meta.url)("./package.j
 // --- CLI flags ---
 
 const args = process.argv.slice(2);
-const command = args[0]?.toLowerCase() || null;
+const COMMANDS = new Set(["install", "update", "reinstall", "doctor", "uninstall", "version", "help"]);
+const commandArg = args.find((arg, index) => !arg.startsWith("-") && args[index - 1] !== "--scope");
+const command = commandArg?.toLowerCase() || null;
+const unknownCommand = command !== null && !COMMANDS.has(command);
+const install = command === "install";
 const update = command === "update";
+const reinstall = command === "reinstall";
+const showVersion = command === "version" || args.includes("--version") || args.includes("-v");
+const showHelp = command === "help" || args.includes("--help") || args.includes("-h");
 const applyUpdate = args.includes("--apply-update");
 const dryRun = args.includes("--dry-run");
-const yes = args.includes("--yes") || args.includes("-y") || update || applyUpdate;
+const yes = args.includes("--yes") || args.includes("-y") || install || update || reinstall || applyUpdate;
 const verbose = args.includes("--verbose");
-const doctor = args.includes("--doctor");
-const uninstall = args.includes("--uninstall");
+const doctor = command === "doctor" || args.includes("--doctor");
+const uninstall = command === "uninstall" || args.includes("--uninstall");
 const removePonytail = args.includes("--remove-ponytail");
 const removeRtk = args.includes("--remove-rtk");
 
@@ -41,6 +48,27 @@ const scopeFlag = (() => {
   if (i === -1) return null;
   return args[i + 1]?.toLowerCase() || null;
 })();
+
+function printHelp() {
+  console.log(`Usage: ${PACKAGE_BIN} [command] [options]
+
+Commands:
+  install      Install the add-ons (user scope by default)
+  update       Run the latest published installer
+  reinstall    Clean and reinstall the user-scope add-ons
+  doctor       Check the current installation
+  uninstall    Remove the managed extensions
+  version      Print the package version
+  help         Show this help
+
+Options:
+  --scope user|project|both
+  --yes, -y
+  --dry-run
+  --verbose
+  --version, -v
+  --help, -h`);
+}
 
 function debug(...a) {
   if (verbose) console.log("  [debug]", ...a);
@@ -252,6 +280,9 @@ async function stepPonytail(pluginsDir, userDir, options = {}) {
 
   if (options.dryRun) {
     console.log("  [dry-run] would run: omp plugin install github:DietrichGebert/ponytail");
+    if (options.reinstall) {
+      console.log("  [dry-run] would run: npm install @dietrichgebert/ponytail@latest --save --no-audit --no-fund");
+    }
 
     const ponytailExtPath = path.join(
       pluginsDir,
@@ -275,6 +306,22 @@ async function stepPonytail(pluginsDir, userDir, options = {}) {
     console.log("  [ok] omp plugin install ran");
   } catch (e) {
     console.log(`  [warn] omp plugin install failed: ${e.message}`);
+  }
+
+  if (options.reinstall) {
+    try {
+      await execP("npm", [
+        "install",
+        "@dietrichgebert/ponytail@latest",
+        "--save",
+        "--no-audit",
+        "--no-fund",
+      ], { cwd: pluginsDir, timeout: 120000 });
+      console.log("  [ok] Ponytail refreshed");
+    } catch (e) {
+      console.log(`  [fail] Could not refresh ponytail: ${e.message}`);
+      console.log(`  [hint] Manual: cd ~/.omp/plugins && npm install @dietrichgebert/ponytail@latest --save --no-audit --no-fund`);
+    }
   }
 
   // Verify the pi-extension/index.js actually exists
@@ -618,7 +665,12 @@ async function runDoctor() {
 
 // --- Uninstall ---
 
-async function runUninstall() {
+async function runUninstall(options = {}) {
+  const confirmed = options.yes ?? yes;
+  const shouldRemovePonytail = options.removePonytail ?? removePonytail;
+  const shouldRemoveRtk = options.removeRtk ?? removeRtk;
+  const shouldDryRun = options.dryRun ?? dryRun;
+
   console.log("\n=== OMP Supreme Token Saver Uninstall ===\n");
 
   const extDir = path.join(HOME, ".omp", "agent", "extensions");
@@ -637,56 +689,66 @@ async function runUninstall() {
     console.log(`  ${t}`);
   }
 
-  if (removeRtk) {
+  if (shouldRemoveRtk) {
     console.log(`  ${rtkBin}`);
   }
 
-  if (!yes) {
+  if (!confirmed) {
     const answer = await ask("\nProceed? [y/N]: ");
     if (!answer.toLowerCase().startsWith("y")) {
       console.log("Aborted.");
       closeRL();
-      return;
+      return false;
     }
   }
 
   // Remove extension directories
   for (const t of targets) {
     try {
-      await fs.rm(t, { recursive: true, force: true });
-      console.log(`  [rm] ${t}`);
+      if (shouldDryRun) console.log(`  [dry-run] would remove ${t}`);
+      else {
+        await fs.rm(t, { recursive: true, force: true });
+        console.log(`  [rm] ${t}`);
+      }
     } catch {
       debug(`Could not remove ${t}`);
     }
   }
 
-  // Remove combo and ponytail from config.yml
+  // Remove combo and, when explicitly requested, ponytail from config.yml
   const configRaw = await readIfExists(configPath);
   if (configRaw) {
     let lines = configRaw.split("\n");
     const before = lines.length;
     lines = lines.filter((l) => {
       if (l.includes("combo-toggle")) return false;
-      if (removePonytail && l.includes("ponytail") && l.includes("pi-extension")) return false;
+      if (shouldRemovePonytail && l.includes("ponytail") && l.includes("pi-extension")) return false;
       return true;
     });
     if (lines.length !== before) {
-      await fs.writeFile(configPath, lines.join("\n"), "utf8");
-      console.log(`  [write] Updated config.yml (removed ${before - lines.length} entries)`);
+      if (shouldDryRun) console.log(`  [dry-run] would remove ${before - lines.length} config.yml entries`);
+      else {
+        await fs.writeFile(configPath, lines.join("\n"), "utf8");
+        console.log(`  [write] Updated config.yml (removed ${before - lines.length} entries)`);
+      }
     }
   }
 
   // Remove RTK binary if requested
-  if (removeRtk) {
+  if (shouldRemoveRtk) {
     try {
-      await fs.unlink(rtkBin);
-      console.log(`  [rm] ${rtkBin}`);
+      if (shouldDryRun) console.log(`  [dry-run] would remove ${rtkBin}`);
+      else {
+        await fs.unlink(rtkBin);
+        console.log(`  [rm] ${rtkBin}`);
+      }
     } catch {
       debug(`Could not remove ${rtkBin}`);
     }
   }
 
   console.log("\nDone. Restart OMP for changes to take effect.");
+  return true;
 }
 
 async function runLatestUpdate() {
@@ -739,6 +801,26 @@ async function runLatestUpdate() {
 // --- Main ---
 
 async function main() {
+  if (showVersion) {
+    console.log(PACKAGE_VERSION);
+    closeRL();
+    return;
+  }
+
+  if (showHelp) {
+    printHelp();
+    closeRL();
+    return;
+  }
+
+  if (unknownCommand) {
+    console.error(`Unknown command: ${commandArg}`);
+    printHelp();
+    process.exitCode = 1;
+    closeRL();
+    return;
+  }
+
   if (update && !applyUpdate) {
     await runLatestUpdate();
     closeRL();
@@ -757,6 +839,10 @@ async function main() {
     return;
   }
 
+  if (reinstall) {
+    await runUninstall({ yes: true, removePonytail: false, removeRtk: true });
+  }
+
   if (dryRun) console.log("[dry-run] No changes will be written.\n");
 
   console.log(`=== OMP Supreme Token Saver v${PACKAGE_VERSION} ===`);
@@ -766,7 +852,10 @@ async function main() {
 
   // Determine install scope
   let scope;
-  if (scopeFlag) {
+  if (reinstall) {
+    scope = "1";
+    console.log("  Scope: user (reinstall)");
+  } else if (scopeFlag) {
     const map = { user: "1", project: "2", both: "3" };
     scope = map[scopeFlag];
     if (!scope) {
@@ -775,9 +864,9 @@ async function main() {
       process.exit(1);
     }
     console.log(`  Scope: ${scopeFlag}`);
-  } else if (yes) {
+  } else if (install || yes) {
     scope = "1";
-    console.log("  Scope: user (--scope omitted, defaulting to user with --yes)");
+    console.log(`  Scope: user (${install ? "install default" : "--scope omitted, defaulting to user with --yes"})`);
   } else {
     console.log("\nInstall scope:");
     console.log("  1) User-level (all OMP sessions)");
@@ -792,7 +881,7 @@ async function main() {
   const bunBinDir = path.join(HOME, ".bun", "bin");
   const projectExtDir = path.join(process.cwd(), ".omp", "extensions");
 
-  const options = { dryRun, verbose, yes, scope };
+  const options = { dryRun, verbose, yes, scope, reinstall };
 
   // Check prerequisites
   console.log("\nPrerequisites:");

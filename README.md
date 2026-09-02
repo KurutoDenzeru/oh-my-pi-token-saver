@@ -1,146 +1,51 @@
 # oh-my-pi-supreme-token-saver
 
-Three toggleable OMP extensions that save tokens: terse replies, compact shell output, and minimal code decisions — with cache-safe CLI updates, in-session updates, and dry-run support.
+Three toggleable [Oh My Pi (OMP)](https://github.com/can1357/oh-my-pi) add-ons that save tokens: terse replies, compact shell output, and minimal code decisions. It also includes combined toggles, health checks, updates, and dry-run support.
 
 ## Install
 
-### Option 1: npm exec (recommended)
-
-```bash
-npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver
-```
-
-### Option 2: npm install global
-
 ```bash
 npm install -g @fernado03/oh-my-pi-supreme-token-saver@latest
-oh-my-pi-supreme-token-saver
+oh-my-pi-supreme-token-saver install
 ```
 
-### Option 3: clone and run
+The first command installs the CLI globally with npm; the second installs its add-ons into your OMP home, so both are required.
 
-```bash
-git clone https://github.com/Fernado03/oh-my-pi-supreme-token-saver.git
-cd oh-my-pi-supreme-token-saver
-node install-omp-addons.js
-```
-
-The installer prints the package version it is running:
-
-```text
-=== OMP Supreme Token Saver v<version> ===
-```
-
-### Update to the latest package
-
-One-off update:
-
-```bash
-npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver update
-```
-
-Or, after a global install:
-
-```bash
-npm install -g @fernado03/oh-my-pi-supreme-token-saver@latest
-oh-my-pi-supreme-token-saver update
-```
-
-The `update` command fetches `@latest`, then runs that version of the installer non-interactively with user scope. Existing files are overwritten only when their contents changed; backups use the `.bak` suffix.
-
-For in-session updates without re-running the installer:
-
-```text
-/ai-addons update all
-```
-
-Dry run first to see what would change:
-
-```text
-/ai-addons update all --dry-run
-```
-
-## CLI Flags
-
-```bash
-# Fetch the latest package and update the user install
-npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver update
-
-# Preview a latest-package update
-npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver update --dry-run
-
-# Non-interactive install (user scope, no prompts)
-npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --scope user --yes
-
-# Project-level install
-npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --scope project --yes
-
-# Both user and project
-npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --scope both --yes
-
-# Dry run — shows planned changes without writing
-npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --dry-run --scope user --yes
-
-# Doctor — check installation health
-npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --doctor
-
-# Uninstall — removes installed extensions (prompts for confirmation)
-npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --uninstall
-
-# Uninstall without prompt
-npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --uninstall --yes
-
-# Also remove the RTK binary during uninstall
-npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --uninstall --yes --remove-rtk
-
-# Unregister Ponytail's extension path during uninstall (keeps the plugin package)
-npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --uninstall --yes --remove-ponytail
-
-# Verbose output (debug details)
-npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --verbose
-```
-
-### Scope options
-
-| Flag | Meaning |
-|------|---------|
-| `--scope user` | User-level (all OMP sessions) — recommended |
-| `--scope project` | Project-level (this repo only) |
-| `--scope both` | Both user and project |
-
-### Dry run
-
-```bash
-npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --dry-run
-```
-
-## What it installs
-
-| Extension | Command | What it does |
-|---|---|---|
-| **Caveman** | `/caveman full` | Shorter replies. Drops filler, keeps technical substance. Modes: `lite`, `full`, `ultra`, `wenyan` |
-| **RTK** | `/rtk on` | Compact shell output. Routes `git status`, `git diff`, `test` through RTK binary |
-| **Ponytail** | `/ponytail full` | Minimal code decisions. Prefers stdlib, avoids over-engineering |
-| **Updater** | `/ai-addons check` | In-session updates for Ponytail, RTK, and Caveman, with dry-run and backup support |
-| **Combo** | `/combo medium` | Toggle all 3 at once. Levels: `off`, `medium`, `max`. Off by default |
-
-## After install
-
-Restart OMP. Fresh sessions start with all three modes off. Enable them together:
+**After install:** restart OMP, then enable the balanced preset:
 
 ```text
 /combo medium
 ```
 
-Or configure them individually:
+Individual toggles: `/caveman full` · `/rtk on` · `/ponytail full`
 
-```text
-/caveman full
-/rtk on
-/ponytail full
-```
+## What it installs
 
-Check installed add-on versions with `/ai-addons check`. Use `/combo max` for the most aggressive combined modes.
+| Add-on | What it does |
+|---|---|
+| **Caveman** | Shortens replies while retaining technical substance. Modes: `lite`, `full`, `ultra`, and `wenyan` |
+| **RTK** | Routes noisy shell commands through the RTK binary for compact output |
+| **Ponytail** | Favors standard-library, minimal, YAGNI-oriented code decisions |
+| **Updater** | Checks and updates Ponytail, RTK, and Caveman in-session, with dry-run and backup support |
+| **Combo** | Switches Caveman, RTK, and Ponytail together. Levels: `off`, `medium`, and `max` |
+
+All three token-saving modes start off until you enable them.
+
+## CLI
+
+After the global install, use these short commands for routine maintenance:
+
+| Command | Purpose |
+|---|---|
+| `oh-my-pi-supreme-token-saver install` | Install non-interactively to user scope by default; use `--scope project` or `--scope both` for another scope |
+| `oh-my-pi-supreme-token-saver update` | Fetch the latest release and refresh the user installation |
+| `oh-my-pi-supreme-token-saver reinstall` | Remove the four bundled extension directories and RTK binary, then install fresh at user scope; the separate Ponytail package is preserved and refreshed |
+| `oh-my-pi-supreme-token-saver doctor` | Check OMP, extension, Ponytail, and RTK installation health |
+| `oh-my-pi-supreme-token-saver uninstall` | Remove bundled extensions; add `--remove-rtk` to remove the RTK binary or `--remove-ponytail` to unregister Ponytail's extension path (the Ponytail package remains installed) |
+| `oh-my-pi-supreme-token-saver version` | Print the package version (`--version` or `-v` also works) |
+| `oh-my-pi-supreme-token-saver help` | Show usage (`--help` or `-h` also works) |
+
+Useful flags are `--scope user|project|both`, `--dry-run`, `--yes`/`-y`, and `--verbose`. The original no-subcommand install and legacy `--doctor` and `--uninstall` forms remain supported.
 
 ## Commands reference
 
@@ -155,23 +60,17 @@ Check installed add-on versions with `/ai-addons check`. Use `/combo max` for th
 /caveman status       show current mode
 ```
 
-Natural language can turn Caveman off:
-
-```text
-"caveman off"
-"stop caveman"
-"normal mode"
-```
+Natural-language off switches also work: `caveman off`, `stop caveman`, and `normal mode`.
 
 ### RTK — compact shell output
 
 ```text
-/rtk on               enable RTK compact output
+/rtk on               enable compact RTK output
 /rtk off              disable
 /rtk status           show current state
 ```
 
-When enabled, the agent prefers `rtk` for noisy commands:
+When enabled, the agent prefers RTK for noisy commands such as:
 
 ```text
 rtk git status
@@ -198,153 +97,87 @@ rtk lint
 ```text
 /ai-addons check                          check all add-on versions
 /ai-addons status                         same as check
-/ai-addons update ponytail                update ponytail
-/ai-addons update rtk                     update rtk binary
-/ai-addons update caveman                 update caveman rule
+/ai-addons update ponytail                update Ponytail
+/ai-addons update rtk                     update the RTK binary
+/ai-addons update caveman                 update the Caveman rule
 /ai-addons update all                     update all three
-/ai-addons update all --dry-run           dry run, no changes
+/ai-addons update all --dry-run           preview without changes
 ```
 
-### Combo — toggle all 3 at once
+### Combo — toggle all three
 
 ```text
 /combo off            all three off (default)
 /combo medium         caveman=lite, rtk=on, ponytail=lite
 /combo max            caveman=ultra, rtk=on, ponytail=ultra
-/combo status         show current level and underlying modes
+/combo status         show the level and underlying modes
 /combo help           show available levels
 ```
 
-`/combo` persists each extension's state, reloads so the new modes apply immediately, and does not emit visible `/caveman`, `/rtk`, or `/ponytail` command messages.
+`/combo` persists each add-on's state and reloads OMP so the new modes apply immediately, without emitting separate `/caveman`, `/rtk`, or `/ponytail` command messages.
 
 ## File locations
 
 | What | Path |
 |---|---|
 | Caveman extension | `~/.omp/agent/extensions/caveman-session/` |
-| RTK extension | `~/.omp/agent/extensions/rtk-session/index.js` |
-| Ponytail | `~/.omp/plugins/node_modules/@dietrichgebert/ponytail/` |
-| Updater | `~/.omp/agent/extensions/ai-addons-updater/index.js` |
-| Combo toggle | `~/.omp/agent/extensions/combo-toggle/index.js` |
+| RTK extension | `~/.omp/agent/extensions/rtk-session/` |
+| Ponytail package | `~/.omp/plugins/node_modules/@dietrichgebert/ponytail/` |
+| Updater extension | `~/.omp/agent/extensions/ai-addons-updater/` |
+| Combo extension | `~/.omp/agent/extensions/combo-toggle/` |
+| RTK binary | `~/.bun/bin/rtk` (`rtk.exe` on Windows) |
+| Explicit extension registrations | `~/.omp/agent/config.yml` |
 
-## Backup behavior
+## Backups
 
-When the installer replaces an existing extension source file, it first writes `<file>.bak`. The in-session updater also creates:
+Before replacing an existing extension source file, the installer writes `<file>.bak`. The in-session updater also creates:
 
-- RTK binary → `rtk.exe.bak` or `rtk.bak` (restored if the new binary fails validation)
-- Caveman `rule.md` → `rule.md.bak` (restored if the written hash is invalid)
-
-## Manual install (without the script)
-
-### Caveman
-
-Copy `extensions/caveman-session/` to `~/.omp/agent/extensions/caveman-session/`
-
-### RTK
-
-1. Copy `extensions/rtk-session/index.js` to `~/.omp/agent/extensions/rtk-session/index.js`
-2. Download RTK binary from [github.com/rtk-ai/rtk/releases](https://github.com/rtk-ai/rtk/releases)
-3. Place at `~/.bun/bin/rtk.exe` (Windows) or `~/.bun/bin/rtk` (Unix). This is only a conventional install path; Bun itself is not required.
-
-### Ponytail
-
-```bash
-mkdir -p ~/.omp/plugins
-cd ~/.omp/plugins
-npm install @dietrichgebert/ponytail@latest --save --no-audit --no-fund
-```
-
-### Updater
-
-Copy `extensions/ai-addons-updater/` to `~/.omp/agent/extensions/ai-addons-updater/`
-
-### Combo toggle
-
-Copy `extensions/combo-toggle/` to `~/.omp/agent/extensions/combo-toggle/`
+- RTK binary: `rtk.bak` or `rtk.exe.bak`, restored if the new binary fails validation
+- Caveman rule: `rule.md.bak`, restored if the written hash is invalid
 
 ## Prerequisites
 
-- [OMP (Oh My Pi)](https://github.com/oh-my-pi/pi) installed
+- [OMP (Oh My Pi)](https://github.com/can1357/oh-my-pi)
 - Node.js 18+ with npm
 
 The installer and `/ai-addons update all` create `~/.bun/bin` for RTK compatibility even when Bun is not installed.
 
+### WSL
+
+Windows and WSL have separate OMP homes. When installing for OMP inside WSL, run the install from WSL and check:
+
+```bash
+command -v npm
+```
+
+It must resolve to a Linux path such as `~/.nvm/versions/node/.../bin/npm`, not a Windows path under `/mnt/c/`; otherwise the add-ons may be installed into the Windows environment instead of the WSL OMP home.
+
+## Advanced: one-off use
+
+Without keeping the package globally installed, run the latest release once:
+
+```bash
+npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver install
+```
+
 ## Troubleshooting
 
-### Installer shows no version or `update` still prompts
+### Ponytail or Combo command is missing
 
-An older one-off command selected a cached release. Cancel the prompt and force a registry freshness check:
+Run `oh-my-pi-supreme-token-saver reinstall` in the same Windows, WSL, or Linux environment where OMP runs, restart OMP, then try `/ponytail status` and `/combo status`. If either is still missing, run `oh-my-pi-supreme-token-saver doctor`; the installer normally repairs both explicit registrations in `~/.omp/agent/config.yml`.
 
-```bash
-npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver update
-```
+### RTK is missing or not executable
 
-Check the latest published version with:
-
-```bash
-npm view @fernado03/oh-my-pi-supreme-token-saver version
-```
-
-### /ponytail command not found (skill loads but command missing)
-
-Ponytail's extension module may not be discovered by OMP on some setups. The install script handles this automatically by adding the extension path to `config.yml`, but if you installed manually:
-
-Add this to `~/.omp/agent/config.yml`:
-
-```yaml
-extensions:
-  - ~/.omp/plugins/node_modules/@dietrichgebert/ponytail/pi-extension/index.js
-```
-
-Then restart OMP. Verify with:
-
-```text
-/ponytail status
-```
-
-### /combo command not found
-
-The installer auto-registers Combo in `config.yml`. If it still doesn't load:
-
-```yaml
-extensions:
-  - ~/.omp/agent/extensions/combo-toggle/index.js
-```
-
-Then restart OMP. Verify with:
-
-```text
-/combo status
-```
-
-### Combo status indicator not showing
-
-Run these to diagnose:
-
-```text
-/caveman status
-/rtk status
-/ponytail status
-/combo status
-```
-
-Or run the installer doctor:
-
-```bash
-npm exec --yes --prefer-online --package=@fernado03/oh-my-pi-supreme-token-saver@latest -- oh-my-pi-supreme-token-saver --doctor
-```
-
-### RTK not executable on Linux/macOS
-
-The installer now sets `chmod +x` automatically. If manually installed:
+Run `oh-my-pi-supreme-token-saver reinstall`, then `oh-my-pi-supreme-token-saver doctor`. On Linux or macOS, an older manually installed binary can be repaired with:
 
 ```bash
 chmod +x ~/.bun/bin/rtk
 ```
 
-### Checksum warnings or failures
+### Checksum warning or failure
 
-The installer verifies RTK against `checksums.txt` when checksum metadata is available, and aborts on a mismatch. If the file or asset entry is unavailable, the installer warns and continues. `/ai-addons update rtk` is stricter and aborts when checksum metadata is missing.
+The installer verifies RTK against `checksums.txt` when checksum metadata is available and aborts on a mismatch. If the checksum file or matching asset entry is unavailable, installation warns and continues; `/ai-addons update rtk` is stricter and aborts when checksum metadata is missing.
 
+## License
 
 MIT

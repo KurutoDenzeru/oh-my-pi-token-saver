@@ -1,3 +1,8 @@
+## v1.3.5
+- Add explicit `install`, `reinstall`, `doctor`, `uninstall`, `version`, and `help` CLI commands while preserving legacy flags.
+- Make `reinstall` cleanly refresh the managed extensions, RTK binary, and Ponytail package.
+- Simplify the README to one default global-install workflow, one optional one-off command, and clear WSL environment guidance.
+
 ## v1.3.4
 - Make `/ai-addons update ponytail` use npm directly so OMP installations without Bun can update Ponytail.
 - Fix RTK checksum parsing and create its conventional `~/.bun/bin` destination when Bun is absent.

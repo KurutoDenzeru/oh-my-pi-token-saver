@@ -22,7 +22,7 @@ function ponytailFallback(mode) {
     : mode === "review"
       ? "Review only for avoidable complexity; recommend the smallest correct replacement."
       : "Use the minimum correct solution. Delete or reuse before adding.";
-  return `PONYTAIL MODE ACTIVE — level: ${mode}\n${intensity} Understand the path first and fix root causes, not symptoms. Prefer the standard library and YAGNI. Avoid speculative abstractions and dependencies. Preserve correctness. Verify changed behavior.`;
+  return `🦥 PONYTAIL MODE ACTIVE — level: ${mode}\n${intensity} Understand the path first and fix root causes, not symptoms. Prefer the standard library and YAGNI. Avoid speculative abstractions and dependencies. Preserve correctness. Verify changed behavior.`;
 }
 
 function entriesFrom(ctx) {

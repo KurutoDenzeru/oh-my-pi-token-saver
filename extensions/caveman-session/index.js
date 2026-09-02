@@ -70,7 +70,7 @@ export default function cavemanSessionExtension(pi) {
       return;
     }
     const theme = c.ui.theme;
-    const indicator = isActive && theme?.fg ? theme.fg("accent", "●") : "●";
+    const indicator = isActive && theme?.fg ? theme.fg("accent", "🪨") : "🪨";
     const label = `caveman: ${currentMode.toUpperCase()}`;
     c.ui.setStatus("caveman", theme?.fg ? `${indicator} ${theme.fg("muted", label)}` : `${indicator} ${label}`);
   }

@@ -44,7 +44,7 @@ export default function rtkSessionExtension(pi) {
       return;
     }
     const theme = c.ui.theme;
-    const indicator = isActive && theme?.fg ? theme.fg("accent", "●") : "●";
+    const indicator = isActive && theme?.fg ? theme.fg("accent", "⚡") : "⚡";
     const label = "rtk: ON";
     c.ui.setStatus("rtk", theme?.fg ? `${indicator} ${theme.fg("muted", label)}` : `${indicator} ${label}`);
   }

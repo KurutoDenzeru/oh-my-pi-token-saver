@@ -141,6 +141,22 @@ async function stepPonytail(pluginsDir, userDir) {
     ponytailExtExists = await readIfExists(ponytailExtPath);
   }
 
+  // Last-resort fallback: git clone the repo into node_modules
+  if (!ponytailExtExists) {
+    console.log("  [info] npm/bun did not produce pi-extension — trying git clone...");
+    try {
+      const dest = path.join(pluginsDir, "node_modules", "@dietrichgebert", "ponytail");
+      await fs.mkdir(path.dirname(dest), { recursive: true });
+      await execP("git", ["clone", "--depth", "1", "https://github.com/DietrichGebert/ponytail.git", dest],
+        { timeout: 180000 });
+      console.log("  [ok] git clone completed");
+      ponytailExtExists = await readIfExists(ponytailExtPath);
+    } catch (e3) {
+      console.log(`  [fail] git clone failed: ${e3.message}`);
+      console.log(`  [hint] Install git or check network: https://github.com/DietrichGebert/ponytail`);
+    }
+  }
+
   if (!ponytailExtExists) {
     console.log("  [skip] Ponytail pi-extension/index.js still not found — skill-only mode");
     console.log("  [hint] The /ponytail command won't work, but ponytail skills will still load");
@@ -181,30 +197,33 @@ async function stepRtk(binDir) {
     const release = JSON.parse(raw);
     const tag = release.tag_name;
 
-    // Select asset by platform + arch
+    // Map (platform, arch) → Rust triple stem. Note: linux x64 in RTK v0.43 is musl-only.
     const PLATFORM = process.platform;
     const ARCH = process.arch;
-    let assetPattern;
+    let assetTriple;
     if (PLATFORM === "win32" && ARCH === "x64") {
-      assetPattern = "x86_64-pc-windows-msvc.zip";
+      assetTriple = "x86_64-pc-windows-msvc";
     } else if (PLATFORM === "linux" && ARCH === "x64") {
-      assetPattern = "x86_64-unknown-linux-gnu.tar.gz";
+      assetTriple = "x86_64-unknown-linux-musl";
     } else if (PLATFORM === "linux" && ARCH === "arm64") {
-      assetPattern = "aarch64-unknown-linux-gnu.tar.gz";
+      assetTriple = "aarch64-unknown-linux-gnu";
     } else if (PLATFORM === "darwin" && ARCH === "x64") {
-      assetPattern = "x86_64-apple-darwin.tar.gz";
+      assetTriple = "x86_64-apple-darwin";
     } else if (PLATFORM === "darwin" && ARCH === "arm64") {
-      assetPattern = "aarch64-apple-darwin.tar.gz";
+      assetTriple = "aarch64-apple-darwin";
     } else {
       console.log(`  [fail] Unsupported platform: ${PLATFORM}/${ARCH}`);
       console.log(`  [hint] Manual: https://github.com/rtk-ai/rtk/releases`);
       return;
     }
 
-    const asset = (release.assets || []).find((a) => a.name.includes(assetPattern));
+    // Exact match on full asset name (rtk-<triple>.<ext>) so prefix matches don't bleed across arches.
+    const asset = (release.assets || []).find((a) =>
+      a.name === `rtk-${assetTriple}.zip` || a.name === `rtk-${assetTriple}.tar.gz`
+    );
     if (!asset) {
-      console.log(`  [fail] No asset matching ${assetPattern} found in release ${tag}`);
-      console.log(`  [hint] Manual: https://github.com/rtk-ai/rtk/releases`);
+      console.log(`  [fail] No rtk-${assetTriple}.<zip|tar.gz> in release ${tag}`);
+      console.log(`  [hint] Available: ${(release.assets || []).map((a) => a.name).filter((n) => n.startsWith("rtk-")).join(", ")}`);
       return;
     }
 

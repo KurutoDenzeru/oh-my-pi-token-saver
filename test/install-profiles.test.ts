@@ -93,27 +93,18 @@ function run(...args: string[]): RunResult {
   return { status: result.status, stdout: result.stdout || "", stderr: result.stderr || "" };
 }
 
-test("installer accepts a valid profile and reports it", () => {
-  const result = run("install", "--dry-run", "--scope", "project", "--yes", "--skip", "rtk", "--combo-default", "medium");
+test("installer accepts session-default flags and reports them", () => {
+  const result = run("install", "--dry-run", "--scope", "project", "--yes", "--combo-default", "medium");
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /Profile: caveman, ponytail, updater/);
   assert.match(result.stdout, /combo default=medium/);
+  assert.match(result.stdout, /rtk-session/);
+  assert.match(result.stdout, /ai-addons-updater/);
 });
 
-test("installer reports an --only profile", () => {
-  const result = run("install", "--dry-run", "--scope", "project", "--yes", "--only", "caveman");
-  assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /Profile: caveman\b/);
-});
-
-test("installer rejects invalid profile values", () => {
+test("installer rejects invalid default values", () => {
   const badCombo = run("install", "--dry-run", "--yes", "--combo-default", "ultra");
   assert.equal(badCombo.status, 1);
   assert.match(badCombo.stderr, /Invalid --combo-default/);
-
-  const badAddon = run("install", "--dry-run", "--yes", "--only", "rtk,caveman2");
-  assert.equal(badAddon.status, 1);
-  assert.match(badAddon.stderr, /Invalid --only/);
 
   const badRtk = run("install", "--dry-run", "--yes", "--rtk-default", "maybe");
   assert.equal(badRtk.status, 1);
@@ -122,23 +113,14 @@ test("installer rejects invalid profile values", () => {
   const badCaveman = run("install", "--dry-run", "--yes", "--caveman-default", "max");
   assert.equal(badCaveman.status, 1);
   assert.match(badCaveman.stderr, /Invalid --caveman-default/);
-
-  const both = run("install", "--dry-run", "--yes", "--only", "rtk", "--skip", "rtk");
-  assert.equal(both.status, 1);
-  assert.match(both.stderr, /mutually exclusive/);
 });
 
-test("installer dry-run gates project-scope extensions by the profile", () => {
-  const skipped = run("install", "--dry-run", "--scope", "project", "--yes", "--skip", "rtk,caveman,updater");
-  assert.equal(skipped.status, 0, skipped.stderr);
-  assert.doesNotMatch(skipped.stdout, /rtk-session/);
-  assert.doesNotMatch(skipped.stdout, /caveman-session\/index/);
-  assert.doesNotMatch(skipped.stdout, /ai-addons-updater/);
-  assert.match(skipped.stdout, /Profile: ponytail\b/);
-
-  const full = run("install", "--dry-run", "--scope", "project", "--yes");
-  assert.match(full.stdout, /rtk-session/);
-  assert.match(full.stdout, /ai-addons-updater/);
+test("installer dry-run installs every project-scope extension", () => {
+  const result = run("install", "--dry-run", "--scope", "project", "--yes");
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /rtk-session/);
+  assert.match(result.stdout, /caveman-session\/index/);
+  assert.match(result.stdout, /ai-addons-updater/);
 });
 
 // --- Manifest feature/setting shape ---

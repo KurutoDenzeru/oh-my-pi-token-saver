@@ -30,13 +30,11 @@ npm install -g oh-my-pi-token-saver@latest
 oh-my-pi-token-saver install
 ```
 
-The first command installs the CLI globally with npm; the second installs its add-ons into your OMP home, so both are required. At a terminal, `install` asks for an add-on profile and optional session defaults; every prompt keeps its default on Enter. Non-interactive runs keep the classic behavior (all add-ons, modes off).
+The first command installs the CLI globally with npm; the second installs its add-ons into your OMP home, so both are required. At a terminal, `install` asks for optional session-start defaults; every prompt keeps its default on Enter. Non-interactive runs keep the classic behavior (all add-ons, modes off).
 
-Profile flags (also usable non-interactively):
+Default flags (also usable non-interactively):
 
 ```bash
-oh-my-pi-token-saver install --skip rtk                 # everything except RTK
-oh-my-pi-token-saver install --only caveman,ponytail    # just these add-ons
 oh-my-pi-token-saver install --combo-default balanced   # session-start Combo preset
 oh-my-pi-token-saver install --caveman-default lite --rtk-default on
 ```
@@ -86,9 +84,8 @@ After the global install, use these short commands for routine maintenance:
 | `oh-my-pi-token-saver doctor` | Check OMP, extension, Ponytail, and RTK installation health |
 | `oh-my-pi-token-saver uninstall` | Remove bundled extensions, the legacy `aaa-combo-boot` helper, and the plugin registration; add `--remove-rtk` to remove the RTK binary or `--remove-ponytail` to unregister Ponytail's extension path (the Ponytail package remains installed) |
 | `oh-my-pi-token-saver version` | Print the package version (`--version` or `-v` also works) |
-| `oh-my-pi-token-saver help` | Show usage (`--help` or `-h` also works) |
+Useful flags are `--scope user|project|both`, `--combo-default`/`--caveman-default`/`--rtk-default` (session-start defaults), `--dry-run`, `--yes`/`-y`, and `--verbose`. The original no-subcommand install and legacy `--doctor` and `--uninstall` forms remain supported.
 
-Useful flags are `--scope user|project|both`, `--only`/`--skip` (add-on selection), `--combo-default`/`--caveman-default`/`--rtk-default` (session defaults), `--dry-run`, `--yes`/`-y`, and `--verbose`. The original no-subcommand install and legacy `--doctor` and `--uninstall` forms remain supported.
 
 ## Commands reference
 

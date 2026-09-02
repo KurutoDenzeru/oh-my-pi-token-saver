@@ -1,3 +1,6 @@
+import os from "node:os";
+import path from "node:path";
+
 const DEFAULT_ENABLED = false;
 
 function asBoolean(value, fallback = DEFAULT_ENABLED) {
@@ -17,7 +20,9 @@ function resolveEnabled(entries, fallback = DEFAULT_ENABLED) {
   return fallback;
 }
 
-const RTK_BINARY = "C:\\Users\\Fernado\\.bun\\bin\\rtk.exe";
+const IS_WINDOWS = process.platform === "win32";
+const HOME = os.homedir();
+const RTK_BINARY = path.join(HOME, ".bun", "bin", IS_WINDOWS ? "rtk.exe" : "rtk");
 
 const RTK_PROMPT = `RTK mode active for this session.
 Use Rust Token Killer for shell output that would otherwise be noisy. Prefer explicit RTK commands in bash: \`rtk git status\`, \`rtk git diff\`, \`rtk read <file>\`, \`rtk grep <pattern> <path>\`, \`rtk find <glob> <path>\`, \`rtk test <cmd...>\`, \`rtk tsc\`, \`rtk lint\`, or \`rtk <tool> ...\` for supported dev commands.

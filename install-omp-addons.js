@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // install-omp-addons.js — Install caveman/rtk/ponytail add-ons on any OMP device.
-// Usage: node install-omp-addons.js [--dry-run]
+// Usage: node install-omp-addons.js [--dry-run] [--scope user|project|both] [--yes] [--verbose] [--doctor] [--uninstall]
 // Requires: node, omp CLI, bun (for rtk binary)
 
 import https from "node:https";
@@ -16,8 +16,33 @@ import readline from "node:readline";
 const IS_WINDOWS = process.platform === "win32";
 const HOME = process.env.HOME || process.env.USERPROFILE || "";
 
+// --- CLI flags ---
+
+const args = process.argv.slice(2);
+const dryRun = args.includes("--dry-run");
+const yes = args.includes("--yes") || args.includes("-y");
+const verbose = args.includes("--verbose");
+const doctor = args.includes("--doctor");
+const uninstall = args.includes("--uninstall");
+const removePonytail = args.includes("--remove-ponytail");
+const removeRtk = args.includes("--remove-rtk");
+
+const scopeFlag = (() => {
+  const i = args.indexOf("--scope");
+  if (i === -1) return null;
+  return args[i + 1]?.toLowerCase() || null;
+})();
+
+function debug(...a) {
+  if (verbose) console.log("  [debug]", ...a);
+}
+
 const RL = readline.createInterface({ input: process.stdin, output: process.stdout });
-const ask = (q) => new Promise((res) => RL.question(q, (a) => { RL.close(); res(a); }));
+let rlOpen = true;
+function ask(q) {
+  return new Promise((res) => RL.question(q, (a) => { RL.close(); rlOpen = false; res(a); }));
+}
+function closeRL() { if (rlOpen) { RL.close(); rlOpen = false; } }
 
 // Paths to extension source files (relative to this script)
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -35,8 +60,23 @@ function sha256Hex(text) {
   return createHash("sha256").update(text, "utf8").digest("hex");
 }
 
+async function sha256File(filePath) {
+  const buf = await fs.readFile(filePath);
+  return createHash("sha256").update(buf).digest("hex");
+}
+
 async function readIfExists(p) {
   try { return await fs.readFile(p, "utf8"); } catch { return null; }
+}
+
+function parseChecksum(checksumsText, assetName) {
+  for (const line of checksumsText.split(/\r?\n/)) {
+    const match = line.match(/^([0-9a-fA-F]{64})\s+\*?(.+)$/);
+    if (match && path.basename(match[2]) === assetName) {
+      return match[1].toLowerCase();
+    }
+  }
+  return null;
 }
 
 async function httpsGet(url) {
@@ -77,25 +117,67 @@ function execP(cmd, args, opts = {}) {
   return execFile(cmd, args, { timeout: opts.timeout || 120000, encoding: "utf8", ...opts });
 }
 
-async function writeIfChanged(dest, content) {
+async function writeIfChanged(dest, content, options = {}) {
   const existing = await readIfExists(dest);
   if (existing === content) {
-    console.log(`  [skip] ${path.basename(dest)} (already present)`);
+    debug(`${dest} already up to date`);
     return false;
+  }
+  if (options.dryRun) {
+    console.log(`  [dry-run] would write ${dest}`);
+    return true;
   }
   await fs.mkdir(path.dirname(dest), { recursive: true });
   if (existing !== null) {
     await fs.copyFile(dest, `${dest}.bak`);
-    console.log(`  [bak] ${path.basename(dest)} → ${path.basename(dest)}.bak`);
+    debug(`${path.basename(dest)} → ${path.basename(dest)}.bak`);
   }
   await fs.writeFile(dest, content, "utf8");
-  console.log(`  [write] ${path.basename(dest)} (${content.length}b)`);
+  console.log(`  [write] ${dest}`);
+  return true;
+}
+
+async function ensureExtensionInConfig(configPath, extensionPath, label, options = {}) {
+  const normalizedPath = extensionPath.replace(/\\/g, "/");
+  const line = `  - ${normalizedPath}`;
+
+  let raw = await readIfExists(configPath);
+  let lines = (raw || "").split("\n");
+
+  if (lines.some((l) => l.includes(normalizedPath))) {
+    debug(`${label} already in config.yml`);
+    return false;
+  }
+
+  const extLineIdx = lines.findIndex((l) => /^\s*extensions\s*:/i.test(l));
+
+  if (options.dryRun) {
+    console.log(`  [dry-run] would add ${label} to config.yml: ${normalizedPath}`);
+    return true;
+  }
+
+  // Handle "extensions: []" (empty YAML array)
+  const emptyArrayIdx = lines.findIndex((l) => /^\s*extensions\s*:\s*\[\s*\]\s*$/i.test(l));
+  if (emptyArrayIdx !== -1) {
+    lines[emptyArrayIdx] = "extensions:";
+    lines.splice(emptyArrayIdx + 1, 0, line, "");
+  } else if (extLineIdx === -1) {
+    lines.push("extensions:");
+    lines.push(line);
+    lines.push("");
+  } else {
+    lines.splice(extLineIdx + 1, 0, line);
+  }
+
+  await fs.mkdir(path.dirname(configPath), { recursive: true });
+  await fs.writeFile(configPath, lines.join("\n"), "utf8");
+  console.log(`  [write] Added ${label} to config.yml`);
   return true;
 }
 
 // --- Steps ---
 
-async function stepPonytail(pluginsDir, userDir) {
+async function stepPonytail(pluginsDir, userDir, options = {}) {
   console.log("\n[1/5] Installing Ponytail plugin...");
   await fs.mkdir(pluginsDir, { recursive: true });
   const pkgPath = path.join(pluginsDir, "package.json");
@@ -107,11 +189,20 @@ async function stepPonytail(pluginsDir, userDir) {
   pkg.private = true;
   pkg.dependencies = pkg.dependencies || {};
   pkg.dependencies["@dietrichgebert/ponytail"] = "github:DietrichGebert/ponytail";
-  await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
-  console.log(`  [write] package.json`);
+
+  if (options.dryRun) {
+    console.log(`  [dry-run] would write ${pkgPath}`);
+  } else {
+    await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
+    console.log(`  [write] package.json`);
+  }
+
+  if (options.dryRun) {
+    console.log("  [dry-run] would run: omp plugin install github:DietrichGebert/ponytail");
+    return;
+  }
 
   // Try omp plugin install first
-  let installed = false;
   try {
     await execP(IS_WINDOWS ? "omp.cmd" : "omp", ["plugin", "install", "github:DietrichGebert/ponytail"],
       { cwd: pluginsDir });
@@ -167,38 +258,17 @@ async function stepPonytail(pluginsDir, userDir) {
   // Wire extension into config.yml so /ponytail command loads
   console.log("  [ok] Ponytail pi-extension found");
   const configPath = path.join(userDir, "config.yml");
-  let configRaw = await readIfExists(configPath);
-  let configLines = (configRaw || "").split("\n");
-
-  const extLineIdx = configLines.findIndex((l) => /^\s*extensions\s*:/i.test(l));
-  const ponytailLine = `  - ${ponytailExtPath.replace(/\\/g, "/")}`;
-
-  if (extLineIdx === -1) {
-    configLines.push("extensions:");
-    configLines.push(ponytailLine);
-    configLines.push("");
-    console.log(`  [write] Added extensions: + ponytail path to config.yml`);
-  } else {
-    const alreadyListed = configLines.some((l) => l.includes("ponytail") && l.includes("pi-extension"));
-    if (alreadyListed) {
-      console.log(`  [skip] Ponytail extension already in config.yml`);
-    } else {
-      configLines.splice(extLineIdx + 1, 0, ponytailLine);
-      console.log(`  [write] Added ponytail path to extensions in config.yml`);
-    }
-  }
-
-  await fs.writeFile(configPath, configLines.join("\n"), "utf8");
+  await ensureExtensionInConfig(configPath, ponytailExtPath, "ponytail", options);
 }
 
-async function stepRtk(binDir) {
+async function stepRtk(binDir, options = {}) {
   console.log("\n[2/5] Installing RTK binary...");
   try {
     const raw = await httpsGet(RTK_RELEASE_API);
     const release = JSON.parse(raw);
     const tag = release.tag_name;
 
-    // Map (platform, arch) → Rust triple stem. Note: linux x64 in RTK v0.43 is musl-only.
+    // Map (platform, arch) → Rust triple stem.
     const PLATFORM = process.platform;
     const ARCH = process.arch;
     let assetTriple;
@@ -218,7 +288,6 @@ async function stepRtk(binDir) {
       return;
     }
 
-    // Exact match on full asset name (rtk-<triple>.<ext>) so prefix matches don't bleed across arches.
     const asset = (release.assets || []).find((a) =>
       a.name === `rtk-${assetTriple}.zip` || a.name === `rtk-${assetTriple}.tar.gz`
     );
@@ -228,10 +297,49 @@ async function stepRtk(binDir) {
       return;
     }
 
+    const binDest = path.join(binDir, IS_WINDOWS ? "rtk.exe" : "rtk");
+
+    if (options.dryRun) {
+      console.log(`  [dry-run] would download ${asset.name} from release ${tag}`);
+      console.log(`  [dry-run] would verify checksum against checksums.txt`);
+      console.log(`  [dry-run] would extract and install to ${binDest}`);
+      return;
+    }
+
+    // Also download checksums.txt for verification
+    const checksumsAsset = (release.assets || []).find((a) => a.name === "checksums.txt");
+    let checksumsText = null;
+    if (checksumsAsset) {
+      try {
+        checksumsText = await httpsGet(checksumsAsset.browser_download_url);
+      } catch (e) {
+        debug(`Could not download checksums.txt: ${e.message}`);
+      }
+    }
+
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "omp-rtk-"));
     const archivePath = path.join(tmpDir, asset.name);
 
     await httpsDownload(asset.browser_download_url, archivePath);
+
+    // Verify checksum
+    if (checksumsText) {
+      const expected = parseChecksum(checksumsText, asset.name);
+      const actual = await sha256File(archivePath);
+      if (!expected) {
+        console.log(`  [warn] checksums.txt missing entry for ${asset.name} — skipping verification`);
+      } else if (actual !== expected) {
+        console.log(`  [fail] Checksum mismatch for ${asset.name}`);
+        console.log(`  [fail] Expected: ${expected}`);
+        console.log(`  [fail] Got:      ${actual}`);
+        await fs.rm(tmpDir, { recursive: true, force: true });
+        return;
+      } else {
+        console.log(`  [ok] Checksum verified for ${asset.name}`);
+      }
+    } else {
+      console.log(`  [warn] No checksums.txt available — skipping verification`);
+    }
 
     // Extract by extension (not OS)
     const extractDir = path.join(tmpDir, "extracted");
@@ -246,20 +354,17 @@ async function stepRtk(binDir) {
       }
     } else if (asset.name.endsWith(".tar.gz") || asset.name.endsWith(".tgz")) {
       try {
-        const r = await execP("tar", ["xzf", archivePath, "-C", extractDir], { timeout: 60000 });
-        console.log(`  [debug] tar ok; stderr=${(r.stderr||"").trim().slice(0,200)}`);
+        await execP("tar", ["xzf", archivePath, "-C", extractDir], { timeout: 60000 });
+        debug("tar xzf ok");
       } catch (e) {
-        console.log(`  [debug] tar xzf failed: ${(e.stderr||e.message||"").trim().slice(0,200)}`);
-        // Fallback: pipe gunzip | tar
+        debug(`tar xzf failed: ${(e.stderr||e.message||"").trim().slice(0,200)}`);
         try {
           await execP("sh", ["-c", `gunzip < "${archivePath}" | tar xf - -C "${extractDir}"`], { timeout: 60000 });
-          console.log(`  [debug] gunzip|tar fallback ok`);
+          debug("gunzip|tar fallback ok");
         } catch (e2) {
-          console.log(`  [debug] gunzip|tar fallback failed: ${(e2.stderr||e2.message||"").trim().slice(0,200)}`);
+          debug(`gunzip|tar fallback failed: ${(e2.stderr||e2.message||"").trim().slice(0,200)}`);
         }
       }
-      try { const s = await fs.stat(archivePath); console.log(`  [debug] archiveBytes=${s.size}`); } catch {}
-      try { console.log(`  [debug] extractDir listing: ${JSON.stringify(await fs.readdir(extractDir))}`); } catch {}
     } else {
       console.log(`  [fail] Unknown archive format: ${asset.name}`);
       await fs.rm(tmpDir, { recursive: true, force: true });
@@ -269,7 +374,7 @@ async function stepRtk(binDir) {
     // Find binary
     const binaryName = IS_WINDOWS ? "rtk.exe" : "rtk";
     const entries = await fs.readdir(extractDir, { recursive: true });
-    console.log(`  [debug] recursiveReaddir=${JSON.stringify(entries)} basenameMatch=${entries.find((e) => path.basename(e) === binaryName) || 'NONE'}`);
+    debug(`extracted entries: ${entries.join(", ")}`);
     const found = entries.find((e) => path.basename(e) === binaryName);
     if (!found) {
       console.log(`  [fail] Could not find ${binaryName} in extracted archive`);
@@ -277,10 +382,15 @@ async function stepRtk(binDir) {
       return;
     }
 
-    const binDest = path.join(binDir, IS_WINDOWS ? "rtk.exe" : "rtk");
     await fs.mkdir(path.dirname(binDest), { recursive: true });
     await fs.copyFile(path.join(extractDir, found), binDest);
     console.log(`  [write] ${binDest}`);
+
+    // Set executable bit on Unix
+    if (!IS_WINDOWS) {
+      await fs.chmod(binDest, 0o755);
+      debug(`chmod 755 ${binDest}`);
+    }
 
     // Verify
     try {
@@ -298,7 +408,7 @@ async function stepRtk(binDir) {
   }
 }
 
-async function stepRtkSession(extDir) {
+async function stepRtkSession(extDir, options = {}) {
   console.log("\n[3/5] Installing RTK session extension...");
   const src = await readIfExists(RTK_SESSION_INDEX);
   if (!src) {
@@ -306,17 +416,17 @@ async function stepRtkSession(extDir) {
     return;
   }
   const dest = path.join(extDir, "rtk-session", "index.js");
-  await writeIfChanged(dest, src);
+  await writeIfChanged(dest, src, options);
 }
 
-async function stepCaveman(extDir) {
+async function stepCaveman(extDir, options = {}) {
   console.log("\n[4/5] Installing Caveman session extension...");
   const cavemanDir = path.join(extDir, "caveman-session");
-  await fs.mkdir(cavemanDir, { recursive: true });
+  if (!options.dryRun) await fs.mkdir(cavemanDir, { recursive: true });
 
   // Fetch upstream rule
   const rule = await httpsGet(CAVEMAN_REMOTE_RULE);
-  await writeIfChanged(path.join(cavemanDir, "rule.md"), rule);
+  await writeIfChanged(path.join(cavemanDir, "rule.md"), rule, options);
 
   // Write index.js
   const src = await readIfExists(CAVEMAN_INDEX);
@@ -324,53 +434,243 @@ async function stepCaveman(extDir) {
     console.log("  [skip] caveman-session/index.js not found in repo");
     return;
   }
-  await writeIfChanged(path.join(cavemanDir, "index.js"), src);
+  await writeIfChanged(path.join(cavemanDir, "index.js"), src, options);
 
   // Write updater
   const updaterSrc = await readIfExists(UPDATER_INDEX);
   if (updaterSrc) {
     const updaterDest = path.join(extDir, "ai-addons-updater", "index.js");
-    await writeIfChanged(updaterDest, updaterSrc);
+    await writeIfChanged(updaterDest, updaterSrc, options);
   } else {
     console.log("  [skip] ai-addons-updater/index.js not found in repo");
   }
 }
 
-// NOTE: combo-toggle follows the file-only install pattern (like stepCaveman/stepRtkSession),
-// assuming OMP auto-discovers ~/.omp/agent/extensions/*/index.js. If /combo doesn't load after
-// restart in your setup, the user must add ~/.omp/agent/extensions/combo-toggle/index.js to
-// ~/.omp/agent/config.yml under `extensions:` (same fix as ponytail).
-async function stepCombo(extDir) {
-  console.log("\n[5/5] Installing Combo toggle extension (off by default)...");
+async function stepCombo(extDir, options = {}) {
+  console.log("\n[5/5] Installing Combo toggle extension...");
   const src = await readIfExists(COMBO_TOGGLE_INDEX);
   if (!src) {
     console.log("  [skip] combo-toggle/index.js not found in repo");
     return;
   }
   const dest = path.join(extDir, "combo-toggle", "index.js");
-  await writeIfChanged(dest, src);
+  await writeIfChanged(dest, src, options);
+
+  // Auto-register combo in config.yml
+  const configPath = path.join(path.dirname(extDir), "config.yml");
+  await ensureExtensionInConfig(configPath, dest, "combo", options);
 }
 
+// --- Doctor ---
+
+async function runDoctor() {
+  console.log("\n=== OMP Supreme Token Saver Doctor ===\n");
+
+  // Node
+  console.log(`  Node: ok v${process.version}`);
+
+  // OMP CLI
+  try {
+    const v = (await execP(IS_WINDOWS ? "omp.cmd" : "omp", ["--version"])).stdout.trim();
+    console.log(`  OMP CLI: ok ${v}`);
+  } catch {
+    console.log("  OMP CLI: MISSING");
+  }
+
+  // Home
+  console.log(`  Home: ${HOME}`);
+
+  // Directories
+  const agentDir = path.join(HOME, ".omp", "agent");
+  const extDir = path.join(agentDir, "extensions");
+  const configPath = path.join(agentDir, "config.yml");
+  const pluginsDir = path.join(HOME, ".omp", "plugins");
+  const rtkBin = path.join(HOME, ".bun", "bin", IS_WINDOWS ? "rtk.exe" : "rtk");
+
+  const agentOk = await readIfExists(agentDir) !== null || (await fs.readdir(agentDir).catch(() => null)) !== null;
+  console.log(`  OMP agent dir: ${agentOk ? "ok" : "MISSING"} ${agentDir}`);
+
+  const extOk = (await fs.readdir(extDir).catch(() => null)) !== null;
+  console.log(`  OMP extensions dir: ${extOk ? "ok" : "MISSING"} ${extDir}`);
+
+  const configOk = (await readIfExists(configPath)) !== null;
+  console.log(`  OMP config.yml: ${configOk ? "ok" : "MISSING"} ${configPath}`);
+
+  // Ponytail
+  const ponytailPkg = path.join(pluginsDir, "node_modules", "@dietrichgebert", "ponytail", "package.json");
+  const ponytailExt = path.join(pluginsDir, "node_modules", "@dietrichgebert", "ponytail", "pi-extension", "index.js");
+  const ponytailInstalled = (await readIfExists(ponytailPkg)) !== null;
+  const ponytailExtInstalled = (await readIfExists(ponytailExt)) !== null;
+  console.log(`  Ponytail package: ${ponytailInstalled ? "installed" : "MISSING"}`);
+  console.log(`  Ponytail extension: ${ponytailExtInstalled ? "installed" : "MISSING"}`);
+
+  if (configOk) {
+    const configText = await readIfExists(configPath);
+    const hasPonytailPath = configText.includes("ponytail") && configText.includes("pi-extension");
+    console.log(`  Ponytail in config.yml: ${hasPonytailPath ? "registered" : "MISSING"}`);
+  }
+
+  // RTK
+  const rtkExists = (await readIfExists(rtkBin)) !== null;
+  console.log(`  RTK binary: ${rtkExists ? "installed" : "MISSING"} ${rtkBin}`);
+  if (rtkExists) {
+    try {
+      const v = (await execP(rtkBin, ["--version"], { timeout: 5000 })).stdout.trim();
+      console.log(`  RTK version: ${v}`);
+    } catch {
+      console.log("  RTK version: unavailable (may not be executable)");
+    }
+  }
+
+  // Caveman
+  const cavemanIndex = path.join(extDir, "caveman-session", "index.js");
+  const cavemanRule = path.join(extDir, "caveman-session", "rule.md");
+  console.log(`  Caveman extension: ${(await readIfExists(cavemanIndex)) !== null ? "installed" : "MISSING"}`);
+  console.log(`  Caveman rule.md: ${(await readIfExists(cavemanRule)) !== null ? "installed" : "MISSING"}`);
+
+  // RTK extension
+  const rtkIndex = path.join(extDir, "rtk-session", "index.js");
+  console.log(`  RTK extension: ${(await readIfExists(rtkIndex)) !== null ? "installed" : "MISSING"}`);
+
+  // Updater
+  const updaterIndex = path.join(extDir, "ai-addons-updater", "index.js");
+  console.log(`  Updater extension: ${(await readIfExists(updaterIndex)) !== null ? "installed" : "MISSING"}`);
+
+  // Combo
+  const comboIndex = path.join(extDir, "combo-toggle", "index.js");
+  console.log(`  Combo extension: ${(await readIfExists(comboIndex)) !== null ? "installed" : "MISSING"}`);
+
+  if (configOk) {
+    const configText = await readIfExists(configPath);
+    const hasComboPath = configText.includes("combo-toggle");
+    console.log(`  Combo in config.yml: ${hasComboPath ? "registered" : "MISSING"}`);
+  }
+}
+
+// --- Uninstall ---
+
+async function runUninstall() {
+  console.log("\n=== OMP Supreme Token Saver Uninstall ===\n");
+
+  const extDir = path.join(HOME, ".omp", "agent", "extensions");
+  const configPath = path.join(HOME, ".omp", "agent", "config.yml");
+  const rtkBin = path.join(HOME, ".bun", "bin", IS_WINDOWS ? "rtk.exe" : "rtk");
+
+  const targets = [
+    path.join(extDir, "caveman-session"),
+    path.join(extDir, "rtk-session"),
+    path.join(extDir, "ai-addons-updater"),
+    path.join(extDir, "combo-toggle"),
+  ];
+
+  console.log("Will remove:");
+  for (const t of targets) {
+    console.log(`  ${t}`);
+  }
+
+  if (removeRtk) {
+    console.log(`  ${rtkBin}`);
+  }
+
+  if (!yes) {
+    const answer = await ask("\nProceed? [y/N]: ");
+    if (!answer.toLowerCase().startsWith("y")) {
+      console.log("Aborted.");
+      closeRL();
+      return;
+    }
+  }
+
+  // Remove extension directories
+  for (const t of targets) {
+    try {
+      await fs.rm(t, { recursive: true, force: true });
+      console.log(`  [rm] ${t}`);
+    } catch {
+      debug(`Could not remove ${t}`);
+    }
+  }
+
+  // Remove combo and ponytail from config.yml
+  const configRaw = await readIfExists(configPath);
+  if (configRaw) {
+    let lines = configRaw.split("\n");
+    const before = lines.length;
+    lines = lines.filter((l) => {
+      if (l.includes("combo-toggle")) return false;
+      if (removePonytail && l.includes("ponytail") && l.includes("pi-extension")) return false;
+      return true;
+    });
+    if (lines.length !== before) {
+      await fs.writeFile(configPath, lines.join("\n"), "utf8");
+      console.log(`  [write] Updated config.yml (removed ${before - lines.length} entries)`);
+    }
+  }
+
+  // Remove RTK binary if requested
+  if (removeRtk) {
+    try {
+      await fs.unlink(rtkBin);
+      console.log(`  [rm] ${rtkBin}`);
+    } catch {
+      debug(`Could not remove ${rtkBin}`);
+    }
+  }
+
+  console.log("\nDone. Restart OMP for changes to take effect.");
+}
+
+// --- Main ---
+
 async function main() {
-  const dryRun = process.argv.includes("--dry-run");
+  if (doctor) {
+    await runDoctor();
+    closeRL();
+    return;
+  }
+
+  if (uninstall) {
+    await runUninstall();
+    closeRL();
+    return;
+  }
+
   if (dryRun) console.log("[dry-run] No changes will be written.\n");
 
   console.log("=== OMP Supreme Token Saver ===");
   console.log(`  Platform: ${process.platform}`);
+  console.log(`  Arch: ${process.arch}`);
   console.log(`  Home: ${HOME}`);
 
   // Determine install scope
-  console.log("\nInstall scope:");
-  console.log("  1) User-level (all OMP sessions)");
-  console.log("  2) Project-level (this repo only)");
-  console.log("  3) Both");
-  const scope = (await ask("\nChoose [1-3] (default 1): ")).trim() || "1";
+  let scope;
+  if (scopeFlag) {
+    const map = { user: "1", project: "2", both: "3" };
+    scope = map[scopeFlag];
+    if (!scope) {
+      console.log(`  [fail] Invalid --scope: ${scopeFlag}. Use: user, project, both`);
+      closeRL();
+      process.exit(1);
+    }
+    console.log(`  Scope: ${scopeFlag}`);
+  } else if (yes) {
+    scope = "1";
+    console.log("  Scope: user (--scope omitted, defaulting to user with --yes)");
+  } else {
+    console.log("\nInstall scope:");
+    console.log("  1) User-level (all OMP sessions)");
+    console.log("  2) Project-level (this repo only)");
+    console.log("  3) Both");
+    scope = (await ask("\nChoose [1-3] (default 1): ")).trim() || "1";
+  }
 
   const userDir = path.join(HOME, ".omp", "agent");
   const userExtDir = path.join(userDir, "extensions");
   const userPluginsDir = path.join(userDir, "..", "plugins");
   const bunBinDir = path.join(HOME, ".bun", "bin");
   const projectExtDir = path.join(process.cwd(), ".omp", "extensions");
+
+  const options = { dryRun, verbose, yes, scope };
 
   // Check prerequisites
   console.log("\nPrerequisites:");
@@ -381,26 +681,20 @@ async function main() {
     console.log("  [fail] omp not found — ensure it's installed");
   }
 
-  if (dryRun) {
-    console.log("\n[Dry run complete. No files written.]");
-    return;
-  }
-
   // Install per scope
   if (scope === "1" || scope === "3") {
     console.log("\n--- User-level install ---");
-    await stepPonytail(userPluginsDir, userDir);
-    await stepRtk(bunBinDir);
-    await stepRtkSession(userExtDir);
-    await stepCaveman(userExtDir);
-    await stepCombo(userExtDir);
+    await stepPonytail(userPluginsDir, userDir, options);
+    await stepRtk(bunBinDir, options);
+    await stepRtkSession(userExtDir, options);
+    await stepCaveman(userExtDir, options);
+    await stepCombo(userExtDir, options);
   }
-
 
   if (scope === "2" || scope === "3") {
     console.log("\n--- Project-level install ---");
-    await stepRtkSession(projectExtDir);
-    await stepCaveman(projectExtDir);
+    await stepRtkSession(projectExtDir, options);
+    await stepCaveman(projectExtDir, options);
     console.log("  [note] Ponytail, RTK binary, and Combo toggle require user-level (global) install");
   }
 
@@ -412,6 +706,8 @@ async function main() {
   console.log("  4. /ponytail full");
   console.log("  5. /ai-addons check");
   console.log("  6. /combo medium   (toggle all 3 at once — off by default)");
+
+  closeRL();
 }
 
-main().catch(console.error);
+main().catch((e) => { closeRL(); console.error(e); });

@@ -25,7 +25,6 @@ cd oh-my-pi-supreme-token-saver
 node install-omp-addons.js
 ```
 
-
 ### Update (re-run to overwrite old versions)
 
 ```bash
@@ -52,11 +51,41 @@ Dry run first to see what would change:
 /ai-addons update all --dry-run
 ```
 
-You'll be asked to choose an install scope:
+## CLI Flags
 
-1. **User-level** — applies to all OMP sessions (recommended)
-2. **Project-level** — applies to this repo only
-3. **Both**
+```bash
+# Non-interactive install (user scope, no prompts)
+npx @fernado03/oh-my-pi-supreme-token-saver --scope user --yes
+
+# Project-level install
+npx @fernado03/oh-my-pi-supreme-token-saver --scope project --yes
+
+# Both user and project
+npx @fernado03/oh-my-pi-supreme-token-saver --scope both --yes
+
+# Dry run — shows planned changes without writing
+npx @fernado03/oh-my-pi-supreme-token-saver --dry-run --scope user --yes
+
+# Doctor — check installation health
+npx @fernado03/oh-my-pi-supreme-token-saver --doctor
+
+# Uninstall — removes installed extensions (prompts for confirmation)
+npx @fernado03/oh-my-pi-supreme-token-saver --uninstall
+
+# Uninstall without prompt
+npx @fernado03/oh-my-pi-supreme-token-saver --uninstall --yes
+
+# Verbose output (debug details)
+npx @fernado03/oh-my-pi-supreme-token-saver --verbose
+```
+
+### Scope options
+
+| Flag | Meaning |
+|------|---------|
+| `--scope user` | User-level (all OMP sessions) — recommended |
+| `--scope project` | Project-level (this repo only) |
+| `--scope both` | Both user and project |
 
 ### Dry run
 
@@ -155,9 +184,11 @@ rtk lint
 /combo off            all three off (default)
 /combo medium         caveman=lite, rtk=on, ponytail=lite
 /combo max            caveman=ultra, rtk=on, ponytail=ultra
-/combo status         show current level
+/combo status         show current level and underlying modes
 /combo help           show available levels
 ```
+
+**Fixed in v1.2.0:** `/combo` no longer sends visible `/caveman`, `/rtk`, `/ponytail` messages. It persists state directly and shows its own status indicator.
 
 ## File locations
 
@@ -209,7 +240,6 @@ Copy `extensions/combo-toggle/` to `~/.omp/agent/extensions/combo-toggle/`
 - [Bun](https://bun.sh) installed (for RTK binary path)
 - Node.js 18+
 
-
 ## Troubleshooting
 
 ### /ponytail command not found (skill loads but command missing)
@@ -228,6 +258,50 @@ Then restart OMP. Verify with:
 ```text
 /ponytail status
 ```
+
+### /combo command not found
+
+The installer auto-registers Combo in `config.yml`. If it still doesn't load:
+
+```yaml
+extensions:
+  - ~/.omp/agent/extensions/combo-toggle/index.js
+```
+
+Then restart OMP. Verify with:
+
+```text
+/combo status
+```
+
+### Combo status indicator not showing
+
+Run these to diagnose:
+
+```text
+/caveman status
+/rtk status
+/ponytail status
+/combo status
+```
+
+Or run the installer doctor:
+
+```bash
+npx @fernado03/oh-my-pi-supreme-token-saver --doctor
+```
+
+### RTK not executable on Linux/macOS
+
+The installer now sets `chmod +x` automatically. If manually installed:
+
+```bash
+chmod +x ~/.bun/bin/rtk
+```
+
+### Checksum verification failed
+
+The installer downloads and verifies RTK against `checksums.txt` from the GitHub release. If verification fails, it aborts safely — no binary is installed.
 
 
 MIT

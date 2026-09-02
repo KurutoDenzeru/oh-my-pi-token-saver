@@ -26,20 +26,44 @@ function normalizeLevel(value) {
   return Object.prototype.hasOwnProperty.call(LEVELS, v) ? v : null;
 }
 
-function statusMessage(currentLevels) {
-  const c = currentLevels.caveman === "off" ? "off" : currentLevels.caveman;
-  const r = currentLevels.rtk === "off" ? "off" : currentLevels.rtk;
-  const p = currentLevels.ponytail === "off" ? "off" : currentLevels.ponytail;
-  return `Combo: caveman=${c} rtk=${r} ponytail=${p}`;
-}
-
 function levelSummary(level) {
   const v = LEVELS[level];
   return `caveman=${v.caveman} rtk=${v.rtk} ponytail=${v.ponytail}`;
 }
 
+function resolveComboLevel(entries, fallback = DEFAULT_LEVEL) {
+  if (!Array.isArray(entries)) return fallback;
+  for (let i = entries.length - 1; i >= 0; i -= 1) {
+    const entry = entries[i];
+    if (entry?.type !== "custom" || entry?.customType !== "combo-level") continue;
+    const level = normalizeLevel(entry?.data?.level);
+    if (level) return level;
+  }
+  return fallback;
+}
+
 export default function comboToggleExtension(pi) {
   pi.setLabel?.("Combo session toggle (all 3 add-ons)");
+
+  let currentLevel = DEFAULT_LEVEL;
+  let lastCtx = null;
+
+  function syncStatus(ctx) {
+    if (ctx) lastCtx = ctx;
+    const c = ctx || lastCtx;
+    if (!c?.ui?.setStatus) return;
+
+    if (currentLevel === "off") {
+      c.ui.setStatus("combo", "");
+      return;
+    }
+
+    const levels = LEVELS[currentLevel];
+    const theme = c.ui.theme;
+    const indicator = theme?.fg ? theme.fg("accent", "🧩") : "🧩";
+    const label = `combo: ${currentLevel.toUpperCase()} · caveman=${levels.caveman.toUpperCase()} · rtk=${levels.rtk.toUpperCase()} · ponytail=${levels.ponytail.toUpperCase()}`;
+    c.ui.setStatus("combo", theme?.fg ? `${indicator} ${theme.fg("muted", label)}` : `${indicator} ${label}`);
+  }
 
   pi.registerCommand("combo", {
     description: "Toggle all 3 OMP add-ons at once. Usage: /combo <off|medium|max|status>",
@@ -47,7 +71,11 @@ export default function comboToggleExtension(pi) {
       const arg = String(args || "").trim().toLowerCase();
 
       if (!arg || arg === "status") {
-        ctx?.ui?.notify?.("Combo levels: off | medium | max. Run `/combo <level>` to apply.", "info");
+        const levels = LEVELS[currentLevel];
+        ctx?.ui?.notify?.(
+          `Combo: ${currentLevel.toUpperCase()} (${levelSummary(currentLevel)})`,
+          "info"
+        );
         return;
       }
 
@@ -78,33 +106,22 @@ export default function comboToggleExtension(pi) {
       pi.appendEntry("ponytail-mode", { mode: levels.ponytail });
       pi.appendEntry("combo-level", { level });
 
-      // Actually invoke each extension's slash command so their state + UI updates
-      const rtkArg = levels.rtk === "on" ? "on" : "off";
-      await pi.sendUserMessage(`/caveman ${levels.caveman}`, { deliverAs: "followUp" });
-      await pi.sendUserMessage(`/rtk ${rtkArg}`, { deliverAs: "followUp" });
-      await pi.sendUserMessage(`/ponytail ${levels.ponytail}`, { deliverAs: "followUp" });
+      currentLevel = level;
+      syncStatus(ctx);
 
       ctx?.ui?.notify?.(
-        `Combo ${level} applied: caveman=${levels.caveman} rtk=${rtkArg} ponytail=${levels.ponytail}`,
+        `Combo ${level} applied: ${levelSummary(level)}`,
         "info"
       );
     },
   });
 
-  pi.on("input", async (event) => {
-    if (event?.source === "extension") return;
-    const t = String(event?.text || "").trim().toLowerCase().replace(/[.!?\s]+$/, "");
-    const level = normalizeLevel(t.replace(/^combo\s+/, ""));
-    if (level) {
-      const levels = LEVELS[level];
-      const rtkArg = levels.rtk === "on" ? "on" : "off";
-      pi.appendEntry("caveman-mode", { mode: levels.caveman });
-      pi.appendEntry("rtk-mode", { enabled: levels.rtk === "on" });
-      pi.appendEntry("ponytail-mode", { mode: levels.ponytail });
-      pi.appendEntry("combo-level", { level });
-      await pi.sendUserMessage(`/caveman ${levels.caveman}`, { deliverAs: "followUp" });
-      await pi.sendUserMessage(`/rtk ${rtkArg}`, { deliverAs: "followUp" });
-      await pi.sendUserMessage(`/ponytail ${levels.ponytail}`, { deliverAs: "followUp" });
-    }
+  pi.on("session_start", async (_event, ctx) => {
+    const entries = ctx?.sessionManager?.getBranch?.() || ctx?.sessionManager?.getEntries?.() || [];
+    currentLevel = resolveComboLevel(entries);
+    syncStatus(ctx);
   });
+
+  // Remove natural-language handler (pi.on("input", ...)) to avoid accidental triggers
+  // and because it lacks ctx for reload. Use slash commands only.
 }

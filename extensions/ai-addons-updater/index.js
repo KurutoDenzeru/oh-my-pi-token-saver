@@ -12,12 +12,15 @@ import path from "node:path";
 import os from "node:os";
 import { execFileSync } from "node:child_process";
 
+const IS_WINDOWS = process.platform === "win32";
+const HOME = os.homedir();
+
 const PONYTAIL_REMOTE = "https://raw.githubusercontent.com/DietrichGebert/ponytail/main/package.json";
-const PONYTAIL_LOCAL = "C:/Users/Fernado/.omp/plugins/node_modules/@dietrichgebert/ponytail/package.json";
+const PONYTAIL_LOCAL = path.join(HOME, ".omp", "plugins", "node_modules", "@dietrichgebert", "ponytail", "package.json");
 const RTK_RELEASE_API = "https://api.github.com/repos/rtk-ai/rtk/releases/latest";
-const RTK_BINARY = "C:\\Users\\Fernado\\.bun\\bin\\rtk.exe";
+const RTK_BINARY = path.join(HOME, ".bun", "bin", IS_WINDOWS ? "rtk.exe" : "rtk");
 const CAVEMAN_REMOTE = "https://raw.githubusercontent.com/JuliusBrussee/caveman/main/src/rules/caveman-activate.md";
-const CAVEMAN_LOCAL = "C:/Users/Fernado/.omp/agent/extensions/caveman-session/rule.md";
+const CAVEMAN_LOCAL = path.join(HOME, ".omp", "agent", "extensions", "caveman-session", "rule.md");
 
 const RELOAD_MSG = "Reminder: restart OMP (or reload extensions) for updates to take effect.";
 

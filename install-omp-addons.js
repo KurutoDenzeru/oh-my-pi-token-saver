@@ -101,51 +101,71 @@ async function stepPonytail(pluginsDir, userDir) {
   const existing = await readIfExists(pkgPath);
   if (existing) pkg = JSON.parse(existing);
 
-  pkg["omp-plugins"] = pkg["omp-plugins"] || { dependencies: {} };
-  pkg["omp-plugins"].dependencies["@dietrichgebert/ponytail"] = "github:DietrichGebert/ponytail";
-  await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
+  pkg.name = pkg.name || "omp-plugins";
+  pkg.private = true;
+  pkg.dependencies = pkg.dependencies || {};
+  pkg.dependencies["@dietrichgebert/ponytail"] = "github:DietrichGebert/ponytail";
   console.log(`  [write] package.json`);
 
+  // Try omp plugin install first
+  let installed = false;
   try {
     await execP(IS_WINDOWS ? "omp.cmd" : "omp", ["plugin", "install", "github:DietrichGebert/ponytail"],
       { cwd: pluginsDir });
-    console.log("  [ok] Ponytail plugin installed");
+    console.log("  [ok] omp plugin install ran");
   } catch (e) {
-    console.log(`  [fail] Ponytail plugin: ${e.message}`);
-    console.log(`  [hint] Manual: cd ~/.omp/plugins && omp plugin install github:DietrichGebert/ponytail`);
+    console.log(`  [warn] omp plugin install failed: ${e.message}`);
   }
 
-  // Wire extension into config.yml so /ponytail command loads
+  // Verify the pi-extension/index.js actually exists
   const ponytailExtPath = path.join(pluginsDir, "node_modules", "@dietrichgebert", "ponytail", "pi-extension", "index.js");
-  const ponytailExtExists = await readIfExists(ponytailExtPath);
+  let ponytailExtExists = await readIfExists(ponytailExtPath);
+
+  // Fallback: try bun install or npm install
   if (!ponytailExtExists) {
-    console.log("  [skip] Ponytail pi-extension/index.js not found — skill-only mode");
+    console.log("  [info] pi-extension/index.js not found after omp plugin install — trying npm/bun install...");
+    try {
+      await execP("npm", ["install"], { cwd: pluginsDir, timeout: 120000 });
+      console.log("  [ok] npm install completed");
+    } catch {
+      try {
+        await execP("bun", ["install"], { cwd: pluginsDir, timeout: 120000 });
+        console.log("  [ok] bun install completed");
+      } catch (e2) {
+        console.log(`  [fail] Could not install ponytail: ${e2.message}`);
+        console.log(`  [hint] Manual: cd ~/.omp/plugins && npm install`);
+      }
+    }
+    ponytailExtExists = await readIfExists(ponytailExtPath);
+  }
+
+  if (!ponytailExtExists) {
+    console.log("  [skip] Ponytail pi-extension/index.js still not found — skill-only mode");
+    console.log("  [hint] The /ponytail command won't work, but ponytail skills will still load");
     return;
   }
 
+  // Wire extension into config.yml so /ponytail command loads
+  console.log("  [ok] Ponytail pi-extension found");
   const configPath = path.join(userDir, "config.yml");
   let configRaw = await readIfExists(configPath);
   let configLines = (configRaw || "").split("\n");
 
-  // Check if extensions key already exists
-  const extLineIdx = configLines.findIndex((l) => /^extensions\s*:/i.test(l.trim()));
+  const extLineIdx = configLines.findIndex((l) => /^\s*extensions\s*:/i.test(l));
   const ponytailLine = `  - ${ponytailExtPath.replace(/\\/g, "/")}`;
 
   if (extLineIdx === -1) {
-    // No extensions key — add it
     configLines.push("extensions:");
     configLines.push(ponytailLine);
     configLines.push("");
-    console.log(`  [write] Added extensions key + ponytail path to config.yml`);
+    console.log(`  [write] Added extensions: + ponytail path to config.yml`);
   } else {
-    // Check if ponytail is already listed
     const alreadyListed = configLines.some((l) => l.includes("ponytail") && l.includes("pi-extension"));
     if (alreadyListed) {
       console.log(`  [skip] Ponytail extension already in config.yml`);
     } else {
-      // Insert after the extensions: line
       configLines.splice(extLineIdx + 1, 0, ponytailLine);
-      console.log(`  [write] Added ponytail path to existing extensions in config.yml`);
+      console.log(`  [write] Added ponytail path to extensions in config.yml`);
     }
   }
 
@@ -158,30 +178,56 @@ async function stepRtk(binDir) {
     const raw = await httpsGet(RTK_RELEASE_API);
     const release = JSON.parse(raw);
     const tag = release.tag_name;
-    const zipAsset = (release.assets || []).find((a) =>
-      a.name.includes("msvc") && a.name.endsWith(".zip")
-    );
 
-    if (!zipAsset) {
-      console.log(`  [fail] No MSVC zip found in release ${tag}`);
+    // Select asset by platform + arch
+    const PLATFORM = process.platform;
+    const ARCH = process.arch;
+    let assetPattern;
+    if (PLATFORM === "win32" && ARCH === "x64") {
+      assetPattern = "x86_64-pc-windows-msvc.zip";
+    } else if (PLATFORM === "linux" && ARCH === "x64") {
+      assetPattern = "x86_64-unknown-linux-gnu.tar.gz";
+    } else if (PLATFORM === "linux" && ARCH === "arm64") {
+      assetPattern = "aarch64-unknown-linux-gnu.tar.gz";
+    } else if (PLATFORM === "darwin" && ARCH === "x64") {
+      assetPattern = "x86_64-apple-darwin.tar.gz";
+    } else if (PLATFORM === "darwin" && ARCH === "arm64") {
+      assetPattern = "aarch64-apple-darwin.tar.gz";
+    } else {
+      console.log(`  [fail] Unsupported platform: ${PLATFORM}/${ARCH}`);
+      console.log(`  [hint] Manual: https://github.com/rtk-ai/rtk/releases`);
+      return;
+    }
+
+    const asset = (release.assets || []).find((a) => a.name.includes(assetPattern));
+    if (!asset) {
+      console.log(`  [fail] No asset matching ${assetPattern} found in release ${tag}`);
       console.log(`  [hint] Manual: https://github.com/rtk-ai/rtk/releases`);
       return;
     }
 
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "omp-rtk-"));
-    const zipPath = path.join(tmpDir, zipAsset.name);
+    const archivePath = path.join(tmpDir, asset.name);
 
-    await httpsDownload(zipAsset.browser_download_url, zipPath);
+    await httpsDownload(asset.browser_download_url, archivePath);
 
-    // Extract
+    // Extract by extension (not OS)
     const extractDir = path.join(tmpDir, "extracted");
     await fs.mkdir(extractDir, { recursive: true });
 
-    if (IS_WINDOWS) {
-      await execP("powershell", ["Expand-Archive", "-Path", zipPath, "-DestinationPath", extractDir, "-Force"],
-        { timeout: 60000 });
+    if (asset.name.endsWith(".zip")) {
+      if (IS_WINDOWS) {
+        await execP("powershell", ["Expand-Archive", "-Path", archivePath, "-DestinationPath", extractDir, "-Force"],
+          { timeout: 60000 });
+      } else {
+        await execP("unzip", [archivePath, "-d", extractDir], { timeout: 60000 });
+      }
+    } else if (asset.name.endsWith(".tar.gz") || asset.name.endsWith(".tgz")) {
+      await execP("tar", ["xzf", archivePath, "-C", extractDir], { timeout: 60000 });
     } else {
-      await execP("unzip", [zipPath, "-d", extractDir], { timeout: 60000 });
+      console.log(`  [fail] Unknown archive format: ${asset.name}`);
+      await fs.rm(tmpDir, { recursive: true, force: true });
+      return;
     }
 
     // Find binary

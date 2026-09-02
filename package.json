@@ -1,6 +1,6 @@
 {
   "name": "oh-my-pi-token-saver",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Amanai reward detector and three toggleable OMP extensions for terse replies, compact shell output, and minimal code decisions — with a manual updater and dry-run support.",
   "keywords": [
     "omp",
@@ -39,12 +39,16 @@
       "caveman": {
         "description": "Caveman terse-reply session mode (/caveman)",
         "default": true,
-        "extensions": ["./extensions/caveman-session/index.js"]
+        "extensions": [
+          "./extensions/caveman-session/index.js"
+        ]
       },
       "rtk": {
         "description": "RTK compact shell-output session mode (/rtk)",
         "default": true,
-        "extensions": ["./extensions/rtk-session/index.js"]
+        "extensions": [
+          "./extensions/rtk-session/index.js"
+        ]
       },
       "ponytail": {
         "description": "Combo toggle bar and Ponytail mode reinforcement (/combo, mode reinforcement)",
@@ -57,20 +61,33 @@
       "updater": {
         "description": "In-session /ai-addons updater for Ponytail, RTK, and Caveman",
         "default": true,
-        "extensions": ["./extensions/ai-addons-updater/index.js"]
+        "extensions": [
+          "./extensions/ai-addons-updater/index.js"
+        ]
       }
     },
     "settings": {
       "comboDefault": {
         "type": "enum",
         "description": "Combo preset applied on session start when no session state exists",
-        "values": ["off", "medium", "balanced", "max"],
+        "values": [
+          "off",
+          "medium",
+          "balanced",
+          "max"
+        ],
         "default": "off"
       },
       "cavemanDefault": {
         "type": "enum",
         "description": "Caveman mode applied on session start when no session state exists",
-        "values": ["off", "lite", "full", "ultra", "wenyan"],
+        "values": [
+          "off",
+          "lite",
+          "full",
+          "ultra",
+          "wenyan"
+        ],
         "default": "off"
       },
       "rtkDefault": {

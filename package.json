@@ -1,6 +1,6 @@
 {
   "name": "@fernado03/oh-my-pi-supreme-token-saver",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "description": "Three toggleable OMP extensions that save tokens: terse replies, compact shell output, and minimal code decisions — with a manual updater and dry-run support.",
   "keywords": [
     "omp",

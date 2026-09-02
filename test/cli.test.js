@@ -74,6 +74,26 @@ test("project dry-run previews shared bridge before dependent extensions without
   assert.equal(existsSync(path.join(root, "extensions", "shared-session-state.js")), false);
 });
 
+test("user dry-run installs mode reinforcement after Ponytail", () => {
+  const missingHome = path.join(root, "test", "definitely-missing-home");
+  const result = spawnSync(
+    process.execPath,
+    [installer, "install", "--dry-run", "--scope", "user"],
+    {
+      encoding: "utf8",
+      cwd: root,
+      env: { ...process.env, HOME: missingHome, USERPROFILE: missingHome },
+    }
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  const ponytail = result.stdout.indexOf("Installing Ponytail plugin");
+  const reinforcement = result.stdout.indexOf("Installing mode reinforcement extension");
+  assert.ok(ponytail >= 0, result.stdout);
+  assert.ok(reinforcement > ponytail, result.stdout);
+  assert.match(result.stdout, /would place mode reinforcement after Ponytail/);
+});
+
 test("uninstall dry-run previews shared bridge removal", () => {
   const missingHome = path.join(root, "test", "definitely-missing-home");
   const result = spawnSync(

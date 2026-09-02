@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import cavemanSessionExtension from "../extensions/caveman-session/index.js";
 import comboToggleExtension from "../extensions/combo-toggle/index.js";
+import modeReinforcementExtension from "../extensions/shared/mode-reinforcement.js";
 import rtkSessionExtension from "../extensions/rtk-session/index.js";
 import {
   OMP_SUBAGENT_MARKER,
@@ -274,6 +275,29 @@ test("Combo indicator appears only after a Combo preset", async () => {
   await command(combo, "combo", "status", ctx);
   assert.equal(ctx.statuses.get("combo"), "");
 });
+
+test("mode reinforcement follows each top-level turn without persisting duplicates", async () => {
+  resetSharedComboState();
+  const entries = [
+    { type: "custom", customType: "caveman-mode", data: { mode: "wenyan" } },
+    { type: "custom", customType: "rtk-mode", data: { enabled: true } },
+    { type: "custom", customType: "ponytail-mode", data: { mode: "ultra" } },
+  ];
+  const reinforcement = instantiate(modeReinforcementExtension, entries);
+  const ctx = context(entries, true);
+
+  for (const prompt of ["First turn.", "Later turn with long history."]) {
+    const result = await inject(reinforcement, prompt, ctx);
+    assert.equal(
+      instruction(result),
+      "SUPREME TOKEN SAVER MODES ACTIVE: caveman=wenyan · rtk=on · ponytail=ultra. Keep these active for the entire response: concise Caveman prose, RTK for eligible noisy shell output, and the smallest correct Ponytail solution. Do not weaken or disable a mode unless the user explicitly asks."
+    );
+  }
+
+  const first = await inject(reinforcement, "Prompt.", ctx);
+  assert.equal(await inject(reinforcement, ["Prompt.", instruction(first)], ctx), undefined);
+});
+
 
 test("Combo does not duplicate existing Ponytail guidance", async () => {
   resetSharedComboState();

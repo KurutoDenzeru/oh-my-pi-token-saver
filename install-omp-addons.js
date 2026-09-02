@@ -90,6 +90,7 @@ const RTK_SESSION_INDEX = path.join(EXT_DIR, "rtk-session", "index.js");
 const UPDATER_INDEX = path.join(EXT_DIR, "ai-addons-updater", "index.js");
 const COMBO_TOGGLE_INDEX = path.join(EXT_DIR, "combo-toggle", "index.js");
 const AMANAI_REWARD_INDEX = path.join(EXT_DIR, "amanai-reward", "index.js");
+const MODE_REINFORCEMENT_INDEX = path.join(EXT_DIR, "shared", "mode-reinforcement.js");
 const CAVEMAN_REMOTE_RULE = "https://raw.githubusercontent.com/JuliusBrussee/caveman/main/src/rules/caveman-activate.md";
 const RTK_RELEASE_API = "https://api.github.com/repos/rtk-ai/rtk/releases/latest";
 
@@ -220,6 +221,40 @@ async function ensureExtensionInConfig(configPath, extensionPath, label, options
   return true;
 }
 
+async function ensureExtensionAfterConfigEntry(configPath, extensionPath, afterPath, label, options = {}) {
+  const normalizedPath = extensionPath.replace(/\\/g, "/");
+  const normalizedAfterPath = afterPath.replace(/\\/g, "/");
+  const line = `  - ${normalizedPath}`;
+  const raw = await readIfExists(configPath);
+  const lines = (raw || "").split("\n");
+  const existingIndex = lines.findIndex((entry) => entry.includes(normalizedPath));
+  const afterIndex = lines.findIndex((entry) => entry.includes(normalizedAfterPath));
+
+  if (existingIndex !== -1 && afterIndex !== -1 && existingIndex === afterIndex + 1) return false;
+  if (options.dryRun) {
+    console.log(`  [dry-run] would place ${label} after Ponytail in config.yml: ${normalizedPath}`);
+    return true;
+  }
+
+  if (existingIndex !== -1) lines.splice(existingIndex, 1);
+  const refreshedAfterIndex = lines.findIndex((entry) => entry.includes(normalizedAfterPath));
+  if (refreshedAfterIndex !== -1) {
+    lines.splice(refreshedAfterIndex + 1, 0, line);
+  } else {
+    const extensionsIndex = lines.findIndex((entry) => /^\s*extensions\s*:/i.test(entry));
+    if (extensionsIndex === -1) {
+      lines.push("extensions:", line, "");
+    } else {
+      lines.splice(extensionsIndex + 1, 0, line);
+    }
+  }
+
+  await fs.mkdir(path.dirname(configPath), { recursive: true });
+  await fs.writeFile(configPath, lines.join("\n"), "utf8");
+  console.log(`  [write] Placed ${label} after Ponytail in config.yml`);
+  return true;
+}
+
 async function ensurePonytailDefaultOff(options = {}) {
   const configDir = process.env.XDG_CONFIG_HOME
     ? path.join(process.env.XDG_CONFIG_HOME, "ponytail")
@@ -261,7 +296,7 @@ async function ensurePonytailDefaultOff(options = {}) {
 // --- Steps ---
 
 async function stepPonytail(pluginsDir, userDir, options = {}) {
-  console.log("\n[1/6] Installing Ponytail plugin...");
+  console.log("\n[1/7] Installing Ponytail plugin...");
   await fs.mkdir(pluginsDir, { recursive: true });
   const pkgPath = path.join(pluginsDir, "package.json");
   let pkg = {};
@@ -380,7 +415,7 @@ async function stepPonytail(pluginsDir, userDir, options = {}) {
 }
 
 async function stepRtk(binDir, options = {}) {
-  console.log("\n[2/6] Installing RTK binary...");
+  console.log("\n[2/7] Installing RTK binary...");
   try {
     const raw = await httpsGet(RTK_RELEASE_API);
     const release = JSON.parse(raw);
@@ -535,8 +570,20 @@ async function stepSharedSessionState(extDir, options = {}) {
   await writeIfChanged(path.join(extDir, "shared", "session-state.js"), src, options);
 }
 
+async function stepModeReinforcement(extDir, ponytailExtPath, options = {}) {
+  console.log("\n[6/7] Installing mode reinforcement extension...");
+  const src = await readIfExists(MODE_REINFORCEMENT_INDEX);
+  if (!src) {
+    console.log("  [skip] shared/mode-reinforcement.js not found in repo");
+    return;
+  }
+  const dest = path.join(extDir, "shared", "mode-reinforcement.js");
+  await writeIfChanged(dest, src, options);
+  await ensureExtensionAfterConfigEntry(path.join(path.dirname(extDir), "config.yml"), dest, ponytailExtPath, "mode reinforcement", options);
+}
+
 async function stepRtkSession(extDir, options = {}) {
-  console.log("\n[3/6] Installing RTK session extension...");
+  console.log("\n[3/7] Installing RTK session extension...");
   const src = await readIfExists(RTK_SESSION_INDEX);
   if (!src) {
     console.log("  [skip] rtk-session/index.js not found in repo");
@@ -547,7 +594,7 @@ async function stepRtkSession(extDir, options = {}) {
 }
 
 async function stepCaveman(extDir, options = {}) {
-  console.log("\n[4/6] Installing Caveman session extension...");
+  console.log("\n[4/7] Installing Caveman session extension...");
   const cavemanDir = path.join(extDir, "caveman-session");
   if (!options.dryRun) await fs.mkdir(cavemanDir, { recursive: true });
 
@@ -574,7 +621,7 @@ async function stepCaveman(extDir, options = {}) {
 }
 
 async function stepCombo(extDir, options = {}) {
-  console.log("\n[5/6] Installing Combo toggle extension...");
+  console.log("\n[5/7] Installing Combo toggle extension...");
   const src = await readIfExists(COMBO_TOGGLE_INDEX);
   if (!src) {
     console.log("  [skip] combo-toggle/index.js not found in repo");
@@ -589,7 +636,7 @@ async function stepCombo(extDir, options = {}) {
 }
 
 async function stepAmanaiReward(extDir, options = {}) {
-  console.log("\n[6/6] Installing Amanai reward detector...");
+  console.log("\n[7/7] Installing Amanai reward detector...");
   const src = await readIfExists(AMANAI_REWARD_INDEX);
   if (!src) {
     console.log("  [skip] amanai-reward/index.js not found in repo");
@@ -680,6 +727,9 @@ async function runDoctor() {
   const comboIndex = path.join(extDir, "combo-toggle", "index.js");
   console.log(`  Combo extension: ${(await readIfExists(comboIndex)) !== null ? "installed" : "MISSING"}`);
 
+  const modeReinforcement = path.join(extDir, "shared", "mode-reinforcement.js");
+  console.log(`  Mode reinforcement extension: ${(await readIfExists(modeReinforcement)) !== null ? "installed" : "MISSING"}`);
+
   // Amanai reward detector
   const amanaiRewardIndex = path.join(extDir, "amanai-reward", "index.js");
   console.log(`  Amanai reward detector: ${(await readIfExists(amanaiRewardIndex)) !== null ? "installed" : "MISSING"}`);
@@ -745,13 +795,13 @@ async function runUninstall(options = {}) {
     }
   }
 
-  // Remove combo and, when explicitly requested, ponytail from config.yml
+  // Remove Combo and mode-reinforcement registrations; Ponytail only when requested.
   const configRaw = await readIfExists(configPath);
   if (configRaw) {
     let lines = configRaw.split("\n");
     const before = lines.length;
     lines = lines.filter((l) => {
-      if (l.includes("combo-toggle")) return false;
+      if (l.includes("combo-toggle") || l.includes("mode-reinforcement")) return false;
       if (shouldRemovePonytail && l.includes("ponytail") && l.includes("pi-extension")) return false;
       return true;
     });
@@ -927,10 +977,12 @@ async function main() {
     console.log("\n--- User-level install ---");
     await stepSharedSessionState(userExtDir, options);
     await stepPonytail(userPluginsDir, userDir, options);
+    const ponytailExtPath = path.join(userPluginsDir, "node_modules", "@dietrichgebert", "ponytail", "pi-extension", "index.js");
     await stepRtk(bunBinDir, options);
     await stepRtkSession(userExtDir, options);
     await stepCaveman(userExtDir, options);
     await stepCombo(userExtDir, options);
+    await stepModeReinforcement(userExtDir, ponytailExtPath, options);
     await stepAmanaiReward(userExtDir, options);
   }
 

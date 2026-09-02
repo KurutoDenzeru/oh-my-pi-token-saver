@@ -32,6 +32,8 @@ Individual toggles: `/caveman full` · `/rtk on` · `/ponytail full`
 
 All three token-saving modes start off until you enable them.
 
+For long sessions, the package reasserts active modes after Ponytail's prompt block on every top-level turn, including after OMP compacts earlier history.
+
 ### Amanai reward detector
 
 The detector only scans the completed final assistant response, then shows a local notice. Redeem any detected key yourself in the Amanai billing dashboard; the extension does not retain or expose it.

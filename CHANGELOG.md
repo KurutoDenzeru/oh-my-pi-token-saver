@@ -1,3 +1,6 @@
+## v1.3.9
+- Reassert active Caveman, RTK, and Ponytail modes after Ponytail on every top-level turn, so long conversations and compaction cannot dilute their guidance.
+
 ## v1.3.8
 - Keep the Combo footer indicator hidden for individual Caveman, RTK, and Ponytail modes; it now appears only for explicit `/combo medium` or `/combo max` presets.
 

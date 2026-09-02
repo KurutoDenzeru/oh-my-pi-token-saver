@@ -1,3 +1,6 @@
+## v1.3.0
+- Add `update` CLI command that delegates to the latest npm package and reapplies the installer non-interactively.
+
 ## v1.2.4
 - Restore `execP` promisify fix accidentally dropped in v1.2.3.
 - Dry-run now previews Ponytail `defaultMode=off` config before returning.

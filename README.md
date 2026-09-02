@@ -25,19 +25,22 @@ cd oh-my-pi-supreme-token-saver
 node install-omp-addons.js
 ```
 
-### Update (re-run to overwrite old versions)
+### Update to the latest package
+
+One-off update:
 
 ```bash
-npx @fernado03/oh-my-pi-supreme-token-saver
+npx @fernado03/oh-my-pi-supreme-token-saver update
 ```
 
-Or if installed globally:
+Or, after a global install:
 
 ```bash
-oh-my-pi-supreme-token-saver
+npm install -g @fernado03/oh-my-pi-supreme-token-saver
+oh-my-pi-supreme-token-saver update
 ```
 
-Re-running the installer overwrites old extension files and fetches the latest versions. Backups of the previous files are created automatically (`.bak` suffix).
+The `update` command fetches `@latest`, then runs that version of the installer non-interactively with user scope. Existing files are overwritten only when their contents changed; backups use the `.bak` suffix.
 
 For in-session updates without re-running the installer:
 
@@ -54,6 +57,12 @@ Dry run first to see what would change:
 ## CLI Flags
 
 ```bash
+# Fetch the latest package and update the user install
+npx @fernado03/oh-my-pi-supreme-token-saver update
+
+# Preview a latest-package update
+npx @fernado03/oh-my-pi-supreme-token-saver update --dry-run
+
 # Non-interactive install (user scope, no prompts)
 npx @fernado03/oh-my-pi-supreme-token-saver --scope user --yes
 

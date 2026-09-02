@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // install-omp-addons.js — Install caveman/rtk/ponytail add-ons on any OMP device.
-// Usage: node install-omp-addons.js [--dry-run] [--scope user|project|both] [--yes] [--verbose] [--doctor] [--uninstall]
+// Usage: node install-omp-addons.js [update] [--dry-run] [--scope user|project|both] [--yes] [--verbose] [--doctor] [--uninstall]
 // Requires: node, omp CLI, bun (for rtk binary)
 
 import https from "node:https";
@@ -17,11 +17,17 @@ import readline from "node:readline";
 const IS_WINDOWS = process.platform === "win32";
 const HOME = process.env.HOME || process.env.USERPROFILE || "";
 
+const PACKAGE_NAME = "@fernado03/oh-my-pi-supreme-token-saver";
+const PACKAGE_BIN = "oh-my-pi-supreme-token-saver";
+
 // --- CLI flags ---
 
 const args = process.argv.slice(2);
+const command = args[0]?.toLowerCase() || null;
+const update = command === "update";
+const applyUpdate = args.includes("--apply-update");
 const dryRun = args.includes("--dry-run");
-const yes = args.includes("--yes") || args.includes("-y");
+const yes = args.includes("--yes") || args.includes("-y") || update || applyUpdate;
 const verbose = args.includes("--verbose");
 const doctor = args.includes("--doctor");
 const uninstall = args.includes("--uninstall");
@@ -681,9 +687,62 @@ async function runUninstall() {
   console.log("\nDone. Restart OMP for changes to take effect.");
 }
 
+async function runLatestUpdate() {
+  const updateScope = scopeFlag || "user";
+  if (!["user", "project", "both"].includes(updateScope)) {
+    console.error(`[fail] Invalid --scope: ${updateScope}. Use: user, project, both`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const forwardedArgs = ["--yes", "--scope", updateScope];
+  if (dryRun) forwardedArgs.push("--dry-run");
+  if (verbose) forwardedArgs.push("--verbose");
+
+  const npmArgs = [
+    "exec",
+    "--yes",
+    "--prefer-online",
+    `--package=${PACKAGE_NAME}@latest`,
+    "--",
+    PACKAGE_BIN,
+    "--apply-update",
+    ...forwardedArgs,
+  ];
+
+  const npmCommand = IS_WINDOWS ? process.env.ComSpec || "cmd.exe" : "npm";
+  const npmCommandArgs = IS_WINDOWS ? ["/d", "/s", "/c", "npm", ...npmArgs] : npmArgs;
+
+  console.log("=== Updating OMP Supreme Token Saver ===");
+  console.log(`  Running the latest ${PACKAGE_NAME} installer...\n`);
+
+  try {
+    const result = await execP(npmCommand, npmCommandArgs, {
+      timeout: 300000,
+      maxBuffer: 10 * 1024 * 1024,
+      windowsHide: true,
+      shell: false,
+    });
+    if (result.stdout) process.stdout.write(result.stdout);
+    if (result.stderr) process.stderr.write(result.stderr);
+    console.log("\n=== Update complete ===");
+  } catch (e) {
+    if (e.stdout) process.stdout.write(e.stdout);
+    if (e.stderr) process.stderr.write(e.stderr);
+    console.error(`\n[fail] Could not run ${PACKAGE_NAME}@latest: ${e.message}`);
+    process.exitCode = 1;
+  }
+}
+
 // --- Main ---
 
 async function main() {
+  if (update && !applyUpdate) {
+    await runLatestUpdate();
+    closeRL();
+    return;
+  }
+
   if (doctor) {
     await runDoctor();
     closeRL();

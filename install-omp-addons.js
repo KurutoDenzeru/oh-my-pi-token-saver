@@ -245,8 +245,20 @@ async function stepRtk(binDir) {
         await execP("unzip", [archivePath, "-d", extractDir], { timeout: 60000 });
       }
     } else if (asset.name.endsWith(".tar.gz") || asset.name.endsWith(".tgz")) {
-      await execP("tar", ["xzf", archivePath, "-C", extractDir], { timeout: 60000 });
-      try { const s = await fs.stat(archivePath); console.log(`  [debug] tar ok; archiveBytes=${s.size}`); } catch {}
+      try {
+        const r = await execP("tar", ["xzf", archivePath, "-C", extractDir], { timeout: 60000 });
+        console.log(`  [debug] tar ok; stderr=${(r.stderr||"").trim().slice(0,200)}`);
+      } catch (e) {
+        console.log(`  [debug] tar xzf failed: ${(e.stderr||e.message||"").trim().slice(0,200)}`);
+        // Fallback: pipe gunzip | tar
+        try {
+          await execP("sh", ["-c", `gunzip < "${archivePath}" | tar xf - -C "${extractDir}"`], { timeout: 60000 });
+          console.log(`  [debug] gunzip|tar fallback ok`);
+        } catch (e2) {
+          console.log(`  [debug] gunzip|tar fallback failed: ${(e2.stderr||e2.message||"").trim().slice(0,200)}`);
+        }
+      }
+      try { const s = await fs.stat(archivePath); console.log(`  [debug] archiveBytes=${s.size}`); } catch {}
       try { console.log(`  [debug] extractDir listing: ${JSON.stringify(await fs.readdir(extractDir))}`); } catch {}
     } else {
       console.log(`  [fail] Unknown archive format: ${asset.name}`);
@@ -254,6 +266,8 @@ async function stepRtk(binDir) {
       return;
     }
 
+    // Find binary
+    const binaryName = IS_WINDOWS ? "rtk.exe" : "rtk";
     const entries = await fs.readdir(extractDir, { recursive: true });
     console.log(`  [debug] recursiveReaddir=${JSON.stringify(entries)} basenameMatch=${entries.find((e) => path.basename(e) === binaryName) || 'NONE'}`);
     const found = entries.find((e) => path.basename(e) === binaryName);

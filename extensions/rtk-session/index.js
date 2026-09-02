@@ -129,6 +129,7 @@ export default function rtkSessionExtension(pi) {
 
   pi.on("before_agent_start", async (event) => {
     if (!enabled) return;
-    return { systemPrompt: `${event.systemPrompt}\n\n${RTK_PROMPT}` };
+    const base = Array.isArray(event.systemPrompt) ? event.systemPrompt : [event.systemPrompt];
+    return { systemPrompt: [...base, RTK_PROMPT] };
   });
 }

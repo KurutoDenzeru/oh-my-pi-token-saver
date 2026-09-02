@@ -129,6 +129,7 @@ export default function cavemanSessionExtension(pi) {
   pi.on("before_agent_start", async (event) => {
     if (!currentMode || currentMode === "off") return;
     const instruction = typeof INSTRUCTIONS[currentMode] === "function" ? INSTRUCTIONS[currentMode]() : INSTRUCTIONS[currentMode];
-    return { systemPrompt: `${event.systemPrompt}\n\n${instruction}` };
+    const base = Array.isArray(event.systemPrompt) ? event.systemPrompt : [event.systemPrompt];
+    return { systemPrompt: [...base, instruction] };
   });
 }

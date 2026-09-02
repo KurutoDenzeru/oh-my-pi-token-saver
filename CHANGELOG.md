@@ -1,7 +1,9 @@
-## Unreleased
+## v1.3.4
 - Make `/ai-addons update ponytail` use npm directly so OMP installations without Bun can update Ponytail.
 - Fix RTK checksum parsing and create its conventional `~/.bun/bin` destination when Bun is absent.
 - Add regression coverage for checksum parsing and the npm-based Ponytail update.
+- Return `systemPrompt` as an array and append to the existing prompt in the Caveman and RTK session extensions, matching OMP's typed `ExtensionAPI` contract.
+- Run `npm test` in CI alongside `npm run check`.
 
 ## v1.3.2
 - Replace every one-off runner example with cache-safe `npm exec` commands.

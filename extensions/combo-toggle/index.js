@@ -76,15 +76,16 @@ export default function comboToggleExtension(pi) {
       pi.appendEntry("caveman-mode", { mode: levels.caveman });
       pi.appendEntry("rtk-mode", { enabled: levels.rtk === "on" });
       pi.appendEntry("ponytail-mode", { mode: levels.ponytail });
-
-      // Also persist which /combo level was last picked (for /combo status)
       pi.appendEntry("combo-level", { level });
 
-      // Trigger per-add-on slash commands so they take effect immediately
-      // (the next prompt will pick up the new mode via session_start).
-      const trigger = `/caveman ${levels.caveman} • /rtk ${levels.rtk === "on" ? "on" : "off"} • /ponytail ${levels.ponytail}`;
+      // Actually invoke each extension's slash command so their state + UI updates
+      const rtkArg = levels.rtk === "on" ? "on" : "off";
+      await pi.sendUserMessage(`/caveman ${levels.caveman}`, { deliverAs: "followUp" });
+      await pi.sendUserMessage(`/rtk ${rtkArg}`, { deliverAs: "followUp" });
+      await pi.sendUserMessage(`/ponytail ${levels.ponytail}`, { deliverAs: "followUp" });
+
       ctx?.ui?.notify?.(
-        `Combo ${level}: ${levelSummary(level)}. Run: ${trigger}`,
+        `Combo ${level} applied: caveman=${levels.caveman} rtk=${rtkArg} ponytail=${levels.ponytail}`,
         "info"
       );
     },
@@ -96,10 +97,14 @@ export default function comboToggleExtension(pi) {
     const level = normalizeLevel(t.replace(/^combo\s+/, ""));
     if (level) {
       const levels = LEVELS[level];
+      const rtkArg = levels.rtk === "on" ? "on" : "off";
       pi.appendEntry("caveman-mode", { mode: levels.caveman });
       pi.appendEntry("rtk-mode", { enabled: levels.rtk === "on" });
       pi.appendEntry("ponytail-mode", { mode: levels.ponytail });
       pi.appendEntry("combo-level", { level });
+      await pi.sendUserMessage(`/caveman ${levels.caveman}`, { deliverAs: "followUp" });
+      await pi.sendUserMessage(`/rtk ${rtkArg}`, { deliverAs: "followUp" });
+      await pi.sendUserMessage(`/ponytail ${levels.ponytail}`, { deliverAs: "followUp" });
     }
   });
 }

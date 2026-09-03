@@ -1,8 +1,8 @@
 import os from "node:os";
 import path from "node:path";
-import { COMBO_LEVELS, getSharedComboState, isOmpSubagentPrompt, setSharedComboMode } from "../shared/session-state.js";
-import { readRtkDefault } from "../shared/plugin-settings.js";
-import type { ExtensionApi, ExtensionCtx, InputEvent, SessionEntry, SystemPromptEvent } from "../shared/types.js";
+import { COMBO_LEVELS, getSharedComboState, isOmpSubagentPrompt, setSharedComboMode } from "../shared/session-state.ts";
+import { readRtkDefault } from "../shared/plugin-settings.ts";
+import type { ExtensionApi, ExtensionCtx, InputEvent, SessionEntry, SystemPromptEvent } from "../shared/types.ts";
 
 const DEFAULT_ENABLED = false;
 

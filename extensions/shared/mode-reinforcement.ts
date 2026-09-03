@@ -1,5 +1,5 @@
-import { reconcileSharedComboEntries } from "./session-state.js";
-import type { ExtensionApi, ExtensionCtx, SystemPromptEvent } from "./types.js";
+import { reconcileSharedComboEntries } from "./session-state.ts";
+import type { ExtensionApi, ExtensionCtx, SystemPromptEvent } from "./types.ts";
 
 const MARKER = "SUPREME TOKEN SAVER MODES ACTIVE";
 

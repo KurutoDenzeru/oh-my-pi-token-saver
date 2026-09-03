@@ -6,6 +6,7 @@
     "strict": true,
     "skipLibCheck": true,
     "types": ["node"],
+    "rewriteRelativeImportExtensions": true,
     "outDir": ".",
     "rootDir": ".",
     "noEmitOnError": true

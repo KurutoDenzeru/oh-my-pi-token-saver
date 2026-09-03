@@ -12,9 +12,9 @@ import {
   reconcileSharedComboEntries,
   setSharedComboLevel,
   setSharedComboListener,
-} from "../shared/session-state.js";
-import { readComboDefault } from "../shared/plugin-settings.js";
-import type { ComboState, ExtensionApi, ExtensionCtx, SessionEntry, SystemPromptEvent } from "../shared/types.js";
+} from "../shared/session-state.ts";
+import { readComboDefault } from "../shared/plugin-settings.ts";
+import type { ComboState, ExtensionApi, ExtensionCtx, SessionEntry, SystemPromptEvent } from "../shared/types.ts";
 
 const require = createRequire(import.meta.url);
 

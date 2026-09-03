@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { COMBO_LEVELS, getSharedComboState, isOmpSubagentPrompt, setSharedComboMode } from "../shared/session-state.js";
-import { readCavemanDefault } from "../shared/plugin-settings.js";
-import type { ExtensionApi, ExtensionCtx, InputEvent, SessionEntry, SystemPromptEvent } from "../shared/types.js";
+import { COMBO_LEVELS, getSharedComboState, isOmpSubagentPrompt, setSharedComboMode } from "../shared/session-state.ts";
+import { readCavemanDefault } from "../shared/plugin-settings.ts";
+import type { ExtensionApi, ExtensionCtx, InputEvent, SessionEntry, SystemPromptEvent } from "../shared/types.ts";
 
 const CAVERN_DIR = dirname(fileURLToPath(import.meta.url));
 const RULE_PATH = join(CAVERN_DIR, "rule.md");

@@ -1,4 +1,4 @@
-import type { ExtensionApi, ExtensionCtx } from "../shared/types.js";
+import type { ExtensionApi, ExtensionCtx } from "../shared/types.ts";
 
 const REWARD_KEY = /(?<![A-Za-z0-9_-])AMANAI-GACHA-[A-Za-z0-9]+-[A-Za-z0-9]+(?![A-Za-z0-9_-])/;
 const NOTIFICATION = "Amanai reward key detected in the final response. Redeem it manually in the Amanai billing dashboard.";

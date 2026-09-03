@@ -1,4 +1,4 @@
-import type { ComboLevel, ComboState, SessionEntry } from "./types.js";
+import type { ComboLevel, ComboState, SessionEntry } from "./types.ts";
 
 const BRIDGE_KEY = Symbol.for("tersio/combo-session-state");
 

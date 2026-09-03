@@ -20,7 +20,7 @@ import {
   sha256File,
   parseChecksum,
   readTextIfExists,
-} from "./extensions/lib/utils.js";
+} from "./extensions/lib/utils.ts";
 
 const IS_WINDOWS = process.platform === "win32";
 const HOME = process.env.HOME || process.env.USERPROFILE || "";
@@ -137,7 +137,9 @@ function debug(...a: unknown[]): void {
 const RL = readline.createInterface({ input: process.stdin, output: process.stdout });
 let rlOpen = true;
 function ask(q: string): Promise<string> {
-  return new Promise((res) => RL.question(q, (a) => { RL.close(); rlOpen = false; res(a); }));
+  const { promise, resolve } = Promise.withResolvers<string>();
+  RL.question(q, resolve);
+  return promise;
 }
 function closeRL(): void { if (rlOpen) { RL.close(); rlOpen = false; } }
 

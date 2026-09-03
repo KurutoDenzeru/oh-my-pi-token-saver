@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { getSharedComboState, isOmpSubagentPrompt, setSharedComboMode } from "../shared/session-state.js";
+import { COMBO_LEVELS, getSharedComboState, isOmpSubagentPrompt, setSharedComboMode } from "../shared/session-state.js";
 import { readCavemanDefault } from "../shared/plugin-settings.js";
 import type { ExtensionApi, ExtensionCtx, InputEvent, SessionEntry, SystemPromptEvent } from "../shared/types.js";
 
@@ -67,8 +67,8 @@ export default function cavemanSessionExtension(pi: ExtensionApi): void {
     if (ctx) lastCtx = ctx;
     const c = ctx || lastCtx;
     if (!c?.ui?.setStatus) return;
-    // Combo owns the bar when a preset is active; keep ours empty to avoid duplication.
-    if (getSharedComboState().level === "medium" || getSharedComboState().level === "max") {
+    // Combo owns the bar when any preset is active; keep ours empty to avoid duplication.
+    if (getSharedComboState().level in COMBO_LEVELS && getSharedComboState().level !== "off") {
       c.ui.setStatus("caveman", undefined);
       return;
     }

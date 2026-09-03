@@ -1,13 +1,13 @@
-// Plugin settings reader for the Token Saver extensions.
+// Plugin settings reader for the Tersio extensions.
 // Reads omp's persisted plugin state (~/.omp/plugins/omp-plugins.lock.json),
-// written by `omp plugin config set oh-my-pi-token-saver <key> <value>` and by
+// written by `omp plugin config set tersio <key> <value>` and by
 // the installer profile step. Tolerant: any parse failure yields {} so every
 // caller falls back to its own default.
 
 import { existsSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-export const PLUGIN_NAME = "oh-my-pi-token-saver";
+export const PLUGIN_NAME = "tersio";
 
 function lockPaths(): string[] {
   const configHome = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");

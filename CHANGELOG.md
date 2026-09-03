@@ -1,3 +1,7 @@
+## v1.0.0
+- Rebrand: `oh-my-pi-token-saver` is now `tersio` (npm package, `tersio` command, OMP plugin, GitHub repo). New product line, so the version restarts at 1.0.0; code is identical to `oh-my-pi-token-saver@2.1.1` apart from the rename.
+- Migration is one reinstall: `omp plugin install tersio` (or `npm i -g tersio` + `tersio install`). The installer drops the legacy `oh-my-pi-token-saver` dependency from `~/.omp/plugins/package.json` on its next run. Old releases stay on npm, deprecated in favor of `tersio`.
+
 ## v2.1.1
 - Fix status bar duplication under the balanced combo preset: caveman and rtk still hardcoded the medium/max preset names in their suppression checks, so `/combo balanced` painted three status lines instead of one. Both extensions now consult `COMBO_LEVELS` from the shared session-state module, so a future preset cannot reopen the gap.
 

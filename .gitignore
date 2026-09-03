@@ -3,6 +3,6 @@ node
 node_modules
 dist
 *.tsbuildinfo
-install-omp-addons.js
+tersio.js
 extensions/**/*.js
 test/definitely-missing-home/.omp/logs/

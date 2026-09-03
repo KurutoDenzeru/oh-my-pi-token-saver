@@ -1,4 +1,4 @@
-# oh-my-pi-token-saver
+# Tersio ✂️
 
 > Maintained fork of the unmaintained [Fernado03/oh-my-pi-supreme-token-saver](https://github.com/Fernado03/oh-my-pi-supreme-token-saver). Original author: Fernado03.
 
@@ -11,14 +11,14 @@ A passive Amanai reward detector plus three toggleable [Oh My Pi (OMP)](https://
 If you use OMP, install the package as a managed plugin — no separate installer run, and OMP's plugin manager handles updates, enable/disable, and per-add-on features:
 
 ```bash
-omp plugin install oh-my-pi-token-saver
+omp plugin install tersio
 ```
 
 Then start a new OMP session. Every add-on is on by default; trim the set with OMP's feature flags:
 
 ```bash
-omp plugin install 'oh-my-pi-token-saver[caveman,ponytail]'   # only these two add-ons
-omp plugin features oh-my-pi-token-saver --disable rtk        # turn one off later
+omp plugin install 'tersio[caveman,ponytail]'   # only these two add-ons
+omp plugin features tersio --disable rtk        # turn one off later
 ```
 
 Features: `caveman`, `rtk`, `ponytail` (combo bar + mode reinforcement), `updater` (`/ai-addons`). The Amanai reward detector is the plugin base and is always loaded.
@@ -26,8 +26,8 @@ Features: `caveman`, `rtk`, `ponytail` (combo bar + mode reinforcement), `update
 ### Installer (npm CLI)
 
 ```bash
-npm install -g oh-my-pi-token-saver@latest
-oh-my-pi-token-saver install
+npm install -g tersio@latest
+tersio install
 ```
 
 The first command installs the CLI globally with npm; the second installs its add-ons into your OMP home, so both are required. At a terminal, `install` asks for optional session-start defaults; every prompt keeps its default on Enter. Non-interactive runs keep the classic behavior (all add-ons, modes off).
@@ -35,11 +35,11 @@ The first command installs the CLI globally with npm; the second installs its ad
 Default flags (also usable non-interactively):
 
 ```bash
-oh-my-pi-token-saver install --combo-default balanced   # session-start Combo preset
-oh-my-pi-token-saver install --caveman-default lite --rtk-default on
+tersio install --combo-default balanced   # session-start Combo preset
+tersio install --caveman-default lite --rtk-default on
 ```
 
-Defaults apply only to fresh sessions — anything you persist with `/combo`, `/caveman`, or `/rtk` always wins. They are stored as plugin settings (`omp plugin config get oh-my-pi-token-saver comboDefault`) and can be changed later with `omp plugin config set`.
+Defaults apply only to fresh sessions — anything you persist with `/combo`, `/caveman`, or `/rtk` always wins. They are stored as plugin settings (`omp plugin config get tersio comboDefault`) and can be changed later with `omp plugin config set`.
 
 **After install:** restart OMP, then enable a preset:
 
@@ -60,7 +60,7 @@ Individual toggles: `/caveman full` · `/rtk on` · `/ponytail full`
 | **Combo** | Switches Caveman, RTK, and Ponytail together. Presets: `off`, `medium`, `balanced`, and `max`; mixed individual modes display as `custom` |
 | **Amanai reward detector** | Locally notifies you when a final successful response contains a footer-shaped `AMANAI-GACHA-…` key; it never changes output, stores or sends the key, redeems it, opens a browser, or creates requests |
 
-User-level installs also register the package in `~/.omp/plugins`, so it appears as `oh-my-pi-token-saver` in OMP **Settings → Plugins**. In that state the Amanai reward detector loads through the plugin manifest instead of a copied extension entry.
+User-level installs also register the package in `~/.omp/plugins`, so it appears as `tersio` in OMP **Settings → Plugins**. In that state the Amanai reward detector loads through the plugin manifest instead of a copied extension entry.
 
 All three token-saving modes start off until you enable them.
 
@@ -78,12 +78,12 @@ After the global install, use these short commands for routine maintenance:
 
 | Command | Purpose |
 |---|---|
-| `oh-my-pi-token-saver install` | Install non-interactively to user scope by default; use `--scope project` or `--scope both` for another scope |
-| `oh-my-pi-token-saver update` | Fetch the latest release and refresh the user installation |
-| `oh-my-pi-token-saver reinstall` | Remove the bundled extension directories and RTK binary, then install fresh at user scope; the separate Ponytail package is preserved and refreshed |
-| `oh-my-pi-token-saver doctor` | Check OMP, extension, Ponytail, and RTK installation health |
-| `oh-my-pi-token-saver uninstall` | Remove bundled extensions, the legacy `aaa-combo-boot` helper, and the plugin registration; add `--remove-rtk` to remove the RTK binary or `--remove-ponytail` to unregister Ponytail's extension path (the Ponytail package remains installed) |
-| `oh-my-pi-token-saver version` | Print the package version (`--version` or `-v` also works) |
+| `tersio install` | Install non-interactively to user scope by default; use `--scope project` or `--scope both` for another scope |
+| `tersio update` | Fetch the latest release and refresh the user installation |
+| `tersio reinstall` | Remove the bundled extension directories and RTK binary, then install fresh at user scope; the separate Ponytail package is preserved and refreshed |
+| `tersio doctor` | Check OMP, extension, Ponytail, and RTK installation health |
+| `tersio uninstall` | Remove bundled extensions, the legacy `aaa-combo-boot` helper, and the plugin registration; add `--remove-rtk` to remove the RTK binary or `--remove-ponytail` to unregister Ponytail's extension path (the Ponytail package remains installed) |
+| `tersio version` | Print the package version (`--version` or `-v` also works) |
 Useful flags are `--scope user|project|both`, `--combo-default`/`--caveman-default`/`--rtk-default` (session-start defaults), `--dry-run`, `--yes`/`-y`, and `--verbose`. The original no-subcommand install and legacy `--doctor` and `--uninstall` forms remain supported.
 
 
@@ -181,7 +181,7 @@ Before replacing an existing extension source file, the installer writes `<file>
 
 ## Development
 
-Source lives in TypeScript: `install-omp-addons.ts`, `extensions/**/*.ts`, shared helpers in `extensions/lib/utils.ts`, and OMP host types in `extensions/shared/types.ts`. Tests run directly on the TypeScript source through `tsx` — Node never executes a `.ts` file.
+Source lives in TypeScript: `tersio.ts`, `extensions/**/*.ts`, shared helpers in `extensions/lib/utils.ts`, and OMP host types in `extensions/shared/types.ts`. Tests run directly on the TypeScript source through `tsx` — Node never executes a `.ts` file.
 
 The `.js` files sitting next to the sources are compiled build artifacts, not hand-written code: `npm run build` emits them, they are gitignored, and npm publishes them. Runtime consumers (`bin`, the OMP plugin manifest, the installed extensions) all point at the compiled `.js`.
 
@@ -216,18 +216,18 @@ It must resolve to a Linux path such as `~/.nvm/versions/node/.../bin/npm`, not 
 Without keeping the package globally installed, run the latest release once:
 
 ```bash
-npm exec --yes --prefer-online --package=oh-my-pi-token-saver@latest -- oh-my-pi-token-saver install
+npm exec --yes --prefer-online --package=tersio@latest -- tersio install
 ```
 
 ## Troubleshooting
 
 ### Ponytail or Combo command is missing
 
-Run `oh-my-pi-token-saver reinstall` in the same Windows, WSL, or Linux environment where OMP runs, restart OMP, then try `/ponytail status` and `/combo status`. If either is still missing, run `oh-my-pi-token-saver doctor`; the installer normally repairs both explicit registrations in `~/.omp/agent/config.yml`.
+Run `tersio reinstall` in the same Windows, WSL, or Linux environment where OMP runs, restart OMP, then try `/ponytail status` and `/combo status`. If either is still missing, run `tersio doctor`; the installer normally repairs both explicit registrations in `~/.omp/agent/config.yml`.
 
 ### RTK is missing or not executable
 
-Run `oh-my-pi-token-saver reinstall`, then `oh-my-pi-token-saver doctor`. On Linux or macOS, an older manually installed binary can be repaired with:
+Run `tersio reinstall`, then `tersio doctor`. On Linux or macOS, an older manually installed binary can be repaired with:
 
 ```bash
 chmod +x ~/.bun/bin/rtk

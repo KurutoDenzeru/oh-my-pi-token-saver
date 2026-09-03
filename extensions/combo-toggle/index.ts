@@ -14,6 +14,7 @@ import {
   setSharedComboListener,
 } from "../shared/session-state.js";
 import { readComboDefault } from "../shared/plugin-settings.js";
+import { getHeadroomStatus, refreshHeadroomStatus } from "../shared/headroom-status.js";
 import type { ComboState, ExtensionApi, ExtensionCtx, SessionEntry, SystemPromptEvent } from "../shared/types.js";
 
 const require = createRequire(import.meta.url);
@@ -54,7 +55,7 @@ function loadPonytailInstructions(mode: string): string {
     );
     const { getPonytailInstructions } = require(installed) as { getPonytailInstructions?: (mode: string) => string };
     if (typeof getPonytailInstructions === "function") return getPonytailInstructions(mode);
-  } catch {}
+  } catch { }
   return ponytailFallback(mode);
 }
 
@@ -79,7 +80,8 @@ export default function comboToggleExtension(pi: ExtensionApi): void {
     const r = currentState.rtk.toUpperCase();
     const p = currentState.ponytail.toUpperCase();
     const lvl = currentState.level.toUpperCase();
-    const label = `combo ${lvl}: 🪨caveman=${c0} ⚡rtk=${r} 🦥ponytail=${p}`;
+    const hw = getHeadroomStatus();
+    const label = `combo ${lvl}: 🪨caveman=${c0} ⚡rtk=${r} 🦥ponytail=${p}${hw === "off" ? "" : ` 🗜️headroom=${hw.toUpperCase()}`}`;
     c.ui.setStatus("combo", theme?.fg ? `${theme.fg("accent", "🧩")} ${theme.fg("muted", label)}` : `🧩 ${label}`);
     // Clobber any sibling bars another extension may have painted in a race
     // during session_start — our bar is canonical for the duration of the preset.
@@ -91,6 +93,8 @@ export default function comboToggleExtension(pi: ExtensionApi): void {
   function useState(state: Readonly<ComboState>, ctx?: ExtensionCtx): Readonly<ComboState> {
     currentState = state;
     syncStatus(ctx);
+    // Proxy /health is async; repaint when the probe settles so STALE shows up.
+    void refreshHeadroomStatus().then(() => syncStatus());
     return state;
   }
 

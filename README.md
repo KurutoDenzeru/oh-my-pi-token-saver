@@ -64,7 +64,26 @@ Individual toggles: `/caveman full` · `/rtk on` · `/ponytail full`
 /ai-addons update headroom  # runs `headroom update` (self-updates in place)
 ```
 
-`headroom wrap omp` from a shell additionally starts the proxy and launches omp through it; the in-session `/headroom on` writes the same reversible `models.yml` override without launching a nested session, so start the proxy separately if needed (`headroom proxy --port 8787`). The installer itself never writes `models.yml`. `oh-my-pi-token-saver doctor` reports the wrap state and whether the proxy is running; the combo status bar shows `🗜️headroom=ON` while wrapped. To remove the override during uninstall, add `--remove-headroom`.
+`headroom wrap omp` from a shell additionally starts the proxy and launches omp through it; the in-session `/headroom on` writes the same reversible `models.yml` override without launching a nested session, so start the proxy separately if needed (`headroom proxy --port 8787`). The installer only touches `models.yml` when you accept its enable prompt (prepare-only path, same backup contract); otherwise it just detects and instructs. `oh-my-pi-token-saver doctor` reports the wrap state and whether the proxy is running; the combo status bar shows `🗜️headroom=ON` while wrapped. To remove the override during uninstall, add `--remove-headroom`.
+
+### Headroom commands
+
+| Where | Command | What it does |
+|---|---|---|
+| OMP | `/headroom on` | Wrap: route OMP through the proxy (reversible `models.yml` override) |
+| OMP | `/headroom off` | Unwrap: restore `models.yml` from backup |
+| OMP | `/headroom status` | CLI version, wrap state, proxy health |
+| OMP | `/ai-addons check` | Ponytail, RTK, Caveman, and Headroom (local vs latest) + routing state |
+| OMP | `/ai-addons update headroom` | Run `headroom update` (self-updates in place) |
+| OMP | `/ai-addons update all [--dry-run]` | Update everything sequentially, Headroom included |
+| Shell | `headroom wrap omp` | Start proxy + wrap + launch OMP through it |
+| Shell | `headroom unwrap omp` | Restore `models.yml`, stop the proxy |
+| Shell | `headroom proxy --port 8787` | Run the proxy standalone (separate terminal) |
+| Shell | `headroom update [--check]` | Upgrade Headroom itself (`--check` reports only) |
+| Shell | `headroom doctor` | Headroom's own health check |
+| Shell | `oh-my-pi-token-saver install` | Always runs the Headroom check; offers to enable routing when the CLI is present |
+| Shell | `oh-my-pi-token-saver doctor` | Reports wrap state and proxy health |
+| Shell | `oh-my-pi-token-saver uninstall --remove-headroom` | Undo the wrap during uninstall |
 
 ## What it installs
 

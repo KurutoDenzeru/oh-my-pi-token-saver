@@ -790,8 +790,10 @@ async function stepHeadroom(options: WriteOptions): Promise<void> {
     console.log("  [hint] No action needed. Undo anytime with: headroom unwrap omp  (or in-session: /headroom off)");
     return;
   }
+  let cliFound = false;
   try {
     await execP("headroom", ["--version"]);
+    cliFound = true;
     console.log("  [ok] headroom CLI found. To route OMP through it, run:");
     console.log("         headroom wrap omp      # starts the proxy + writes a reversible models.yml override");
     console.log("         headroom unwrap omp    # undo   (or in-session: /headroom on|off)");
@@ -799,7 +801,30 @@ async function stepHeadroom(options: WriteOptions): Promise<void> {
     console.log("  [skip] headroom CLI not found — install with:");
     console.log("           uv tool install --python 3.13 \"headroom-ai[all]\"");
     console.log("           pip install \"headroom-ai[all]\"   # alternative");
-    console.log("         then run: headroom wrap omp");
+    console.log("         then run: headroom wrap omp  (or in-session: /headroom on)");
+  }
+  if (!cliFound) return;
+  // Offer to enable routing now: prepare-only injects the reversible override
+  // and returns immediately (plain `wrap omp` would launch a nested session).
+  // Never during dry-run actions or non-interactive apply-update runs.
+  if (options.dryRun) {
+    console.log("  [dry-run] would offer to enable Headroom routing (`headroom wrap omp --prepare-only`)");
+    return;
+  }
+  if (applyUpdate || !tty()) return;
+  const answer = (await ask("  Route OMP through the Headroom proxy now? [y/N]: ")).trim().toLowerCase();
+  if (answer !== "y" && answer !== "yes") {
+    console.log("  [skip] leaving models.yml untouched — enable anytime with /headroom on");
+    return;
+  }
+  try {
+    await execP("headroom", ["wrap", "omp", "--prepare-only"]);
+    const st = headroomWrapState(await readTextIfExists(headroomModelsPath()));
+    const healthy = st.port !== null && await headroomProxyHealthy(st.port);
+    console.log(`  [ok] Headroom on: models.yml wrapped (proxy http://127.0.0.1:${st.port ?? 8787}${healthy ? ", running" : " — NOT running"})`);
+    if (!healthy) console.log("  [next] start the proxy: headroom proxy --port 8787  (or run `headroom wrap omp` from a shell)");
+  } catch (e) {
+    console.log(`  [fail] headroom wrap failed: ${(e as Error).message} — models.yml untouched`);
   }
 }
 

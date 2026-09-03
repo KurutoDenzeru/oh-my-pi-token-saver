@@ -136,6 +136,28 @@ test("headroom check runs by default: default install mentions headroom", () => 
   }
 });
 
+test("dry-run with the CLI previews the enable offer without prompting", () => {
+  const home = fakeHome();
+  try {
+    const result = run(["install", "--dry-run", "--scope", "project", "--yes"], envFor(home, { headroom: true }));
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /would offer to enable Headroom routing/);
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("reinstall runs the headroom check", () => {
+  const home = fakeHome();
+  try {
+    const result = run(["reinstall", "--dry-run", "--yes"], envFor(home));
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /Checking Headroom compression proxy/);
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
 test("uninstall --remove-headroom dry-run only previews the unwrap", () => {
   const home = fakeHome();
   try {

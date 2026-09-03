@@ -86,7 +86,6 @@ const doctor = command === "doctor" || args.includes("--doctor");
 const uninstall = command === "uninstall" || args.includes("--uninstall");
 const removePonytail = args.includes("--remove-ponytail");
 const removeRtk = args.includes("--remove-rtk");
-const withHeadroom = args.includes("--with-headroom");
 const removeHeadroom = args.includes("--remove-headroom");
 
 const scopeFlag = (() => {
@@ -123,7 +122,7 @@ Commands:
 
 Options:
   --scope user|project|both
-  --with-headroom                check for the Headroom compression proxy and print setup steps
+  --with-headroom                no-op (Headroom check runs by default; toggle in-session with /headroom)
   --remove-headroom              during uninstall: undo the headroom wrap (restores models.yml)
   --combo-default off|medium|balanced|max
   --caveman-default off|lite|full|ultra|wenyan
@@ -788,14 +787,14 @@ async function stepHeadroom(options: WriteOptions): Promise<void> {
   if (state.wrapped) {
     const healthy = state.port !== null && await headroomProxyHealthy(state.port);
     console.log(`  [ok] models.yml is headroom-wrapped (proxy http://127.0.0.1:${state.port ?? 8787}${healthy ? ", running" : " — NOT running; start: headroom proxy"})`);
-    console.log("  [hint] No action needed. Undo anytime with: headroom unwrap omp");
+    console.log("  [hint] No action needed. Undo anytime with: headroom unwrap omp  (or in-session: /headroom off)");
     return;
   }
   try {
     await execP("headroom", ["--version"]);
     console.log("  [ok] headroom CLI found. To route OMP through it, run:");
     console.log("         headroom wrap omp      # starts the proxy + writes a reversible models.yml override");
-    console.log("         headroom unwrap omp    # undo");
+    console.log("         headroom unwrap omp    # undo   (or in-session: /headroom on|off)");
   } catch {
     console.log("  [skip] headroom CLI not found — install with:");
     console.log("           uv tool install --python 3.13 \"headroom-ai[all]\"");
@@ -885,7 +884,7 @@ async function runDoctor(): Promise<void> {
   // Headroom proxy wrap state
   const hwState = headroomWrapState(await readTextIfExists(headroomModelsPath()));
   if (!hwState.wrapped) {
-    console.log("  Headroom: not wrapped (optional; see --with-headroom)");
+    console.log("  Headroom: not wrapped (use /headroom on to route OMP through the proxy)");
   } else {
     const healthy = hwState.port !== null && await headroomProxyHealthy(hwState.port);
     console.log(`  Headroom: wrapped (proxy http://127.0.0.1:${hwState.port ?? 8787}${healthy ? ", running" : " — NOT running"})`);
@@ -1334,7 +1333,7 @@ async function main(): Promise<void> {
     await stepUpdater(userExtDir, options);
     await stepAmanaiReward(userExtDir, options, selfPlugin);
     if (selfPlugin) await writePluginSettings(profile, options);
-    if (withHeadroom) await stepHeadroom(options);
+    await stepHeadroom(options);
   }
 
   if (scope === "2" || scope === "3") {
@@ -1345,7 +1344,7 @@ async function main(): Promise<void> {
     await stepUpdater(projectExtDir, options);
     await stepAmanaiReward(projectExtDir, options);
     console.log("  [note] Ponytail, RTK binary, and Combo toggle require user-level (global) install");
-    if (withHeadroom && scope === "2") await stepHeadroom(options);
+    if (scope === "2") await stepHeadroom(options);
   }
 
   console.log("\n=== Installation complete ===");

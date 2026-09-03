@@ -125,12 +125,12 @@ test("install --with-headroom without the CLI prints install hints and exits 0",
   }
 });
 
-test("install --with-headroom is opt-in: default install never mentions headroom", () => {
+test("headroom check runs by default: default install mentions headroom", () => {
   const home = fakeHome();
   try {
     const result = run(["install", "--dry-run", "--scope", "project", "--yes"], envFor(home));
     assert.equal(result.status, 0, result.stderr);
-    assert.doesNotMatch(result.stdout, /[Hh]eadroom/);
+    assert.match(result.stdout, /Checking Headroom compression proxy/);
   } finally {
     rmSync(home, { recursive: true, force: true });
   }

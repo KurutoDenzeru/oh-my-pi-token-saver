@@ -49,22 +49,22 @@ Defaults apply only to fresh sessions — anything you persist with `/combo`, `/
 
 Individual toggles: `/caveman full` · `/rtk on` · `/ponytail full`
 
-### Headroom (optional)
+### Headroom
 
-[Headroom](https://github.com/headroomlabs-ai/headroom) is a local-first compression proxy that shrinks tool outputs, JSON, and logs before they reach the model — a different layer from this package's prompt-level add-ons, and the two stack. Pass `--with-headroom` to have the installer check for it:
+[Headroom](https://github.com/headroomlabs-ai/headroom) is a local-first compression proxy that shrinks tool outputs, JSON, and logs before they reach the model — a different layer from this package's prompt-level add-ons, and the two stack. The installer checks for it on every install, and it is managed like the other add-ons from inside OMP:
 
-```bash
-oh-my-pi-token-saver install --with-headroom
+```text
+/headroom on      # route omp through the compression proxy
+/headroom off     # undo (restores models.yml from backup)
+/headroom status  # CLI version, wrap state, proxy health
 ```
 
-The installer never writes OMP's `models.yml` itself. Routing OMP through the proxy is one command from Headroom's own CLI (reversible, with a byte-for-byte backup):
-
-```bash
-headroom wrap omp      # route omp through the compression proxy
-headroom unwrap omp    # undo
+```text
+/ai-addons check            # includes Headroom local vs latest (PyPI) + routing state
+/ai-addons update headroom  # runs `headroom update` (self-updates in place)
 ```
 
-`oh-my-pi-token-saver doctor` reports the wrap state and whether the proxy is running. To remove the override during uninstall, add `--remove-headroom`.
+`headroom wrap omp` from a shell additionally starts the proxy and launches omp through it; the in-session `/headroom on` writes the same reversible `models.yml` override without launching a nested session, so start the proxy separately if needed (`headroom proxy --port 8787`). The installer itself never writes `models.yml`. `oh-my-pi-token-saver doctor` reports the wrap state and whether the proxy is running; the combo status bar shows `🗜️headroom=ON` while wrapped. To remove the override during uninstall, add `--remove-headroom`.
 
 ## What it installs
 

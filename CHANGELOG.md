@@ -1,8 +1,9 @@
 ## v2.2.0
-- Optional Headroom integration: `install --with-headroom` checks for the [Headroom](https://github.com/headroomlabs-ai/headroom) compression proxy and prints setup steps (`headroom wrap omp` / `headroom unwrap omp`). The installer never mutates `models.yml` — routing stays with Headroom's own reversible commands.
+- Headroom integration: every `install` checks for the [Headroom](https://github.com/headroomlabs-ai/headroom) compression proxy and prints setup steps. The installer never mutates `models.yml` — routing stays with Headroom's own reversible commands (or in-session `/headroom on`).
 - `doctor` reports the Headroom wrap state and whether the proxy is running.
 - `uninstall --remove-headroom` undoes the Headroom wrap (restores `models.yml` from its backup) when the file is wrap-managed; unmanaged files are never touched.
 - Combo status bar shows `🗜️headroom=ON` while `models.yml` is headroom-wrapped (`STALE` when the wrapped proxy is down); absent when not wrapped.
+- Headroom is managed by default: the installer always runs the Headroom check (`--with-headroom` now a no-op), `/headroom <on|off|status>` toggles routing in-session (non-launching prepare path, with dry-run), and `/ai-addons check|update headroom|all` covers the CLI version against PyPI via `headroom update`.
 
 ## v2.1.0
 - Session-start mode defaults. Set them with the installer (`install --combo-default balanced`, `--caveman-default lite`, `--rtk-default on`, or the interactive prompt) or through OMP plugin settings (`omp plugin config set oh-my-pi-token-saver comboDefault max`). All default off.

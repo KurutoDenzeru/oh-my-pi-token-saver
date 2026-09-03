@@ -1,5 +1,5 @@
 {
-  "name": "tersio",
+  "name": "tersio-omp",
   "version": "1.0.0",
   "description": "Amanai reward detector and three toggleable OMP extensions for terse replies, compact shell output, and minimal code decisions — with a manual updater and dry-run support.",
   "keywords": [

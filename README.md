@@ -11,14 +11,14 @@ A passive Amanai reward detector plus three toggleable [Oh My Pi (OMP)](https://
 If you use OMP, install the package as a managed plugin — no separate installer run, and OMP's plugin manager handles updates, enable/disable, and per-add-on features:
 
 ```bash
-omp plugin install tersio
+omp plugin install tersio-omp
 ```
 
 Then start a new OMP session. Every add-on is on by default; trim the set with OMP's feature flags:
 
 ```bash
-omp plugin install 'tersio[caveman,ponytail]'   # only these two add-ons
-omp plugin features tersio --disable rtk        # turn one off later
+omp plugin install 'tersio-omp[caveman,ponytail]'   # only these two add-ons
+omp plugin features tersio-omp --disable rtk        # turn one off later
 ```
 
 Features: `caveman`, `rtk`, `ponytail` (combo bar + mode reinforcement), `updater` (`/ai-addons`). The Amanai reward detector is the plugin base and is always loaded.
@@ -26,7 +26,7 @@ Features: `caveman`, `rtk`, `ponytail` (combo bar + mode reinforcement), `update
 ### Installer (npm CLI)
 
 ```bash
-npm install -g tersio@latest
+npm install -g tersio-omp@latest
 tersio install
 ```
 
@@ -39,7 +39,7 @@ tersio install --combo-default balanced   # session-start Combo preset
 tersio install --caveman-default lite --rtk-default on
 ```
 
-Defaults apply only to fresh sessions — anything you persist with `/combo`, `/caveman`, or `/rtk` always wins. They are stored as plugin settings (`omp plugin config get tersio comboDefault`) and can be changed later with `omp plugin config set`.
+Defaults apply only to fresh sessions — anything you persist with `/combo`, `/caveman`, or `/rtk` always wins. They are stored as plugin settings (`omp plugin config get tersio-omp comboDefault`) and can be changed later with `omp plugin config set tersio-omp`.
 
 **After install:** restart OMP, then enable a preset:
 
@@ -60,7 +60,7 @@ Individual toggles: `/caveman full` · `/rtk on` · `/ponytail full`
 | **Combo** | Switches Caveman, RTK, and Ponytail together. Presets: `off`, `medium`, `balanced`, and `max`; mixed individual modes display as `custom` |
 | **Amanai reward detector** | Locally notifies you when a final successful response contains a footer-shaped `AMANAI-GACHA-…` key; it never changes output, stores or sends the key, redeems it, opens a browser, or creates requests |
 
-User-level installs also register the package in `~/.omp/plugins`, so it appears as `tersio` in OMP **Settings → Plugins**. In that state the Amanai reward detector loads through the plugin manifest instead of a copied extension entry.
+User-level installs also register the package in `~/.omp/plugins`, so it appears as `tersio-omp` in OMP **Settings → Plugins**. In that state the Amanai reward detector loads through the plugin manifest instead of a copied extension entry.
 
 All three token-saving modes start off until you enable them.
 
@@ -216,7 +216,7 @@ It must resolve to a Linux path such as `~/.nvm/versions/node/.../bin/npm`, not 
 Without keeping the package globally installed, run the latest release once:
 
 ```bash
-npm exec --yes --prefer-online --package=tersio@latest -- tersio install
+npm exec --yes --prefer-online --package=tersio-omp@latest -- tersio install
 ```
 
 ## Troubleshooting

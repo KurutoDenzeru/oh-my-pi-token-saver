@@ -25,7 +25,7 @@ import {
 const IS_WINDOWS = process.platform === "win32";
 const HOME = process.env.HOME || process.env.USERPROFILE || "";
 
-const PACKAGE_NAME = "tersio";
+const PACKAGE_NAME = "tersio-omp";
 const PACKAGE_BIN = "tersio";
 const { version: PACKAGE_VERSION } = createRequire(import.meta.url)("./package.json") as { version: string };
 

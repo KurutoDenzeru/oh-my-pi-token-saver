@@ -51,7 +51,7 @@ test("readPluginSettings returns defaults when no lock file exists", () => {
 
 test("readPluginSettings picks up values from the omp lock file", () => {
   withHome((home) => {
-    writeLock(home, { "tersio": { comboDefault: "max", cavemanDefault: "wenyan", rtkDefault: true } });
+    writeLock(home, { "tersio-omp": { comboDefault: "max", cavemanDefault: "wenyan", rtkDefault: true } });
     assert.equal(readComboDefault(), "max");
     assert.equal(readCavemanDefault(), "wenyan");
     assert.equal(readRtkDefault(), true);
@@ -62,7 +62,7 @@ test("readPluginSettings ignores invalid values and other plugins", () => {
   withHome((home) => {
     writeLock(home, {
       "other-plugin": { comboDefault: "max" },
-      "tersio": { comboDefault: "yolo", cavemanDefault: 42, rtkDefault: "yes" },
+      "tersio-omp": { comboDefault: "yolo", cavemanDefault: 42, rtkDefault: "yes" },
     });
     assert.equal(readComboDefault(), "off");
     assert.equal(readCavemanDefault(), "off");

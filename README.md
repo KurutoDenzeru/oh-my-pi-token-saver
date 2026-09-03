@@ -1,9 +1,9 @@
 # Tersio ✂️
 
-[![npm version](https://img.shields.io/npm/v/tersio-omp)](https://www.npmjs.com/package/tersio-omp)
-[![npm downloads](https://img.shields.io/npm/dt/tersio-omp)](https://www.npmjs.com/package/tersio-omp)
-[![license](https://img.shields.io/npm/l/tersio-omp)](./LICENSE)
-[![node](https://img.shields.io/node/v/tersio-omp)](https://nodejs.org)
+[![npm version](https://img.shields.io/npm/v/@krtclcdy%2Ftersio)](https://www.npmjs.com/package/@krtclcdy/tersio)
+[![npm downloads](https://img.shields.io/npm/dt/@krtclcdy%2Ftersio)](https://www.npmjs.com/package/@krtclcdy/tersio)
+[![license](https://img.shields.io/npm/l/@krtclcdy%2Ftersio)](./LICENSE)
+[![node](https://img.shields.io/node/v/@krtclcdy%2Ftersio)](https://nodejs.org)
 [![CI](https://github.com/KurutoDenzeru/tersio/actions/workflows/ci.yml/badge.svg)](https://github.com/KurutoDenzeru/tersio/actions)
 
 Terse replies, compact shell output, and minimal code decisions for [Oh My Pi (OMP)](https://github.com/can1357/oh-my-pi) — plus a passive Amanai reward detector.
@@ -13,20 +13,20 @@ Terse replies, compact shell output, and minimal code decisions for [Oh My Pi (O
 OMP plugin (recommended — updates and feature flags handled by OMP):
 
 ```bash
-omp plugin install tersio-omp
+omp plugin install @krtclcdy/tersio
 ```
 
 Subset only:
 
 ```bash
-omp plugin install 'tersio-omp[caveman,ponytail]'
-omp plugin features tersio-omp --disable rtk
+omp plugin install '@krtclcdy/tersio[caveman,ponytail]'
+omp plugin features @krtclcdy/tersio --disable rtk
 ```
 
 npm CLI (installs add-ons into your OMP home):
 
 ```bash
-npm install -g tersio-omp@latest
+npm install -g @krtclcdy/tersio@latest
 tersio install
 ```
 
@@ -44,7 +44,7 @@ Session-start defaults (prompted during `install`, or flags):
 tersio install --combo-default balanced --caveman-default lite --rtk-default on
 ```
 
-Defaults apply to fresh sessions only — anything persisted with `/combo`, `/caveman`, or `/rtk` wins. Stored as plugin settings (`omp plugin config get tersio-omp comboDefault`).
+Defaults apply to fresh sessions only — anything persisted with `/combo`, `/caveman`, or `/rtk` wins. Stored as plugin settings (`omp plugin config get @krtclcdy/tersio comboDefault`).
 
 ## What it installs
 
@@ -153,7 +153,7 @@ Windows/WSL have separate OMP homes — install from the environment where OMP r
 One-off use without installing:
 
 ```bash
-npm exec --yes --prefer-online --package=tersio-omp@latest -- tersio install
+npm exec --yes --prefer-online --package=@krtclcdy/tersio@latest -- tersio install
 ```
 
 ## Troubleshooting

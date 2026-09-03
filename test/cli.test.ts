@@ -92,7 +92,7 @@ test("user dry-run installs mode reinforcement after Ponytail", () => {
   assert.ok(ponytail >= 0, result.stdout);
   assert.ok(reinforcement > ponytail, result.stdout);
   assert.match(result.stdout, /would place mode reinforcement after Ponytail/);
-  assert.match(result.stdout, /\[dry-run\] would add tersio-omp/);
+  assert.match(result.stdout, /\[dry-run\] would add @krtclcdy\/tersio/);
 });
 
 test("uninstall dry-run previews shared bridge removal", () => {

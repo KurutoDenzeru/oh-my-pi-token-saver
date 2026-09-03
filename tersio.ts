@@ -25,7 +25,7 @@ import {
 const IS_WINDOWS = process.platform === "win32";
 const HOME = process.env.HOME || process.env.USERPROFILE || "";
 
-const PACKAGE_NAME = "tersio-omp";
+const PACKAGE_NAME = "@krtclcdy/tersio";
 const PACKAGE_BIN = "tersio";
 const { version: PACKAGE_VERSION } = createRequire(import.meta.url)("./package.json") as { version: string };
 
@@ -489,9 +489,11 @@ async function stepSelfPlugin(pluginsDir: string, options: InstallOptions): Prom
   pkg.private = true;
   pkg.dependencies = pkg.dependencies || {};
   pkg.dependencies[PACKAGE_NAME] = `^${PACKAGE_VERSION}`;
-  if ("oh-my-pi-token-saver" in pkg.dependencies) {
-    delete pkg.dependencies["oh-my-pi-token-saver"];
-    if (!options.dryRun) console.log("  [migrate] dropped legacy oh-my-pi-token-saver dependency");
+  for (const legacy of ["oh-my-pi-token-saver", "tersio-omp"]) {
+    if (legacy in pkg.dependencies) {
+      delete pkg.dependencies[legacy];
+      if (!options.dryRun) console.log(`  [migrate] dropped legacy ${legacy} dependency`);
+    }
   }
 
   if (options.dryRun) {

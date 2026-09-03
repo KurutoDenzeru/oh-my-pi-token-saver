@@ -51,39 +51,7 @@ Individual toggles: `/caveman full` · `/rtk on` · `/ponytail full`
 
 ### Headroom
 
-[Headroom](https://github.com/headroomlabs-ai/headroom) is a local-first compression proxy that shrinks tool outputs, JSON, and logs before they reach the model — a different layer from this package's prompt-level add-ons, and the two stack. The installer checks for it on every install, and it is managed like the other add-ons from inside OMP:
-
-```text
-/headroom on      # route omp through the compression proxy
-/headroom off     # undo (restores models.yml from backup)
-/headroom status  # CLI version, wrap state, proxy health
-```
-
-```text
-/ai-addons check            # includes Headroom local vs latest (PyPI) + routing state
-/ai-addons update headroom  # runs `headroom update` (self-updates in place)
-```
-
-`headroom wrap omp` from a shell additionally starts the proxy and launches omp through it; the in-session `/headroom on` writes the same reversible `models.yml` override without launching a nested session, so start the proxy separately if needed (`headroom proxy --port 8787`). The installer only touches `models.yml` when you accept its enable prompt (prepare-only path, same backup contract); otherwise it just detects and instructs. `oh-my-pi-token-saver doctor` reports the wrap state and whether the proxy is running; the combo status bar shows `🗜️headroom=ON` while wrapped. To remove the override during uninstall, add `--remove-headroom`.
-
-### Headroom commands
-
-| Where | Command | What it does |
-|---|---|---|
-| OMP | `/headroom on` | Wrap: route OMP through the proxy (reversible `models.yml` override) |
-| OMP | `/headroom off` | Unwrap: restore `models.yml` from backup |
-| OMP | `/headroom status` | CLI version, wrap state, proxy health |
-| OMP | `/ai-addons check` | Ponytail, RTK, Caveman, and Headroom (local vs latest) + routing state |
-| OMP | `/ai-addons update headroom` | Run `headroom update` (self-updates in place) |
-| OMP | `/ai-addons update all [--dry-run]` | Update everything sequentially, Headroom included |
-| Shell | `headroom wrap omp` | Start proxy + wrap + launch OMP through it |
-| Shell | `headroom unwrap omp` | Restore `models.yml`, stop the proxy |
-| Shell | `headroom proxy --port 8787` | Run the proxy standalone (separate terminal) |
-| Shell | `headroom update [--check]` | Upgrade Headroom itself (`--check` reports only) |
-| Shell | `headroom doctor` | Headroom's own health check |
-| Shell | `oh-my-pi-token-saver install` | Always runs the Headroom check; offers to enable routing when the CLI is present |
-| Shell | `oh-my-pi-token-saver doctor` | Reports wrap state and proxy health |
-| Shell | `oh-my-pi-token-saver uninstall --remove-headroom` | Undo the wrap during uninstall |
+[Headroom](https://github.com/headroomlabs-ai/headroom) is a local-first compression proxy that shrinks tool outputs, JSON, and logs before they reach the model — a different layer from this package's prompt-level add-ons, and the two stack. The installer checks for it on every install and offers to enable routing; from inside OMP it is managed like the other add-ons (see `/headroom` and `/ai-addons` in Commands reference). While wrapped, the combo status bar shows `🗜️headroom=ON`.
 
 ## What it installs
 
@@ -117,8 +85,8 @@ After the global install, use these short commands for routine maintenance:
 | `oh-my-pi-token-saver install` | Install non-interactively to user scope by default; use `--scope project` or `--scope both` for another scope |
 | `oh-my-pi-token-saver update` | Fetch the latest release and refresh the user installation |
 | `oh-my-pi-token-saver reinstall` | Remove the bundled extension directories and RTK binary, then install fresh at user scope; the separate Ponytail package is preserved and refreshed |
-| `oh-my-pi-token-saver doctor` | Check OMP, extension, Ponytail, and RTK installation health |
-| `oh-my-pi-token-saver uninstall` | Remove bundled extensions, the legacy `aaa-combo-boot` helper, and the plugin registration; add `--remove-rtk` to remove the RTK binary or `--remove-ponytail` to unregister Ponytail's extension path (the Ponytail package remains installed) |
+| `oh-my-pi-token-saver doctor` | Check OMP, extension, Ponytail, RTK, and Headroom routing health |
+| `oh-my-pi-token-saver uninstall` | Remove bundled extensions, the legacy `aaa-combo-boot` helper, and the plugin registration; add `--remove-rtk` to remove the RTK binary, `--remove-ponytail` to unregister Ponytail's extension path (the Ponytail package remains installed), or `--remove-headroom` to undo the Headroom wrap |
 | `oh-my-pi-token-saver version` | Print the package version (`--version` or `-v` also works) |
 Useful flags are `--scope user|project|both`, `--combo-default`/`--caveman-default`/`--rtk-default` (session-start defaults), `--dry-run`, `--yes`/`-y`, and `--verbose`. The original no-subcommand install and legacy `--doctor` and `--uninstall` forms remain supported.
 
@@ -176,7 +144,8 @@ rtk lint
 /ai-addons update ponytail                update Ponytail
 /ai-addons update rtk                     update the RTK binary
 /ai-addons update caveman                 update the Caveman rule
-/ai-addons update all                     update all three
+/ai-addons update headroom                update Headroom (`headroom update`)
+/ai-addons update all                     update all four
 /ai-addons update all --dry-run           preview without changes
 ```
 
@@ -194,6 +163,16 @@ rtk lint
 `/combo` persists each add-on's state and reloads OMP so the new modes apply immediately, without emitting separate `/caveman`, `/rtk`, or `/ponytail` command messages.
 
 Active Combo presets are inherited by OMP task subagents created from the session. `/combo medium`, `/combo balanced`, or `/combo max` is the only way to activate a preset and show the Combo footer indicator. Individual `/caveman`, `/rtk`, and `/ponytail` commands leave Combo inactive; `/combo status` reports their actual mixed state without turning the indicator on.
+
+### Headroom — compression routing
+
+```text
+/headroom on           route OMP through the proxy (reversible override)
+/headroom off          restore models.yml from backup
+/headroom status       CLI version, wrap state, proxy health
+```
+
+In-session `/headroom on` uses the non-launching prepare path; start the proxy separately if needed (`headroom proxy --port 8787`). From a shell, plain `headroom wrap omp` additionally starts the proxy and launches OMP through it.
 
 ## File locations
 

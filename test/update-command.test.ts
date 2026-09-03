@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const installer = path.join(root, "install-omp-addons.js");
+const installer = path.join(root, "tersio.js");
 
 test("update delegates to the latest package non-interactively", () => {
   const fakeBin = mkdtempSync(path.join(os.tmpdir(), "omp-update-test-"));
@@ -38,7 +38,7 @@ test("update delegates to the latest package non-interactively", () => {
     assert.equal(result.status, 0, result.stderr);
     assert.match(
       result.stdout,
-      /fake-npm exec --yes --prefer-online --package=oh-my-pi-token-saver@latest -- oh-my-pi-token-saver --apply-update --yes --scope project --dry-run/
+      /fake-npm exec --yes --prefer-online --package=@krtclcdy\/tersio@latest -- tersio --apply-update --yes --scope project --dry-run/
     );
     assert.match(result.stdout, /=== Update complete ===/);
   } finally {

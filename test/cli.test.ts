@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const installer = path.join(root, "install-omp-addons.js");
+const installer = path.join(root, "tersio.js");
 const { version } = createRequire(import.meta.url)("../package.json");
 
 function run(...args: string[]) {
@@ -92,7 +92,7 @@ test("user dry-run installs mode reinforcement after Ponytail", () => {
   assert.ok(ponytail >= 0, result.stdout);
   assert.ok(reinforcement > ponytail, result.stdout);
   assert.match(result.stdout, /would place mode reinforcement after Ponytail/);
-  assert.match(result.stdout, /\[dry-run\] would add oh-my-pi-token-saver/);
+  assert.match(result.stdout, /\[dry-run\] would add @krtclcdy\/tersio/);
 });
 
 test("uninstall dry-run previews shared bridge removal", () => {

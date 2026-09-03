@@ -14,7 +14,7 @@ import {
 } from "../extensions/shared/plugin-settings.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const installer = path.join(root, "install-omp-addons.js");
+const installer = path.join(root, "tersio.js");
 
 // Each scenario runs under its own HOME so the lock-file fixtures never
 // collide with the real user state.
@@ -51,7 +51,7 @@ test("readPluginSettings returns defaults when no lock file exists", () => {
 
 test("readPluginSettings picks up values from the omp lock file", () => {
   withHome((home) => {
-    writeLock(home, { "oh-my-pi-token-saver": { comboDefault: "max", cavemanDefault: "wenyan", rtkDefault: true } });
+    writeLock(home, { "@krtclcdy/tersio": { comboDefault: "max", cavemanDefault: "wenyan", rtkDefault: true } });
     assert.equal(readComboDefault(), "max");
     assert.equal(readCavemanDefault(), "wenyan");
     assert.equal(readRtkDefault(), true);
@@ -62,7 +62,7 @@ test("readPluginSettings ignores invalid values and other plugins", () => {
   withHome((home) => {
     writeLock(home, {
       "other-plugin": { comboDefault: "max" },
-      "oh-my-pi-token-saver": { comboDefault: "yolo", cavemanDefault: 42, rtkDefault: "yes" },
+      "@krtclcdy/tersio": { comboDefault: "yolo", cavemanDefault: 42, rtkDefault: "yes" },
     });
     assert.equal(readComboDefault(), "off");
     assert.equal(readCavemanDefault(), "off");

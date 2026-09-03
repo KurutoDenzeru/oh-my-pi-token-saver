@@ -19,7 +19,7 @@ function instruction(state: { caveman: string; rtk: string; ponytail: string }):
 }
 
 export default function modeReinforcementExtension(pi: ExtensionApi): void {
-  pi.setLabel?.("Token Saver mode reinforcement");
+  pi.setLabel?.("Tersio mode reinforcement");
 
   pi.on("before_agent_start", async (event: SystemPromptEvent, ctx) => {
     if (!ctx?.hasUI) return;

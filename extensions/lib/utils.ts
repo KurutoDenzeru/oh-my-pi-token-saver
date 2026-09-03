@@ -27,7 +27,7 @@ function withResolvers<T>(): { promise: Promise<T>; resolve: (value: T | Promise
 export function httpsGet(url: string, opts: HttpGetOptions = {}): Promise<string> {
   const { promise, resolve, reject } = withResolvers<string>();
   const maxRedirects = opts.maxRedirects ?? 5;
-  const req = https.get(url, { headers: { "User-Agent": "omp-token-saver", Accept: "application/json,*/*" } }, (res) => {
+  const req = https.get(url, { headers: { "User-Agent": "tersio", Accept: "application/json,*/*" } }, (res) => {
     if (res.statusCode !== undefined && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
       if (maxRedirects <= 0) { res.resume(); reject(new Error(`Too many redirects fetching ${url}`)); return; }
       res.resume();
@@ -50,7 +50,7 @@ export function httpsGet(url: string, opts: HttpGetOptions = {}): Promise<string
 export function httpsDownload(url: string, dest: string, opts: HttpDownloadOptions = {}): Promise<void> {
   const { promise, resolve, reject } = withResolvers<void>();
   const maxRedirects = opts.maxRedirects ?? 5;
-  const req = https.get(url, { headers: { "User-Agent": "omp-token-saver", Accept: "*/*" } }, (res) => {
+  const req = https.get(url, { headers: { "User-Agent": "tersio", Accept: "*/*" } }, (res) => {
     if (res.statusCode !== undefined && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
       if (maxRedirects <= 0) { res.resume(); reject(new Error(`Too many redirects downloading ${url}`)); return; }
       res.resume();

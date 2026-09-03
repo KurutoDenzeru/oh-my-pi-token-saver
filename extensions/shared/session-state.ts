@@ -1,6 +1,6 @@
 import type { ComboLevel, ComboState, SessionEntry } from "./types.js";
 
-const BRIDGE_KEY = Symbol.for("oh-my-pi-token-saver/combo-session-state");
+const BRIDGE_KEY = Symbol.for("tersio/combo-session-state");
 
 export const OMP_SUBAGENT_MARKER = "You are operating on a piece of work assigned to you by the main agent.";
 

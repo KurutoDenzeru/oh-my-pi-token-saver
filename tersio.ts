@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// install-omp-addons.ts — Install caveman/rtk/ponytail add-ons on any OMP device.
-// Usage: node install-omp-addons.js [install|update|reinstall|doctor|uninstall|version|help] [options]
+// tersio.ts — Install Tersio (caveman/rtk/ponytail) add-ons on any OMP device.
+// Usage: node tersio.js [install|update|reinstall|doctor|uninstall|version|help] [options]
 // Requires: node/npm and omp CLI
 
 import { execFile } from "node:child_process";
@@ -25,8 +25,8 @@ import {
 const IS_WINDOWS = process.platform === "win32";
 const HOME = process.env.HOME || process.env.USERPROFILE || "";
 
-const PACKAGE_NAME = "oh-my-pi-token-saver";
-const PACKAGE_BIN = "oh-my-pi-token-saver";
+const PACKAGE_NAME = "@krtclcdy/tersio";
+const PACKAGE_BIN = "tersio";
 const { version: PACKAGE_VERSION } = createRequire(import.meta.url)("./package.json") as { version: string };
 
 // --- Types ---
@@ -478,7 +478,7 @@ async function stepPonytail(pluginsDir: string, userDir: string, options: Instal
 // Amanai detector then loads via the plugin's `omp.extensions` manifest, so
 // the caller must skip copying it into agent/extensions to avoid a double load.
 async function stepSelfPlugin(pluginsDir: string, options: InstallOptions): Promise<boolean> {
-  console.log("\n[2/8] Registering oh-my-pi-token-saver as OMP plugin...");
+  console.log("\n[2/8] Registering tersio as OMP plugin...");
   const pkgPath = path.join(pluginsDir, "package.json");
   let pkg: Record<string, any> = {};
   const existing = await readTextIfExists(pkgPath);
@@ -489,6 +489,12 @@ async function stepSelfPlugin(pluginsDir: string, options: InstallOptions): Prom
   pkg.private = true;
   pkg.dependencies = pkg.dependencies || {};
   pkg.dependencies[PACKAGE_NAME] = `^${PACKAGE_VERSION}`;
+  for (const legacy of ["oh-my-pi-token-saver", "tersio-omp"]) {
+    if (legacy in pkg.dependencies) {
+      delete pkg.dependencies[legacy];
+      if (!options.dryRun) console.log(`  [migrate] dropped legacy ${legacy} dependency`);
+    }
+  }
 
   if (options.dryRun) {
     console.log(`  [dry-run] would add ${PACKAGE_NAME}@^${PACKAGE_VERSION} to ${pkgPath}`);
@@ -516,7 +522,7 @@ async function stepSelfPlugin(pluginsDir: string, options: InstallOptions): Prom
     console.log(`  [warn] ${PACKAGE_NAME} not found in plugins/node_modules after install`);
     return false;
   }
-  console.log("  [ok] Listed in OMP Settings → Plugins as oh-my-pi-token-saver");
+  console.log("  [ok] Listed in OMP Settings → Plugins as tersio");
   return true;
 }
 
@@ -761,7 +767,7 @@ async function stepAmanaiReward(extDir: string, options: WriteOptions, pluginPro
         console.log(`  [rm] ${destDir} (now provided by the plugin)`);
       }
     }
-    console.log("  [ok] detector loads via the oh-my-pi-token-saver plugin manifest");
+    console.log("  [ok] detector loads via the tersio plugin manifest");
     return;
   }
   const src = await readTextIfExists(AMANAI_REWARD_INDEX);
@@ -775,7 +781,7 @@ async function stepAmanaiReward(extDir: string, options: WriteOptions, pluginPro
 // --- Doctor ---
 
 async function runDoctor(): Promise<void> {
-  console.log("\n=== OMP Token Saver Doctor ===\n");
+  console.log("\n=== Tersio Doctor ===\n");
 
   // Node
   console.log(`  Node: ok v${process.version}`);
@@ -895,7 +901,7 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
   const shouldRemoveRtk = options.removeRtk ?? removeRtk;
   const shouldDryRun = options.dryRun ?? dryRun;
 
-  console.log("\n=== OMP Token Saver Uninstall ===\n");
+  console.log("\n=== Tersio Uninstall ===\n");
 
   const extDir = path.join(HOME, ".omp", "agent", "extensions");
   const configPath = path.join(HOME, ".omp", "agent", "config.yml");
@@ -1038,7 +1044,7 @@ async function runLatestUpdate(): Promise<void> {
   const npmCommand = IS_WINDOWS ? process.env.ComSpec || "cmd.exe" : "npm";
   const npmCommandArgs = IS_WINDOWS ? ["/d", "/s", "/c", "npm", ...npmArgs] : npmArgs;
 
-  console.log("=== Updating OMP Token Saver ===");
+  console.log("=== Updating Tersio ===");
   console.log(`  Running the latest ${PACKAGE_NAME} installer...\n`);
 
   try {
@@ -1171,7 +1177,7 @@ async function main(): Promise<void> {
 
   if (dryRun) console.log("[dry-run] No changes will be written.\n");
 
-  console.log(`=== OMP Token Saver v${PACKAGE_VERSION} ===`);
+  console.log(`=== Tersio v${PACKAGE_VERSION} ===`);
   console.log(`  Platform: ${process.platform}`);
   console.log(`  Arch: ${process.arch}`);
   console.log(`  Home: ${HOME}`);

@@ -179,21 +179,6 @@ Before replacing an existing extension source file, the installer writes `<file>
 - RTK binary: `rtk.bak` or `rtk.exe.bak`, restored if the new binary fails validation
 - Caveman rule: `rule.md.bak`, restored if the written hash is invalid
 
-## Development
-
-Source lives in TypeScript: `tersio.ts`, `extensions/**/*.ts`, shared helpers in `extensions/lib/utils.ts`, and OMP host types in `extensions/shared/types.ts`. Tests run directly on the TypeScript source through `tsx` — Node never executes a `.ts` file.
-
-The `.js` files sitting next to the sources are compiled build artifacts, not hand-written code: `npm run build` emits them, they are gitignored, and npm publishes them. Runtime consumers (`bin`, the OMP plugin manifest, the installed extensions) all point at the compiled `.js`.
-
-```bash
-npm run check   # type-check only (tsc --noEmit)
-npm run build   # compile .ts → .js
-npm test        # run tests on the TypeScript source via tsx
-npm run clean   # remove compiled .js artifacts
-```
-
-If `git status` looks clean but stray `.js` files confuse an editor's global search, run `npm run clean` and rebuild.
-
 ## Prerequisites
 
 - [OMP (Oh My Pi)](https://github.com/can1357/oh-my-pi)

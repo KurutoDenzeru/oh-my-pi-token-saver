@@ -68,11 +68,7 @@ export default function cavemanSessionExtension(pi: ExtensionApi): void {
     const c = ctx || lastCtx;
     if (!c?.ui?.setStatus) return;
     // Combo owns the bar when any preset is active; keep ours empty to avoid duplication.
-    if (isComboPresetActive()) {
-      c.ui.setStatus('caveman', undefined);
-      return;
-    }
-    if (currentMode === 'off') {
+    if (isComboPresetActive() || currentMode === 'off') {
       c.ui.setStatus('caveman', undefined);
       return;
     }

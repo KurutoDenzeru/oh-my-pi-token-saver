@@ -40,8 +40,8 @@ interface InstallOptions {
 }
 
 // Session-start mode defaults for fresh installs.
-const COMBO_DEFAULTS: Record<string, true> = { off: true, medium: true, balanced: true, max: true };
-const CAVEMAN_DEFAULTS: Record<string, true> = { off: true, lite: true, full: true, ultra: true, wenyan: true };
+const COMBO_DEFAULTS = new Set(["off", "medium", "balanced", "max"]);
+const CAVEMAN_DEFAULTS = new Set(["off", "lite", "full", "ultra", "wenyan"]);
 
 // ponytail: Combo preset implies all three modes. Mirrors COMBO_LEVELS in
 // extensions/shared/session-state.ts (rtk as boolean here). Single source.
@@ -59,11 +59,11 @@ interface Profile {
   ponytailDefault: string;
 }
 
-function parseEnum(value: string | undefined, valid: Record<string, true>, flag: string): string | undefined {
+function parseEnum(value: string | undefined, valid: Set<string>, flag: string): string | undefined {
   if (value === undefined) return undefined;
   const v = value.trim().toLowerCase();
-  if (!(v in valid)) {
-    console.error(`[fail] Invalid ${flag}: ${value}. Valid: ${Object.keys(valid).join(", ")}`);
+  if (!valid.has(v)) {
+    console.error(`[fail] Invalid ${flag}: ${value}. Valid: ${[...valid].join(", ")}`);
     process.exit(1);
   }
   return v;
@@ -77,11 +77,11 @@ function flagValue(name: string): string | undefined {
 
 // --- CLI flags ---
 
-const COMMANDS: Record<string, true> = { install: true, update: true, reinstall: true, doctor: true, uninstall: true, version: true, help: true };
+const COMMANDS = new Set(["install", "update", "reinstall", "doctor", "uninstall", "version", "help"]);
 const args = process.argv.slice(2);
 const commandArg = args.find((arg, index) => !arg.startsWith("-") && args[index - 1] !== "--scope");
 const command = commandArg?.toLowerCase() || null;
-const unknownCommand = command !== null && !(command in COMMANDS);
+const unknownCommand = command !== null && !COMMANDS.has(command);
 const install = command === "install";
 const update = command === "update";
 const reinstall = command === "reinstall";
@@ -96,11 +96,7 @@ const uninstall = command === "uninstall" || args.includes("--uninstall");
 const removePonytail = args.includes("--remove-ponytail");
 const removeRtk = args.includes("--remove-rtk");
 
-const scopeFlag = (() => {
-  const i = args.indexOf("--scope");
-  if (i === -1) return null;
-  return args[i + 1]?.toLowerCase() || null;
-})();
+const scopeFlag = flagValue("--scope")?.toLowerCase() ?? null;
 
 // --- Profile selection (session-start mode defaults) ---
 
@@ -217,6 +213,17 @@ async function writeIfChanged(dest: string, content: string, options: WriteOptio
   return true;
 }
 
+// omp ships "extensions: null"; appending list items under a null scalar breaks
+// YAML parsing. Normalize null/~/[]/empty to a mapping key first.
+const EXTENSIONS_NULL_RE = /^\s*extensions\s*:\s*(?:\[\s*\]|null|~)?\s*$/i;
+
+function normalizeExtensionsKey(lines: string[]): boolean {
+  const idx = lines.findIndex((l) => EXTENSIONS_NULL_RE.test(l));
+  if (idx === -1) return false;
+  lines[idx] = "extensions:";
+  return true;
+}
+
 async function ensureExtensionInConfig(configPath: string, extensionPath: string, label: string, options: WriteOptions = {}): Promise<boolean> {
   const normalizedPath = extensionPath.replace(/\\/g, "/");
   const line = `  - ${normalizedPath}`;
@@ -236,11 +243,8 @@ async function ensureExtensionInConfig(configPath: string, extensionPath: string
     return true;
   }
 
-  // ponytail: omp ships "extensions: null"; appending list items under a null scalar breaks YAML parsing. Normalize null/~/[]/empty to a mapping key first.
-  const emptyArrayIdx = lines.findIndex((l) => /^\s*extensions\s*:\s*(?:\[\s*\]|null|~)?\s*$/i.test(l));
-  if (emptyArrayIdx !== -1) {
-    lines[emptyArrayIdx] = "extensions:";
-    lines.splice(emptyArrayIdx + 1, 0, line, "");
+  if (normalizeExtensionsKey(lines)) {
+    lines.splice(lines.findIndex((l) => /^\s*extensions\s*:/i.test(l)) + 1, 0, line, "");
   } else if (extLineIdx === -1) {
     lines.push("extensions:");
     lines.push(line);
@@ -279,7 +283,7 @@ async function ensureExtensionAfterConfigEntry(configPath: string, extensionPath
     if (extensionsIndex === -1) {
       lines.push("extensions:", line, "");
     } else {
-      if (/^\s*extensions\s*:\s*(?:\[\s*\]|null|~)?\s*$/i.test(lines[extensionsIndex])) lines[extensionsIndex] = "extensions:";
+      normalizeExtensionsKey(lines);
       lines.splice(extensionsIndex + 1, 0, line);
     }
   }
@@ -303,65 +307,57 @@ interface PonytailConfig {
   [key: string]: unknown;
 }
 
-async function ensurePonytailDefaultOff(options: WriteOptions = {}): Promise<void> {
+function parsePonytailConfig(existing: string | null): PonytailConfig {
+  if (!existing) return {};
+  try {
+    const cfg: unknown = JSON.parse(existing.replace(/^\uFEFF/, ""));
+    if (!cfg || typeof cfg !== "object" || Array.isArray(cfg)) return {};
+    return cfg as PonytailConfig;
+  } catch {
+    return {};
+  }
+}
+
+async function patchPonytailConfig(
+  apply: (cfg: PonytailConfig) => boolean,
+  dryRunNote: string,
+  writeNote: string,
+  options: WriteOptions = {},
+): Promise<void> {
   const config = readPonytailConfig();
-
   if (options.dryRun) {
-    console.log(`  [dry-run] would set Ponytail defaultMode=off in ${config.path}`);
+    console.log(`  [dry-run] ${dryRunNote} in ${config.path}`);
     return;
   }
-
-  let cfg: PonytailConfig = {};
-  const existing = await readTextIfExists(config.path);
-
-  if (existing) {
-    try {
-      cfg = JSON.parse(existing.replace(/^\uFEFF/, ""));
-      if (!cfg || typeof cfg !== "object" || Array.isArray(cfg)) {
-        cfg = {};
-      }
-    } catch {
-      cfg = {};
-    }
-  }
-
-  if (cfg.defaultMode === "off") {
-    debug("Ponytail defaultMode already off");
+  const cfg = parsePonytailConfig(await readTextIfExists(config.path));
+  if (!apply(cfg)) {
+    debug("Ponytail config already up to date");
     return;
   }
-
   await fs.mkdir(config.dir, { recursive: true });
-  cfg.defaultMode = "off";
   await fs.writeFile(config.path, JSON.stringify(cfg, null, 2) + "\n", "utf8");
+  console.log(`  [write] ${writeNote} in ${config.path}`);
+}
 
-  console.log(`  [write] Set Ponytail defaultMode=off in ${config.path}`);
+async function ensurePonytailDefaultOff(options: WriteOptions = {}): Promise<void> {
+  await patchPonytailConfig((cfg) => {
+    if (cfg.defaultMode === "off") return false;
+    cfg.defaultMode = "off";
+    return true;
+  }, "would set Ponytail defaultMode=off", "Set Ponytail defaultMode=off", options);
 }
 
 // Sets ~/.config/ponytail/config.json#hideStatus=true so the upstream ponytail
 // status bar doesn't render — the combo extension owns the bar instead.
 async function ensurePonytailHideStatus(options: WriteOptions = {}): Promise<void> {
-  const config = readPonytailConfig();
-  if (options.dryRun) {
-    console.log(`  [dry-run] would set Ponytail hideStatus=true in ${config.path}`);
-    return;
-  }
-  let cfg: PonytailConfig = {};
-  const existing = await readTextIfExists(config.path);
-  if (existing) {
-    try {
-      cfg = JSON.parse(existing.replace(/^\uFEFF/, ""));
-      if (!cfg || typeof cfg !== "object" || Array.isArray(cfg)) cfg = {};
-    } catch { cfg = {}; }
-  }
-  if (cfg.hideStatus === true) {
-    debug("Ponytail hideStatus already true");
-    return;
-  }
-  await fs.mkdir(config.dir, { recursive: true });
-  cfg.hideStatus = true;
-  await fs.writeFile(config.path, JSON.stringify(cfg, null, 2) + "\n", "utf8");
-  console.log(`  [write] Set Ponytail hideStatus=true in ${config.path}`);
+  await patchPonytailConfig((cfg) => {
+    if (cfg.hideStatus === true) return false;
+    cfg.hideStatus = true;
+    return true;
+  }, "would set Ponytail hideStatus=true", "Set Ponytail hideStatus=true", options);
 }
+
+
 
 // --- Steps ---
 
@@ -1161,7 +1157,7 @@ async function resolveProfile(): Promise<Profile> {
   // given, and never for --apply-update runs.
   if (tty() && !profileFlagsGiven && !applyUpdate && (install || reinstall)) {
     const comboAnswer = (await ask("  Default Combo preset on session start? [off/medium/balanced/max] (off): ")).trim().toLowerCase();
-    if (comboAnswer && comboAnswer in COMBO_DEFAULTS) profile.comboDefault = comboAnswer;
+    if (comboAnswer && COMBO_DEFAULTS.has(comboAnswer)) profile.comboDefault = comboAnswer;
   }
 
   // Explicit flags always win. Caveman/RTK flags override the Combo preset.

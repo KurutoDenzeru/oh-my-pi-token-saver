@@ -29,6 +29,16 @@ export interface RtkPlatformSpec {
   binary: string;
 }
 
+export interface RtkReleaseAsset {
+  name: string;
+  browser_download_url: string;
+}
+
+export interface RtkRelease {
+  tag_name?: string;
+  assets?: RtkReleaseAsset[];
+}
+
 const RTK_PLATFORM_SPECS: Record<string, RtkPlatformSpec> = {
   'win32/x64': { triple: 'x86_64-pc-windows-msvc', ext: '.zip', binary: 'rtk.exe' },
   'linux/x64': { triple: 'x86_64-unknown-linux-musl', ext: '.tar.gz', binary: 'rtk' },

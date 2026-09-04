@@ -15,6 +15,8 @@ import { createRequire } from 'node:module';
 import {
   CAVEMAN_REMOTE_RULE,
   RTK_RELEASE_API,
+  RtkRelease,
+  RtkReleaseAsset,
   fetchJson,
   findFile,
   httpsGet,
@@ -541,8 +543,6 @@ async function stepSelfPlugin(pluginsDir: string, options: InstallOptions): Prom
   return true;
 }
 
-interface RtkAsset { name: string; browser_download_url: string }
-interface RtkRelease { tag_name: string; assets?: RtkAsset[] }
 
 function resolveRtkTriple(): string | null {
   const triple = rtkPlatformSpec()?.triple;
@@ -552,7 +552,7 @@ function resolveRtkTriple(): string | null {
   return null;
 }
 
-function findRtkAsset(release: RtkRelease, triple: string): RtkAsset | null {
+function findRtkAsset(release: RtkRelease, triple: string): RtkReleaseAsset | null {
   const assets = release.assets || [];
   const asset = assets.find((a) => a.name === `rtk-${triple}.zip` || a.name === `rtk-${triple}.tar.gz`);
   if (asset) return asset;

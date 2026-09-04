@@ -13,6 +13,7 @@ import path from 'node:path';
 import {
   CAVEMAN_REMOTE_RULE as CAVEMAN_REMOTE,
   RTK_RELEASE_API,
+  RtkRelease,
   fetchJson,
   findFile,
   httpsGet,
@@ -49,16 +50,6 @@ interface AddonUpdaterPi {
   registerCommand?: (name: string, config: { description: string; handler: (args: string, ctx: AddonUpdaterCtx) => Promise<string> }) => void;
   exec?: (cmd: string, args: string[], opts?: { cwd?: string }) => Promise<{ stdout: string; stderr: string; code: number }>;
   cwd?: string;
-}
-
-interface ReleaseAsset {
-  name: string;
-  browser_download_url: string;
-}
-
-interface GitHubRelease {
-  tag_name?: string;
-  assets?: ReleaseAsset[];
 }
 
 type NotifyLevel = 'info' | 'warning';
@@ -104,8 +95,8 @@ function checkPonytail(): Promise<AddonStatus> {
   });
 }
 
-async function fetchRelease(): Promise<GitHubRelease> {
-  return fetchJson<GitHubRelease>(RTK_RELEASE_API);
+async function fetchRelease(): Promise<RtkRelease> {
+  return fetchJson<RtkRelease>(RTK_RELEASE_API);
 }
 
 function checkRtk(): Promise<AddonStatus> {
@@ -181,7 +172,7 @@ async function updatePonytail(pi: AddonUpdaterPi, ctx: AddonUpdaterCtx, dryRun =
 }
 
 async function updateRtk(ctx: AddonUpdaterCtx, dryRun = false): Promise<string> {
-  let release: GitHubRelease;
+  let release: RtkRelease;
   try {
     release = await fetchRelease();
   } catch (e) {

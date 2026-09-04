@@ -3,15 +3,15 @@
 // Usage: node tersio.js [install|update|reinstall|doctor|uninstall|version|help] [options]
 // Requires: node/npm and omp CLI
 
-import { execFile } from "node:child_process";
-import { createHash } from "node:crypto";
-import { promises as fs } from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import readline from "node:readline";
-import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
-import { createRequire } from "node:module";
+import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { promises as fs } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import readline from 'node:readline';
+import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
+import { createRequire } from 'node:module';
 
 import {
   httpsGet,
@@ -20,14 +20,14 @@ import {
   sha256File,
   parseChecksum,
   readTextIfExists,
-} from "./extensions/lib/utils.ts";
+} from './extensions/lib/utils.ts';
 
-const IS_WINDOWS = process.platform === "win32";
-const HOME = process.env.HOME || process.env.USERPROFILE || "";
+const IS_WINDOWS = process.platform === 'win32';
+const HOME = process.env.HOME || process.env.USERPROFILE || '';
 
-const PACKAGE_NAME = "@krtclcdy/tersio";
-const PACKAGE_BIN = "tersio";
-const { version: PACKAGE_VERSION } = createRequire(import.meta.url)("./package.json") as { version: string };
+const PACKAGE_NAME = '@krtclcdy/tersio';
+const PACKAGE_BIN = 'tersio';
+const { version: PACKAGE_VERSION } = createRequire(import.meta.url)('./package.json') as { version: string };
 
 // --- Types ---
 
@@ -47,16 +47,16 @@ interface PluginsPackage {
 }
 
 // Session-start mode defaults for fresh installs.
-const COMBO_DEFAULTS = new Set(["off", "medium", "balanced", "max"]);
-const CAVEMAN_DEFAULTS = new Set(["off", "lite", "full", "ultra", "wenyan"]);
+const COMBO_DEFAULTS = new Set(['off', 'medium', 'balanced', 'max']);
+const CAVEMAN_DEFAULTS = new Set(['off', 'lite', 'full', 'ultra', 'wenyan']);
 
 // ponytail: Combo preset implies all three modes. Mirrors COMBO_LEVELS in
 // extensions/shared/session-state.ts (rtk as boolean here). Single source.
 const COMBO_PRESET_MODES: Record<string, { caveman: string; rtk: boolean; ponytail: string }> = {
-  off: { caveman: "off", rtk: false, ponytail: "off" },
-  medium: { caveman: "lite", rtk: true, ponytail: "lite" },
-  balanced: { caveman: "full", rtk: true, ponytail: "full" },
-  max: { caveman: "ultra", rtk: true, ponytail: "ultra" },
+  off: { caveman: 'off', rtk: false, ponytail: 'off' },
+  medium: { caveman: 'lite', rtk: true, ponytail: 'lite' },
+  balanced: { caveman: 'full', rtk: true, ponytail: 'full' },
+  max: { caveman: 'ultra', rtk: true, ponytail: 'ultra' },
 };
 
 interface Profile {
@@ -70,7 +70,7 @@ function parseEnum(value: string | undefined, valid: Set<string>, flag: string):
   if (value === undefined) return undefined;
   const v = value.trim().toLowerCase();
   if (!valid.has(v)) {
-    console.error(`[fail] Invalid ${flag}: ${value}. Valid: ${[...valid].join(", ")}`);
+    console.error(`[fail] Invalid ${flag}: ${value}. Valid: ${[...valid].join(', ')}`);
     process.exit(1);
   }
   return v;
@@ -84,34 +84,34 @@ function flagValue(name: string): string | undefined {
 
 // --- CLI flags ---
 
-const COMMANDS = new Set(["install", "update", "reinstall", "doctor", "uninstall", "version", "help"]);
+const COMMANDS = new Set(['install', 'update', 'reinstall', 'doctor', 'uninstall', 'version', 'help']);
 const args = process.argv.slice(2);
-const commandArg = args.find((arg, index) => !arg.startsWith("-") && args[index - 1] !== "--scope");
+const commandArg = args.find((arg, index) => !arg.startsWith('-') && args[index - 1] !== '--scope');
 const command = commandArg?.toLowerCase() || null;
 const unknownCommand = command !== null && !COMMANDS.has(command);
-const install = command === "install";
-const update = command === "update";
-const reinstall = command === "reinstall";
-const showVersion = command === "version" || args.includes("--version") || args.includes("-v");
-const showHelp = command === "help" || args.includes("--help") || args.includes("-h");
-const applyUpdate = args.includes("--apply-update");
-const dryRun = args.includes("--dry-run");
-const yes = args.includes("--yes") || args.includes("-y") || install || update || reinstall || applyUpdate;
-const verbose = args.includes("--verbose");
-const doctor = command === "doctor" || args.includes("--doctor");
-const uninstall = command === "uninstall" || args.includes("--uninstall");
-const removePonytail = args.includes("--remove-ponytail");
-const removeRtk = args.includes("--remove-rtk");
+const install = command === 'install';
+const update = command === 'update';
+const reinstall = command === 'reinstall';
+const showVersion = command === 'version' || args.includes('--version') || args.includes('-v');
+const showHelp = command === 'help' || args.includes('--help') || args.includes('-h');
+const applyUpdate = args.includes('--apply-update');
+const dryRun = args.includes('--dry-run');
+const yes = args.includes('--yes') || args.includes('-y') || install || update || reinstall || applyUpdate;
+const verbose = args.includes('--verbose');
+const doctor = command === 'doctor' || args.includes('--doctor');
+const uninstall = command === 'uninstall' || args.includes('--uninstall');
+const removePonytail = args.includes('--remove-ponytail');
+const removeRtk = args.includes('--remove-rtk');
 
-const scopeFlag = flagValue("--scope")?.toLowerCase() ?? null;
+const scopeFlag = flagValue('--scope')?.toLowerCase() ?? null;
 
 // --- Profile selection (session-start mode defaults) ---
 
-const comboDefaultFlag = parseEnum(flagValue("--combo-default"), COMBO_DEFAULTS, "--combo-default");
-const cavemanDefaultFlag = parseEnum(flagValue("--caveman-default"), CAVEMAN_DEFAULTS, "--caveman-default");
-const rtkDefaultFlag = flagValue("--rtk-default")?.toLowerCase();
+const comboDefaultFlag = parseEnum(flagValue('--combo-default'), COMBO_DEFAULTS, '--combo-default');
+const cavemanDefaultFlag = parseEnum(flagValue('--caveman-default'), CAVEMAN_DEFAULTS, '--caveman-default');
+const rtkDefaultFlag = flagValue('--rtk-default')?.toLowerCase();
 
-if (rtkDefaultFlag !== undefined && rtkDefaultFlag !== "on" && rtkDefaultFlag !== "off") {
+if (rtkDefaultFlag !== undefined && rtkDefaultFlag !== 'on' && rtkDefaultFlag !== 'off') {
   console.error(`[fail] Invalid --rtk-default: ${rtkDefaultFlag}. Use: on, off`);
   process.exit(1);
 }
@@ -146,7 +146,7 @@ Options:
 }
 
 function debug(...a: unknown[]): void {
-  if (verbose) console.log("  [debug]", ...a);
+  if (verbose) console.log('  [debug]', ...a);
 }
 
 const RL = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -160,19 +160,19 @@ function closeRL(): void { if (rlOpen) { RL.close(); rlOpen = false; } }
 
 // Paths to extension source files (relative to this script)
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
-const EXT_DIR = path.join(SCRIPT_DIR, "extensions");
-const SHARED_SESSION_STATE = path.join(EXT_DIR, "shared", "session-state.js");
-const CAVEMAN_INDEX = path.join(EXT_DIR, "caveman-session", "index.js");
-const RTK_SESSION_INDEX = path.join(EXT_DIR, "rtk-session", "index.js");
-const UPDATER_INDEX = path.join(EXT_DIR, "ai-addons-updater", "index.js");
-const COMBO_TOGGLE_INDEX = path.join(EXT_DIR, "combo-toggle", "index.js");
-const AMANAI_REWARD_INDEX = path.join(EXT_DIR, "amanai-reward", "index.js");
-const MODE_REINFORCEMENT_INDEX = path.join(EXT_DIR, "shared", "mode-reinforcement.js");
-const SHARED_TYPES = path.join(EXT_DIR, "shared", "types.js");
-const LIB_UTILS = path.join(EXT_DIR, "lib", "utils.js");
-const SHARED_PLUGIN_SETTINGS = path.join(EXT_DIR, "shared", "plugin-settings.js");
-const CAVEMAN_REMOTE_RULE = "https://raw.githubusercontent.com/JuliusBrussee/caveman/main/src/rules/caveman-activate.md";
-const RTK_RELEASE_API = "https://api.github.com/repos/rtk-ai/rtk/releases/latest";
+const EXT_DIR = path.join(SCRIPT_DIR, 'extensions');
+const SHARED_SESSION_STATE = path.join(EXT_DIR, 'shared', 'session-state.js');
+const CAVEMAN_INDEX = path.join(EXT_DIR, 'caveman-session', 'index.js');
+const RTK_SESSION_INDEX = path.join(EXT_DIR, 'rtk-session', 'index.js');
+const UPDATER_INDEX = path.join(EXT_DIR, 'ai-addons-updater', 'index.js');
+const COMBO_TOGGLE_INDEX = path.join(EXT_DIR, 'combo-toggle', 'index.js');
+const AMANAI_REWARD_INDEX = path.join(EXT_DIR, 'amanai-reward', 'index.js');
+const MODE_REINFORCEMENT_INDEX = path.join(EXT_DIR, 'shared', 'mode-reinforcement.js');
+const SHARED_TYPES = path.join(EXT_DIR, 'shared', 'types.js');
+const LIB_UTILS = path.join(EXT_DIR, 'lib', 'utils.js');
+const SHARED_PLUGIN_SETTINGS = path.join(EXT_DIR, 'shared', 'plugin-settings.js');
+const CAVEMAN_REMOTE_RULE = 'https://raw.githubusercontent.com/JuliusBrussee/caveman/main/src/rules/caveman-activate.md';
+const RTK_RELEASE_API = 'https://api.github.com/repos/rtk-ai/rtk/releases/latest';
 
 // --- Helpers ---
 
@@ -191,7 +191,7 @@ interface ExecOptions {
 async function execP(cmd: string, args: string[], opts: ExecOptions = {}): Promise<{ stdout: string; stderr: string }> {
   return execFileP(cmd, args, {
     timeout: opts.timeout || 120000,
-    encoding: "utf8",
+    encoding: 'utf8',
     ...opts,
   }) as Promise<{ stdout: string; stderr: string }>;
 }
@@ -215,28 +215,28 @@ async function writeIfChanged(dest: string, content: string, options: WriteOptio
     await fs.copyFile(dest, `${dest}.bak`);
     debug(`${path.basename(dest)} → ${path.basename(dest)}.bak`);
   }
-  await fs.writeFile(dest, content, "utf8");
+  await fs.writeFile(dest, content, 'utf8');
   console.log(`  [write] ${dest}`);
   return true;
 }
 
-// omp ships "extensions: null"; appending list items under a null scalar breaks
+// omp ships 'extensions: null'; appending list items under a null scalar breaks
 // YAML parsing. Normalize null/~/[]/empty to a mapping key first.
 const EXTENSIONS_NULL_RE = /^\s*extensions\s*:\s*(?:\[\s*\]|null|~)?\s*$/i;
 
 function normalizeExtensionsKey(lines: string[]): boolean {
   const idx = lines.findIndex((l) => EXTENSIONS_NULL_RE.test(l));
   if (idx === -1) return false;
-  lines[idx] = "extensions:";
+  lines[idx] = 'extensions:';
   return true;
 }
 
 async function ensureExtensionInConfig(configPath: string, extensionPath: string, label: string, options: WriteOptions = {}): Promise<boolean> {
-  const normalizedPath = extensionPath.replace(/\\/g, "/");
+  const normalizedPath = extensionPath.replace(/\\/g, '/');
   const line = `  - ${normalizedPath}`;
 
   const raw = await readTextIfExists(configPath);
-  let lines = (raw || "").split("\n");
+  let lines = (raw || '').split('\n');
 
   if (lines.some((l) => l.includes(normalizedPath))) {
     debug(`${label} already in config.yml`);
@@ -251,27 +251,27 @@ async function ensureExtensionInConfig(configPath: string, extensionPath: string
   }
 
   if (normalizeExtensionsKey(lines)) {
-    lines.splice(lines.findIndex((l) => /^\s*extensions\s*:/i.test(l)) + 1, 0, line, "");
+    lines.splice(lines.findIndex((l) => /^\s*extensions\s*:/i.test(l)) + 1, 0, line, '');
   } else if (extLineIdx === -1) {
-    lines.push("extensions:");
+    lines.push('extensions:');
     lines.push(line);
-    lines.push("");
+    lines.push('');
   } else {
     lines.splice(extLineIdx + 1, 0, line);
   }
 
   await fs.mkdir(path.dirname(configPath), { recursive: true });
-  await fs.writeFile(configPath, lines.join("\n"), "utf8");
+  await fs.writeFile(configPath, lines.join('\n'), 'utf8');
   console.log(`  [write] Added ${label} to config.yml`);
   return true;
 }
 
 async function ensureExtensionAfterConfigEntry(configPath: string, extensionPath: string, afterPath: string, label: string, options: WriteOptions = {}): Promise<boolean> {
-  const normalizedPath = extensionPath.replace(/\\/g, "/");
-  const normalizedAfterPath = afterPath.replace(/\\/g, "/");
+  const normalizedPath = extensionPath.replace(/\\/g, '/');
+  const normalizedAfterPath = afterPath.replace(/\\/g, '/');
   const line = `  - ${normalizedPath}`;
   const raw = await readTextIfExists(configPath);
-  const lines = (raw || "").split("\n");
+  const lines = (raw || '').split('\n');
   const existingIndex = lines.findIndex((entry) => entry.includes(normalizedPath));
   const afterIndex = lines.findIndex((entry) => entry.includes(normalizedAfterPath));
 
@@ -288,7 +288,7 @@ async function ensureExtensionAfterConfigEntry(configPath: string, extensionPath
   } else {
     const extensionsIndex = lines.findIndex((entry) => /^\s*extensions\s*:/i.test(entry));
     if (extensionsIndex === -1) {
-      lines.push("extensions:", line, "");
+      lines.push('extensions:', line, '');
     } else {
       normalizeExtensionsKey(lines);
       lines.splice(extensionsIndex + 1, 0, line);
@@ -296,16 +296,16 @@ async function ensureExtensionAfterConfigEntry(configPath: string, extensionPath
   }
 
   await fs.mkdir(path.dirname(configPath), { recursive: true });
-  await fs.writeFile(configPath, lines.join("\n"), "utf8");
+  await fs.writeFile(configPath, lines.join('\n'), 'utf8');
   console.log(`  [write] Placed ${label} after Ponytail in config.yml`);
   return true;
 }
 
 function readPonytailConfig(): { dir: string; path: string } {
   const dir = process.env.XDG_CONFIG_HOME
-    ? path.join(process.env.XDG_CONFIG_HOME, "ponytail")
-    : path.join(HOME, ".config", "ponytail");
-  return { dir, path: path.join(dir, "config.json") };
+    ? path.join(process.env.XDG_CONFIG_HOME, 'ponytail')
+    : path.join(HOME, '.config', 'ponytail');
+  return { dir, path: path.join(dir, 'config.json') };
 }
 
 interface PonytailConfig {
@@ -317,8 +317,8 @@ interface PonytailConfig {
 function parsePonytailConfig(existing: string | null): PonytailConfig {
   if (!existing) return {};
   try {
-    const cfg: unknown = JSON.parse(existing.replace(/^\uFEFF/, ""));
-    if (!cfg || typeof cfg !== "object" || Array.isArray(cfg)) return {};
+    const cfg: unknown = JSON.parse(existing.replace(/^\uFEFF/, ''));
+    if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg)) return {};
     return cfg as PonytailConfig;
   } catch {
     return {};
@@ -338,20 +338,20 @@ async function patchPonytailConfig(
   }
   const cfg = parsePonytailConfig(await readTextIfExists(config.path));
   if (!apply(cfg)) {
-    debug("Ponytail config already up to date");
+    debug('Ponytail config already up to date');
     return;
   }
   await fs.mkdir(config.dir, { recursive: true });
-  await fs.writeFile(config.path, JSON.stringify(cfg, null, 2) + "\n", "utf8");
+  await fs.writeFile(config.path, JSON.stringify(cfg, null, 2) + '\n', 'utf8');
   console.log(`  [write] ${writeNote} in ${config.path}`);
 }
 
 async function ensurePonytailDefaultOff(options: WriteOptions = {}): Promise<void> {
   await patchPonytailConfig((cfg) => {
-    if (cfg.defaultMode === "off") return false;
-    cfg.defaultMode = "off";
+    if (cfg.defaultMode === 'off') return false;
+    cfg.defaultMode = 'off';
     return true;
-  }, "would set Ponytail defaultMode=off", "Set Ponytail defaultMode=off", options);
+  }, 'would set Ponytail defaultMode=off', 'Set Ponytail defaultMode=off', options);
 }
 
 // Sets ~/.config/ponytail/config.json#hideStatus=true so the upstream ponytail
@@ -361,7 +361,7 @@ async function ensurePonytailHideStatus(options: WriteOptions = {}): Promise<voi
     if (cfg.hideStatus === true) return false;
     cfg.hideStatus = true;
     return true;
-  }, "would set Ponytail hideStatus=true", "Set Ponytail hideStatus=true", options);
+  }, 'would set Ponytail hideStatus=true', 'Set Ponytail hideStatus=true', options);
 }
 
 
@@ -472,18 +472,18 @@ async function stepPonytail(pluginsDir: string, userDir: string, options: Instal
 // Amanai detector then loads via the plugin's `omp.extensions` manifest, so
 // the caller must skip copying it into agent/extensions to avoid a double load.
 async function stepSelfPlugin(pluginsDir: string, options: InstallOptions): Promise<boolean> {
-  console.log("\n[2/8] Registering tersio as OMP plugin...");
-  const pkgPath = path.join(pluginsDir, "package.json");
+  console.log('\n[2/8] Registering tersio as OMP plugin...');
+  const pkgPath = path.join(pluginsDir, 'package.json');
   let pkg: PluginsPackage = {};
   const existing = await readTextIfExists(pkgPath);
   if (existing) {
     try { pkg = JSON.parse(existing); } catch { pkg = {}; }
   }
-  pkg.name = pkg.name || "omp-plugins";
+  pkg.name = pkg.name || 'omp-plugins';
   pkg.private = true;
   pkg.dependencies = pkg.dependencies || {};
   pkg.dependencies[PACKAGE_NAME] = `^${PACKAGE_VERSION}`;
-  for (const legacy of ["oh-my-pi-token-saver", "tersio-omp"]) {
+  for (const legacy of ['oh-my-pi-token-saver', 'tersio-omp']) {
     if (legacy in pkg.dependencies) {
       delete pkg.dependencies[legacy];
       if (!options.dryRun) console.log(`  [migrate] dropped legacy ${legacy} dependency`);
@@ -497,13 +497,13 @@ async function stepSelfPlugin(pluginsDir: string, options: InstallOptions): Prom
   }
 
   await fs.mkdir(pluginsDir, { recursive: true });
-  await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf8");
+  await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
 
   try {
-    await execP("npm", ["install", "--no-audit", "--no-fund"], { cwd: pluginsDir, timeout: 180000 });
+    await execP('npm', ['install', '--no-audit', '--no-fund'], { cwd: pluginsDir, timeout: 180000 });
   } catch {
     try {
-      await execP("bun", ["install"], { cwd: pluginsDir, timeout: 180000 });
+      await execP('bun', ['install'], { cwd: pluginsDir, timeout: 180000 });
     } catch (e) {
       console.log(`  [fail] Could not install ${PACKAGE_NAME} into plugins dir: ${(e as Error).message}`);
       console.log(`  [hint] Manual: cd ~/.omp/plugins && npm install ${PACKAGE_NAME}@^${PACKAGE_VERSION} --save --no-audit --no-fund`);
@@ -511,12 +511,12 @@ async function stepSelfPlugin(pluginsDir: string, options: InstallOptions): Prom
     }
   }
 
-  const installedPkg = path.join(pluginsDir, "node_modules", PACKAGE_NAME, "package.json");
+  const installedPkg = path.join(pluginsDir, 'node_modules', PACKAGE_NAME, 'package.json');
   if ((await readTextIfExists(installedPkg)) === null) {
     console.log(`  [warn] ${PACKAGE_NAME} not found in plugins/node_modules after install`);
     return false;
   }
-  console.log("  [ok] Listed in OMP Settings → Plugins as tersio");
+  console.log('  [ok] Listed in OMP Settings → Plugins as tersio');
   return true;
 }
 
@@ -603,7 +603,7 @@ async function extractRtkArchive(archivePath: string, extractDir: string): Promi
     } catch (e) {
       debug(`tar xzf failed: ${shortError(e)}`);
       try {
-        await execP('sh', ['-c', `gunzip < "${archivePath}" | tar xf - -C "${extractDir}"`], { timeout: 60000 });
+        await execP('sh', ['-c', `gunzip < '${archivePath}' | tar xf - -C '${extractDir}'`], { timeout: 60000 });
         debug('gunzip|tar fallback ok');
       } catch (e2) {
         debug(`gunzip|tar fallback failed: ${shortError(e2)}`);
@@ -695,175 +695,175 @@ async function copySources(extDir: string, files: Array<[string, string]>, skipL
 
 async function stepSharedSessionState(extDir: string, options: WriteOptions): Promise<void> {
   await copySources(extDir, [
-    [SHARED_SESSION_STATE, path.join("shared", "session-state.js")],
-    [SHARED_TYPES, path.join("shared", "types.js")],
-    [LIB_UTILS, path.join("lib", "utils.js")],
-    [SHARED_PLUGIN_SETTINGS, path.join("shared", "plugin-settings.js")],
-  ], "shared/session-state.js", options);
+    [SHARED_SESSION_STATE, path.join('shared', 'session-state.js')],
+    [SHARED_TYPES, path.join('shared', 'types.js')],
+    [LIB_UTILS, path.join('lib', 'utils.js')],
+    [SHARED_PLUGIN_SETTINGS, path.join('shared', 'plugin-settings.js')],
+  ], 'shared/session-state.js', options);
 }
 
 async function stepModeReinforcement(extDir: string, ponytailExtPath: string, options: WriteOptions): Promise<void> {
-  console.log("\n[7/8] Installing mode reinforcement extension...");
-  const dest = path.join(extDir, "shared", "mode-reinforcement.js");
-  if (!await copySources(extDir, [[MODE_REINFORCEMENT_INDEX, dest]], "shared/mode-reinforcement.js", options)) return;
-  await ensureExtensionAfterConfigEntry(path.join(path.dirname(extDir), "config.yml"), dest, ponytailExtPath, "mode reinforcement", options);
+  console.log('\n[7/8] Installing mode reinforcement extension...');
+  const dest = path.join(extDir, 'shared', 'mode-reinforcement.js');
+  if (!await copySources(extDir, [[MODE_REINFORCEMENT_INDEX, dest]], 'shared/mode-reinforcement.js', options)) return;
+  await ensureExtensionAfterConfigEntry(path.join(path.dirname(extDir), 'config.yml'), dest, ponytailExtPath, 'mode reinforcement', options);
 }
 
 async function stepRtkSession(extDir: string, options: WriteOptions): Promise<void> {
-  console.log("\n[4/8] Installing RTK session extension...");
-  await copySources(extDir, [[RTK_SESSION_INDEX, path.join("rtk-session", "index.js")]], "rtk-session/index.js", options);
+  console.log('\n[4/8] Installing RTK session extension...');
+  await copySources(extDir, [[RTK_SESSION_INDEX, path.join('rtk-session', 'index.js')]], 'rtk-session/index.js', options);
 }
 
 async function stepCaveman(extDir: string, options: WriteOptions): Promise<void> {
-  console.log("\n[5/8] Installing Caveman session extension...");
-  const cavemanDir = path.join(extDir, "caveman-session");
+  console.log('\n[5/8] Installing Caveman session extension...');
+  const cavemanDir = path.join(extDir, 'caveman-session');
   if (!options.dryRun) await fs.mkdir(cavemanDir, { recursive: true });
 
   // Dry runs stay offline; the bundled rule is enough to preview its destination.
-  const rule = options.dryRun ? await readTextIfExists(path.join(path.dirname(CAVEMAN_INDEX), "rule.md")) || "" : await httpsGet(CAVEMAN_REMOTE_RULE);
-  await writeIfChanged(path.join(cavemanDir, "rule.md"), rule, options);
+  const rule = options.dryRun ? await readTextIfExists(path.join(path.dirname(CAVEMAN_INDEX), 'rule.md')) || '' : await httpsGet(CAVEMAN_REMOTE_RULE);
+  await writeIfChanged(path.join(cavemanDir, 'rule.md'), rule, options);
 
-  await copySources(extDir, [[CAVEMAN_INDEX, path.join("caveman-session", "index.js")]], "caveman-session/index.js", options);
+  await copySources(extDir, [[CAVEMAN_INDEX, path.join('caveman-session', 'index.js')]], 'caveman-session/index.js', options);
 }
 
 async function stepUpdater(extDir: string, options: WriteOptions): Promise<void> {
-  await copySources(extDir, [[UPDATER_INDEX, path.join("ai-addons-updater", "index.js")]], "ai-addons-updater/index.js", options);
+  await copySources(extDir, [[UPDATER_INDEX, path.join('ai-addons-updater', 'index.js')]], 'ai-addons-updater/index.js', options);
 }
 
 async function stepCombo(extDir: string, options: WriteOptions): Promise<void> {
-  console.log("\n[6/8] Installing Combo toggle extension...");
-  const dest = path.join(extDir, "combo-toggle", "index.js");
-  if (!await copySources(extDir, [[COMBO_TOGGLE_INDEX, path.join("combo-toggle", "index.js")]], "combo-toggle/index.js", options)) return;
+  console.log('\n[6/8] Installing Combo toggle extension...');
+  const dest = path.join(extDir, 'combo-toggle', 'index.js');
+  if (!await copySources(extDir, [[COMBO_TOGGLE_INDEX, path.join('combo-toggle', 'index.js')]], 'combo-toggle/index.js', options)) return;
 
   // Auto-register combo in config.yml
-  const configPath = path.join(path.dirname(extDir), "config.yml");
-  await ensureExtensionInConfig(configPath, dest, "combo", options);
+  const configPath = path.join(path.dirname(extDir), 'config.yml');
+  await ensureExtensionInConfig(configPath, dest, 'combo', options);
 }
 
 async function stepAmanaiReward(extDir: string, options: WriteOptions, pluginProvided = false): Promise<void> {
-  console.log("\n[8/8] Installing Amanai reward detector...");
-  const destDir = path.join(extDir, "amanai-reward");
+  console.log('\n[8/8] Installing Amanai reward detector...');
+  const destDir = path.join(extDir, 'amanai-reward');
   if (pluginProvided) {
     // The plugin's omp.extensions manifest loads the detector from
     // plugins/node_modules; a copied agent/extensions entry would double-load.
-    if ((await readTextIfExists(path.join(destDir, "index.js"))) !== null) {
+    if ((await readTextIfExists(path.join(destDir, 'index.js'))) !== null) {
       if (options.dryRun) console.log(`  [dry-run] would remove ${destDir} (now provided by the plugin)`);
       else {
         await fs.rm(destDir, { recursive: true, force: true });
         console.log(`  [rm] ${destDir} (now provided by the plugin)`);
       }
     }
-    console.log("  [ok] detector loads via the tersio plugin manifest");
+    console.log('  [ok] detector loads via the tersio plugin manifest');
     return;
   }
-  await copySources(extDir, [[AMANAI_REWARD_INDEX, path.join("amanai-reward", "index.js")]], "amanai-reward/index.js", options);
+  await copySources(extDir, [[AMANAI_REWARD_INDEX, path.join('amanai-reward', 'index.js')]], 'amanai-reward/index.js', options);
 }
 
 // --- Doctor ---
 
 async function runDoctor(): Promise<void> {
-  console.log("\n=== Tersio Doctor ===\n");
+  console.log('\n=== Tersio Doctor ===\n');
 
   // Node
   console.log(`  Node: ok v${process.version}`);
 
   // OMP CLI
   try {
-    const v = (await execP(IS_WINDOWS ? "omp.cmd" : "omp", ["--version"])).stdout.trim();
+    const v = (await execP(IS_WINDOWS ? 'omp.cmd' : 'omp', ['--version'])).stdout.trim();
     console.log(`  OMP CLI: ok ${v}`);
   } catch {
-    console.log("  OMP CLI: MISSING");
+    console.log('  OMP CLI: MISSING');
   }
 
   // Home
   console.log(`  Home: ${HOME}`);
 
   // Directories
-  const agentDir = path.join(HOME, ".omp", "agent");
-  const extDir = path.join(agentDir, "extensions");
-  const configPath = path.join(agentDir, "config.yml");
-  const pluginsDir = path.join(HOME, ".omp", "plugins");
-  const rtkBin = path.join(HOME, ".bun", "bin", IS_WINDOWS ? "rtk.exe" : "rtk");
+  const agentDir = path.join(HOME, '.omp', 'agent');
+  const extDir = path.join(agentDir, 'extensions');
+  const configPath = path.join(agentDir, 'config.yml');
+  const pluginsDir = path.join(HOME, '.omp', 'plugins');
+  const rtkBin = path.join(HOME, '.bun', 'bin', IS_WINDOWS ? 'rtk.exe' : 'rtk');
 
   const agentOk = await readTextIfExists(agentDir) !== null || (await fs.readdir(agentDir).catch(() => null)) !== null;
-  console.log(`  OMP agent dir: ${agentOk ? "ok" : "MISSING"} ${agentDir}`);
+  console.log(`  OMP agent dir: ${agentOk ? 'ok' : 'MISSING'} ${agentDir}`);
 
   const extOk = (await fs.readdir(extDir).catch(() => null)) !== null;
-  console.log(`  OMP extensions dir: ${extOk ? "ok" : "MISSING"} ${extDir}`);
+  console.log(`  OMP extensions dir: ${extOk ? 'ok' : 'MISSING'} ${extDir}`);
 
-  const sharedState = path.join(extDir, "shared", "session-state.js");
-  console.log(`  Shared session bridge: ${(await readTextIfExists(sharedState)) !== null ? "installed" : "MISSING"}`);
+  const sharedState = path.join(extDir, 'shared', 'session-state.js');
+  console.log(`  Shared session bridge: ${(await readTextIfExists(sharedState)) !== null ? 'installed' : 'MISSING'}`);
 
   const configOk = (await readTextIfExists(configPath)) !== null;
-  console.log(`  OMP config.yml: ${configOk ? "ok" : "MISSING"} ${configPath}`);
+  console.log(`  OMP config.yml: ${configOk ? 'ok' : 'MISSING'} ${configPath}`);
 
   // Ponytail
-  const ponytailPkg = path.join(pluginsDir, "node_modules", "@dietrichgebert", "ponytail", "package.json");
-  const ponytailExt = path.join(pluginsDir, "node_modules", "@dietrichgebert", "ponytail", "pi-extension", "index.js");
+  const ponytailPkg = path.join(pluginsDir, 'node_modules', '@dietrichgebert', 'ponytail', 'package.json');
+  const ponytailExt = path.join(pluginsDir, 'node_modules', '@dietrichgebert', 'ponytail', 'pi-extension', 'index.js');
   const ponytailInstalled = (await readTextIfExists(ponytailPkg)) !== null;
   const ponytailExtInstalled = (await readTextIfExists(ponytailExt)) !== null;
-  console.log(`  Ponytail package: ${ponytailInstalled ? "installed" : "MISSING"}`);
-  console.log(`  Ponytail extension: ${ponytailExtInstalled ? "installed" : "MISSING"}`);
+  console.log(`  Ponytail package: ${ponytailInstalled ? 'installed' : 'MISSING'}`);
+  console.log(`  Ponytail extension: ${ponytailExtInstalled ? 'installed' : 'MISSING'}`);
 
   if (configOk) {
     const configText = (await readTextIfExists(configPath))!;
-    const hasPonytailPath = configText.includes("ponytail") && configText.includes("pi-extension");
-    console.log(`  Ponytail in config.yml: ${hasPonytailPath ? "registered" : "MISSING"}`);
+    const hasPonytailPath = configText.includes('ponytail') && configText.includes('pi-extension');
+    console.log(`  Ponytail in config.yml: ${hasPonytailPath ? 'registered' : 'MISSING'}`);
   }
 
   // Self plugin registration (Settings → Plugins listing)
-  const pluginsPkgRaw = await readTextIfExists(path.join(pluginsDir, "package.json"));
+  const pluginsPkgRaw = await readTextIfExists(path.join(pluginsDir, 'package.json'));
   let selfDep = false;
   if (pluginsPkgRaw) {
     try { selfDep = PACKAGE_NAME in ((JSON.parse(pluginsPkgRaw) as { dependencies?: Record<string, string> }).dependencies || {}); } catch { /* ignore */ }
   }
-  console.log(`  Self plugin in plugins/package.json: ${selfDep ? "registered" : "MISSING"}`);
-  const selfPkg = path.join(pluginsDir, "node_modules", PACKAGE_NAME, "package.json");
-  console.log(`  Self plugin package: ${(await readTextIfExists(selfPkg)) !== null ? "installed" : "MISSING"}`);
+  console.log(`  Self plugin in plugins/package.json: ${selfDep ? 'registered' : 'MISSING'}`);
+  const selfPkg = path.join(pluginsDir, 'node_modules', PACKAGE_NAME, 'package.json');
+  console.log(`  Self plugin package: ${(await readTextIfExists(selfPkg)) !== null ? 'installed' : 'MISSING'}`);
 
   // RTK
   const rtkExists = (await readTextIfExists(rtkBin)) !== null;
-  console.log(`  RTK binary: ${rtkExists ? "installed" : "MISSING"} ${rtkBin}`);
+  console.log(`  RTK binary: ${rtkExists ? 'installed' : 'MISSING'} ${rtkBin}`);
   if (rtkExists) {
     try {
-      const v = (await execP(rtkBin, ["--version"], { timeout: 5000 })).stdout.trim();
+      const v = (await execP(rtkBin, ['--version'], { timeout: 5000 })).stdout.trim();
       console.log(`  RTK version: ${v}`);
     } catch {
-      console.log("  RTK version: unavailable (may not be executable)");
+      console.log('  RTK version: unavailable (may not be executable)');
     }
   }
 
   // Caveman
-  const cavemanIndex = path.join(extDir, "caveman-session", "index.js");
-  const cavemanRule = path.join(extDir, "caveman-session", "rule.md");
-  console.log(`  Caveman extension: ${(await readTextIfExists(cavemanIndex)) !== null ? "installed" : "MISSING"}`);
-  console.log(`  Caveman rule.md: ${(await readTextIfExists(cavemanRule)) !== null ? "installed" : "MISSING"}`);
+  const cavemanIndex = path.join(extDir, 'caveman-session', 'index.js');
+  const cavemanRule = path.join(extDir, 'caveman-session', 'rule.md');
+  console.log(`  Caveman extension: ${(await readTextIfExists(cavemanIndex)) !== null ? 'installed' : 'MISSING'}`);
+  console.log(`  Caveman rule.md: ${(await readTextIfExists(cavemanRule)) !== null ? 'installed' : 'MISSING'}`);
 
   // RTK extension
-  const rtkIndex = path.join(extDir, "rtk-session", "index.js");
-  console.log(`  RTK extension: ${(await readTextIfExists(rtkIndex)) !== null ? "installed" : "MISSING"}`);
+  const rtkIndex = path.join(extDir, 'rtk-session', 'index.js');
+  console.log(`  RTK extension: ${(await readTextIfExists(rtkIndex)) !== null ? 'installed' : 'MISSING'}`);
 
   // Updater
-  const updaterIndex = path.join(extDir, "ai-addons-updater", "index.js");
-  console.log(`  Updater extension: ${(await readTextIfExists(updaterIndex)) !== null ? "installed" : "MISSING"}`);
+  const updaterIndex = path.join(extDir, 'ai-addons-updater', 'index.js');
+  console.log(`  Updater extension: ${(await readTextIfExists(updaterIndex)) !== null ? 'installed' : 'MISSING'}`);
 
   // Combo
-  const comboIndex = path.join(extDir, "combo-toggle", "index.js");
-  console.log(`  Combo extension: ${(await readTextIfExists(comboIndex)) !== null ? "installed" : "MISSING"}`);
+  const comboIndex = path.join(extDir, 'combo-toggle', 'index.js');
+  console.log(`  Combo extension: ${(await readTextIfExists(comboIndex)) !== null ? 'installed' : 'MISSING'}`);
 
-  const modeReinforcement = path.join(extDir, "shared", "mode-reinforcement.js");
-  console.log(`  Mode reinforcement extension: ${(await readTextIfExists(modeReinforcement)) !== null ? "installed" : "MISSING"}`);
+  const modeReinforcement = path.join(extDir, 'shared', 'mode-reinforcement.js');
+  console.log(`  Mode reinforcement extension: ${(await readTextIfExists(modeReinforcement)) !== null ? 'installed' : 'MISSING'}`);
 
   // Amanai reward detector
-  const amanaiRewardIndex = path.join(extDir, "amanai-reward", "index.js");
+  const amanaiRewardIndex = path.join(extDir, 'amanai-reward', 'index.js');
   const amanaiViaPlugin = selfDep && (await readTextIfExists(selfPkg)) !== null;
-  const amanaiState = (await readTextIfExists(amanaiRewardIndex)) !== null ? "installed" : amanaiViaPlugin ? "installed (via plugin manifest)" : "MISSING";
+  const amanaiState = (await readTextIfExists(amanaiRewardIndex)) !== null ? 'installed' : amanaiViaPlugin ? 'installed (via plugin manifest)' : 'MISSING';
   console.log(`  Amanai reward detector: ${amanaiState}`);
 
   if (configOk) {
     const configText = (await readTextIfExists(configPath))!;
-    const hasComboPath = configText.includes("combo-toggle");
-    console.log(`  Combo in config.yml: ${hasComboPath ? "registered" : "MISSING"}`);
+    const hasComboPath = configText.includes('combo-toggle');
+    console.log(`  Combo in config.yml: ${hasComboPath ? 'registered' : 'MISSING'}`);
   }
 }
 
@@ -899,12 +899,12 @@ async function updateJsonFile(
     console.log(`  [dry-run] ${dryRunNote}`);
     return;
   }
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2) + "\n", "utf8");
+  await fs.writeFile(filePath, JSON.stringify(data, null, 2) + '\n', 'utf8');
   console.log(`  [write] ${writeNote}`);
 }
 
 function dropKey(section: unknown, key: string): boolean {
-  if (!section || typeof section !== "object") return false;
+  if (!section || typeof section !== 'object') return false;
   const record = section as Record<string, unknown>;
   if (!(key in record)) return false;
   delete record[key];
@@ -917,29 +917,29 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
   const shouldRemoveRtk = options.removeRtk ?? removeRtk;
   const shouldDryRun = options.dryRun ?? dryRun;
 
-  console.log("\n=== Tersio Uninstall ===\n");
+  console.log('\n=== Tersio Uninstall ===\n');
 
-  const extDir = path.join(HOME, ".omp", "agent", "extensions");
-  const configPath = path.join(HOME, ".omp", "agent", "config.yml");
-  const rtkBin = path.join(HOME, ".bun", "bin", IS_WINDOWS ? "rtk.exe" : "rtk");
-  const pluginsDir = path.join(HOME, ".omp", "plugins");
-  const ponytailPkgDir = path.join(pluginsDir, "node_modules", "@dietrichgebert", "ponytail");
+  const extDir = path.join(HOME, '.omp', 'agent', 'extensions');
+  const configPath = path.join(HOME, '.omp', 'agent', 'config.yml');
+  const rtkBin = path.join(HOME, '.bun', 'bin', IS_WINDOWS ? 'rtk.exe' : 'rtk');
+  const pluginsDir = path.join(HOME, '.omp', 'plugins');
+  const ponytailPkgDir = path.join(pluginsDir, 'node_modules', '@dietrichgebert', 'ponytail');
 
   const targets = [
-    path.join(extDir, "caveman-session"),
-    path.join(extDir, "rtk-session"),
-    path.join(extDir, "ai-addons-updater"),
-    path.join(extDir, "combo-toggle"),
-    path.join(extDir, "shared"),
-    path.join(extDir, "amanai-reward"),
+    path.join(extDir, 'caveman-session'),
+    path.join(extDir, 'rtk-session'),
+    path.join(extDir, 'ai-addons-updater'),
+    path.join(extDir, 'combo-toggle'),
+    path.join(extDir, 'shared'),
+    path.join(extDir, 'amanai-reward'),
     // Only consumed by ai-addons-updater (removed above); otherwise orphaned.
-    path.join(extDir, "lib"),
+    path.join(extDir, 'lib'),
     // Legacy always-on combo helper; imports shared/session-state.js, so it
     // breaks with a module-not-found warning once the shared dir is removed.
-    path.join(extDir, "aaa-combo-boot"),
+    path.join(extDir, 'aaa-combo-boot'),
   ];
 
-  console.log("Will remove:");
+  console.log('Will remove:');
   for (const t of targets) {
     console.log(`  ${t}`);
   }
@@ -953,9 +953,9 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
   }
 
   if (!confirmed) {
-    const answer = await ask("\nProceed? [y/N]: ");
-    if (!answer.toLowerCase().startsWith("y")) {
-      console.log("Aborted.");
+    const answer = await ask('\nProceed? [y/N]: ');
+    if (!answer.toLowerCase().startsWith('y')) {
+      console.log('Aborted.');
       closeRL();
       return false;
     }
@@ -977,17 +977,17 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
   // Remove Combo and mode-reinforcement registrations; Ponytail only when requested.
   const configRaw = await readTextIfExists(configPath);
   if (configRaw) {
-    let lines = configRaw.split("\n");
+    let lines = configRaw.split('\n');
     const before = lines.length;
     lines = lines.filter((l) => {
-      if (l.includes("combo-toggle") || l.includes("mode-reinforcement")) return false;
-      if (shouldRemovePonytail && l.includes("ponytail") && l.includes("pi-extension")) return false;
+      if (l.includes('combo-toggle') || l.includes('mode-reinforcement')) return false;
+      if (shouldRemovePonytail && l.includes('ponytail') && l.includes('pi-extension')) return false;
       return true;
     });
     if (lines.length !== before) {
       if (shouldDryRun) console.log(`  [dry-run] would remove ${before - lines.length} config.yml entries`);
       else {
-        await fs.writeFile(configPath, lines.join("\n"), "utf8");
+        await fs.writeFile(configPath, lines.join('\n'), 'utf8');
         console.log(`  [write] Updated config.yml (removed ${before - lines.length} entries)`);
       }
     }
@@ -996,11 +996,11 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
   // Remove the Ponytail plugin package the installer added (dep, files,
   // lock entry); the config.yml entry was filtered above.
   if (shouldRemovePonytail) {
-    const pluginsPkgPath = path.join(pluginsDir, "package.json");
+    const pluginsPkgPath = path.join(pluginsDir, 'package.json');
     await updateJsonFile(pluginsPkgPath,
-      (data) => dropKey(data.dependencies, "@dietrichgebert/ponytail"),
+      (data) => dropKey(data.dependencies, '@dietrichgebert/ponytail'),
       `would remove @dietrichgebert/ponytail from ${pluginsPkgPath}`,
-      "Removed @dietrichgebert/ponytail from plugins/package.json", options);
+      'Removed @dietrichgebert/ponytail from plugins/package.json', options);
     try {
       if (shouldDryRun) console.log(`  [dry-run] would remove ${ponytailPkgDir}`);
       else {
@@ -1010,23 +1010,23 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
         console.log(`  [rm] ${path.dirname(ponytailPkgDir)} (empty scope)`);
       }
     } catch {
-      debug("Could not remove ponytail package dir (scope may hold other packages)");
+      debug('Could not remove ponytail package dir (scope may hold other packages)');
     }
-    const lockPath = path.join(pluginsDir, "omp-plugins.lock.json");
+    const lockPath = path.join(pluginsDir, 'omp-plugins.lock.json');
     await updateJsonFile(lockPath,
-      (data) => dropKey(data.plugins, "@dietrichgebert/ponytail"),
+      (data) => dropKey(data.plugins, '@dietrichgebert/ponytail'),
       `would remove @dietrichgebert/ponytail from ${lockPath}`,
       `Removed @dietrichgebert/ponytail from ${lockPath}`, options);
   }
 
   // Remove our plugin registration from ~/.omp/plugins
-  const pluginsPkgPath = path.join(pluginsDir, "package.json");
+  const pluginsPkgPath = path.join(pluginsDir, 'package.json');
   await updateJsonFile(pluginsPkgPath,
     (data) => dropKey(data.dependencies, PACKAGE_NAME),
     `would remove ${PACKAGE_NAME} from ${pluginsPkgPath}`,
     `Removed ${PACKAGE_NAME} from plugins/package.json`, options);
-  const selfPluginDir = path.join(pluginsDir, "node_modules", PACKAGE_NAME);
-  if ((await readTextIfExists(path.join(selfPluginDir, "package.json"))) !== null) {
+  const selfPluginDir = path.join(pluginsDir, 'node_modules', PACKAGE_NAME);
+  if ((await readTextIfExists(path.join(selfPluginDir, 'package.json'))) !== null) {
     try {
       if (shouldDryRun) console.log(`  [dry-run] would remove ${selfPluginDir}`);
       else {
@@ -1051,37 +1051,37 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
     }
   }
 
-  console.log("\nDone. Restart OMP for changes to take effect.");
+  console.log('\nDone. Restart OMP for changes to take effect.');
   return true;
 }
 
 async function runLatestUpdate(): Promise<void> {
-  const updateScope = scopeFlag || "user";
-  if (!["user", "project", "both"].includes(updateScope)) {
+  const updateScope = scopeFlag || 'user';
+  if (!['user', 'project', 'both'].includes(updateScope)) {
     console.error(`[fail] Invalid --scope: ${updateScope}. Use: user, project, both`);
     process.exitCode = 1;
     return;
   }
 
-  const forwardedArgs = ["--yes", "--scope", updateScope];
-  if (dryRun) forwardedArgs.push("--dry-run");
-  if (verbose) forwardedArgs.push("--verbose");
+  const forwardedArgs = ['--yes', '--scope', updateScope];
+  if (dryRun) forwardedArgs.push('--dry-run');
+  if (verbose) forwardedArgs.push('--verbose');
 
   const npmArgs = [
-    "exec",
-    "--yes",
-    "--prefer-online",
+    'exec',
+    '--yes',
+    '--prefer-online',
     `--package=${PACKAGE_NAME}@latest`,
-    "--",
+    '--',
     PACKAGE_BIN,
-    "--apply-update",
+    '--apply-update',
     ...forwardedArgs,
   ];
 
-  const npmCommand = IS_WINDOWS ? process.env.ComSpec || "cmd.exe" : "npm";
-  const npmCommandArgs = IS_WINDOWS ? ["/d", "/s", "/c", "npm", ...npmArgs] : npmArgs;
+  const npmCommand = IS_WINDOWS ? process.env.ComSpec || 'cmd.exe' : 'npm';
+  const npmCommandArgs = IS_WINDOWS ? ['/d', '/s', '/c', 'npm', ...npmArgs] : npmArgs;
 
-  console.log("=== Updating Tersio ===");
+  console.log('=== Updating Tersio ===');
   console.log(`  Running the latest ${PACKAGE_NAME} installer...\n`);
 
   try {
@@ -1093,7 +1093,7 @@ async function runLatestUpdate(): Promise<void> {
     });
     if (result.stdout) process.stdout.write(result.stdout);
     if (result.stderr) process.stderr.write(result.stderr);
-    console.log("\n=== Update complete ===");
+    console.log('\n=== Update complete ===');
   } catch (e) {
     const err = e as Error & { stdout?: string; stderr?: string };
     if (err.stdout) process.stdout.write(err.stdout);
@@ -1107,10 +1107,10 @@ async function runLatestUpdate(): Promise<void> {
 
 function defaultProfile(): Profile {
   return {
-    comboDefault: "off",
-    cavemanDefault: "off",
+    comboDefault: 'off',
+    cavemanDefault: 'off',
     rtkDefault: false,
-    ponytailDefault: "off",
+    ponytailDefault: 'off',
   };
 }
 
@@ -1118,13 +1118,13 @@ function tty(): boolean {
   return Boolean(process.stdin.isTTY && process.stdout.isTTY);
 }
 
-const SCOPE_MAP: Record<string, string> = { user: "1", project: "2", both: "3" };
+const SCOPE_MAP: Record<string, string> = { user: '1', project: '2', both: '3' };
 
 // Determine install scope: reinstall > flag > non-interactive default > prompt.
 async function resolveScope(): Promise<string> {
   if (reinstall) {
-    console.log("  Scope: user (reinstall)");
-    return "1";
+    console.log('  Scope: user (reinstall)');
+    return '1';
   }
   if (scopeFlag) {
     const scope = SCOPE_MAP[scopeFlag];
@@ -1137,14 +1137,14 @@ async function resolveScope(): Promise<string> {
     return scope;
   }
   if (install || yes) {
-    console.log(`  Scope: user (${install ? "install default" : "--scope omitted, defaulting to user with --yes"})`);
-    return "1";
+    console.log(`  Scope: user (${install ? 'install default' : '--scope omitted, defaulting to user with --yes'})`);
+    return '1';
   }
-  console.log("\nInstall scope:");
-  console.log("  1) User-level (all OMP sessions)");
-  console.log("  2) Project-level (this repo only)");
-  console.log("  3) Both");
-  return (await ask("\nChoose [1-3] (default 1): ")).trim() || "1";
+  console.log('\nInstall scope:');
+  console.log('  1) User-level (all OMP sessions)');
+  console.log('  2) Project-level (this repo only)');
+  console.log('  3) Both');
+  return (await ask('\nChoose [1-3] (default 1): ')).trim() || '1';
 }
 
 async function resolveProfile(): Promise<Profile> {
@@ -1154,7 +1154,7 @@ async function resolveProfile(): Promise<Profile> {
   // Only for a real user at a terminal, only when no default flags were
   // given, and never for --apply-update runs.
   if (tty() && !profileFlagsGiven && !applyUpdate && (install || reinstall)) {
-    const comboAnswer = (await ask("  Default Combo preset on session start? [off/medium/balanced/max] (off): ")).trim().toLowerCase();
+    const comboAnswer = (await ask('  Default Combo preset on session start? [off/medium/balanced/max] (off): ')).trim().toLowerCase();
     if (comboAnswer && COMBO_DEFAULTS.has(comboAnswer)) profile.comboDefault = comboAnswer;
   }
 
@@ -1165,9 +1165,9 @@ async function resolveProfile(): Promise<Profile> {
   profile.rtkDefault = preset.rtk;
   profile.ponytailDefault = preset.ponytail;
   if (cavemanDefaultFlag !== undefined) profile.cavemanDefault = cavemanDefaultFlag;
-  if (rtkDefaultFlag !== undefined) profile.rtkDefault = rtkDefaultFlag === "on";
+  if (rtkDefaultFlag !== undefined) profile.rtkDefault = rtkDefaultFlag === 'on';
 
-  console.log(`  Profile: combo default=${profile.comboDefault} (caveman=${profile.cavemanDefault} · rtk=${profile.rtkDefault ? "on" : "off"} · ponytail=${profile.ponytailDefault})`);
+  console.log(`  Profile: combo default=${profile.comboDefault} (caveman=${profile.cavemanDefault} · rtk=${profile.rtkDefault ? 'on' : 'off'} · ponytail=${profile.ponytailDefault})`);
   return profile;
 }
 
@@ -1175,27 +1175,27 @@ async function resolveProfile(): Promise<Profile> {
 // OMP launch, so fail loudly here instead of at the next OMP start.
 async function validateConfigExtensions(agentDir: string, options: WriteOptions): Promise<void> {
   if (options.dryRun) return;
-  const raw = await readTextIfExists(path.join(agentDir, "config.yml"));
+  const raw = await readTextIfExists(path.join(agentDir, 'config.yml'));
   if (!raw) return;
-  const lines = raw.split("\n");
+  const lines = raw.split('\n');
   const keyIdx = lines.findIndex((l) => /^\s*extensions\s*:/i.test(l));
   if (keyIdx === -1) return;
   const scalarNull = /^\s*extensions\s*:\s*(null|~|\[\s*\])\s*$/i.test(lines[keyIdx]);
   const hasEntries = lines.slice(keyIdx + 1).some((l) => /^\s*-\s+\S/.test(l));
   if (scalarNull && hasEntries) {
-    console.log("  [fail] config.yml lists extensions under `extensions: null` — OMP will fail to launch.");
-    console.log("  [hint] Replace the `extensions: null` line with `extensions:`, then reinstall.");
+    console.log('  [fail] config.yml lists extensions under `extensions: null` — OMP will fail to launch.');
+    console.log('  [hint] Replace the `extensions: null` line with `extensions:`, then reinstall.');
     process.exitCode = 1;
   } else {
-    console.log("  [ok] config.yml extensions key valid");
+    console.log('  [ok] config.yml extensions key valid');
   }
 }
 
 // Persist the profile as omp plugin settings so `omp plugin config get`
 // reflects the choice and the extensions pick it up on session start.
 async function writePluginSettings(profile: Profile, options: WriteOptions): Promise<void> {
-  const pluginsDir = path.join(HOME, ".omp", "plugins");
-  const lockPath = path.join(pluginsDir, "omp-plugins.lock.json");
+  const pluginsDir = path.join(HOME, '.omp', 'plugins');
+  const lockPath = path.join(pluginsDir, 'omp-plugins.lock.json');
   let config: { plugins?: Record<string, unknown>; settings?: Record<string, Record<string, unknown>> } = {};
   const existing = await readTextIfExists(lockPath);
   if (existing) {
@@ -1215,7 +1215,7 @@ async function writePluginSettings(profile: Profile, options: WriteOptions): Pro
     return;
   }
   await fs.mkdir(pluginsDir, { recursive: true });
-  await fs.writeFile(lockPath, JSON.stringify(config, null, 2) + "\n", "utf8");
+  await fs.writeFile(lockPath, JSON.stringify(config, null, 2) + '\n', 'utf8');
   console.log(`  [write] Plugin settings in ${lockPath}`);
 }
 
@@ -1264,7 +1264,7 @@ async function main(): Promise<void> {
     await runUninstall({ yes: true, removePonytail: false, removeRtk: true });
   }
 
-  if (dryRun) console.log("[dry-run] No changes will be written.\n");
+  if (dryRun) console.log('[dry-run] No changes will be written.\n');
 
   console.log(`=== Tersio v${PACKAGE_VERSION} ===`);
   console.log(`  Platform: ${process.platform}`);
@@ -1278,29 +1278,29 @@ async function main(): Promise<void> {
   const profile = await resolveProfile();
 
 
-  const userDir = path.join(HOME, ".omp", "agent");
-  const userExtDir = path.join(userDir, "extensions");
-  const userPluginsDir = path.join(userDir, "..", "plugins");
-  const bunBinDir = path.join(HOME, ".bun", "bin");
-  const projectExtDir = path.join(process.cwd(), ".omp", "extensions");
+  const userDir = path.join(HOME, '.omp', 'agent');
+  const userExtDir = path.join(userDir, 'extensions');
+  const userPluginsDir = path.join(userDir, '..', 'plugins');
+  const bunBinDir = path.join(HOME, '.bun', 'bin');
+  const projectExtDir = path.join(process.cwd(), '.omp', 'extensions');
 
   const options: InstallOptions = { dryRun, verbose, yes, scope, reinstall };
 
   // Check prerequisites
-  console.log("\nPrerequisites:");
+  console.log('\nPrerequisites:');
   try {
-    const v = (await execP(IS_WINDOWS ? "omp.cmd" : "omp", ["--version"])).stdout.trim();
+    const v = (await execP(IS_WINDOWS ? 'omp.cmd' : 'omp', ['--version'])).stdout.trim();
     console.log(`  [ok] omp ${v}`);
   } catch {
-    console.log("  [fail] omp not found — ensure it's installed");
+    console.log('  [fail] omp not found — ensure it\'s installed');
   }
 
-  if (scope === "1" || scope === "3") {
-    console.log("\n--- User-level install ---");
+  if (scope === '1' || scope === '3') {
+    console.log('\n--- User-level install ---');
     await stepSharedSessionState(userExtDir, options);
     await stepPonytail(userPluginsDir, userDir, options);
     const selfPlugin = await stepSelfPlugin(userPluginsDir, options);
-    const ponytailExtPath = path.join(userPluginsDir, "node_modules", "@dietrichgebert", "ponytail", "pi-extension", "index.js");
+    const ponytailExtPath = path.join(userPluginsDir, 'node_modules', '@dietrichgebert', 'ponytail', 'pi-extension', 'index.js');
     await stepRtk(bunBinDir, options);
     await stepRtkSession(userExtDir, options);
     await stepCaveman(userExtDir, options);
@@ -1312,24 +1312,24 @@ async function main(): Promise<void> {
     await validateConfigExtensions(userDir, options);
   }
 
-  if (scope === "2" || scope === "3") {
-    console.log("\n--- Project-level install ---");
+  if (scope === '2' || scope === '3') {
+    console.log('\n--- Project-level install ---');
     await stepSharedSessionState(projectExtDir, options);
     await stepRtkSession(projectExtDir, options);
     await stepCaveman(projectExtDir, options);
     await stepUpdater(projectExtDir, options);
     await stepAmanaiReward(projectExtDir, options);
-    console.log("  [note] Ponytail, RTK binary, and Combo toggle require user-level (global) install");
+    console.log('  [note] Ponytail, RTK binary, and Combo toggle require user-level (global) install');
   }
 
-  console.log("\n=== Installation complete ===");
-  console.log("\nNext steps:");
-  console.log("  1. Restart OMP");
-  console.log("  2. /caveman full");
-  console.log("  3. /rtk on");
-  console.log("  4. /ponytail full");
-  console.log("  5. /ai-addons check");
-  console.log("  6. /combo medium   (toggle all 3 at once — off by default)");
+  console.log('\n=== Installation complete ===');
+  console.log('\nNext steps:');
+  console.log('  1. Restart OMP');
+  console.log('  2. /caveman full');
+  console.log('  3. /rtk on');
+  console.log('  4. /ponytail full');
+  console.log('  5. /ai-addons check');
+  console.log('  6. /combo medium   (toggle all 3 at once — off by default)');
 
   closeRL();
 }

@@ -693,9 +693,11 @@ async function copySources(extDir: string, files: Array<[string, string]>, skipL
     return false;
   }
   await writeIfChanged(path.join(extDir, files[0][1]), src, options);
-  for (const [from, to] of files.slice(1)) {
-    const extra = await readTextIfExists(from);
-    if (extra) await writeIfChanged(path.join(extDir, to), extra, options);
+  const rest = files.slice(1);
+  const extras = await Promise.all(rest.map(([from]) => readTextIfExists(from)));
+  for (let i = 0; i < rest.length; i++) {
+    const extra = extras[i];
+    if (extra) await writeIfChanged(path.join(extDir, rest[i][1]), extra, options);
   }
   return true;
 }

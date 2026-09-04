@@ -80,6 +80,10 @@ function publish(state: Readonly<ComboState>): Readonly<ComboState> {
   return state;
 }
 
+export function normalizeInputCommand(value: unknown): string {
+  return String(value || '').trim().toLowerCase().replace(/[.!?\s]+$/, '');
+}
+
 export function asPromptArray(systemPrompt: string | string[]): string[] {
   return Array.isArray(systemPrompt) ? systemPrompt : [systemPrompt];
 }

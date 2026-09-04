@@ -1,6 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
-import { asPromptArray, getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
+import { asPromptArray, getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, normalizeInputCommand, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
 import { readRtkDefault } from '../shared/plugin-settings.ts';
 import type { ExtensionApi, ExtensionCtx, InputEvent, SessionEntry, SystemPromptEvent } from '../shared/types.ts';
 
@@ -116,7 +116,7 @@ export default function rtkSessionExtension(pi: ExtensionApi): void {
 
   pi.on<InputEvent>('input', async (event) => {
     if (event?.source === 'extension') return;
-    const t = String(event?.text || '').trim().toLowerCase().replace(/[.!?\s]+$/, '');
+    const t = normalizeInputCommand(event?.text);
     if (t === 'rtk on' || t === 'use rtk') setEnabled(true);
     if (t === 'rtk off' || t === 'stop rtk') setEnabled(false);
   });

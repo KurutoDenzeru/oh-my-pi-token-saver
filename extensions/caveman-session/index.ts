@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { asPromptArray, getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
+import { asPromptArray, getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, normalizeInputCommand, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
 import { readCavemanDefault } from '../shared/plugin-settings.ts';
 import type { ExtensionApi, ExtensionCtx, InputEvent, SessionEntry, SystemPromptEvent } from '../shared/types.ts';
 
@@ -54,7 +54,7 @@ function resolveMode(entries: SessionEntry[] | null | undefined, fallback: strin
 }
 
 function isOffCommand(text: unknown): boolean {
-  const t = String(text || '').trim().toLowerCase().replace(/[.!?\s]+$/, '');
+  const t = normalizeInputCommand(text);
   return t === 'stop caveman' || t === 'normal mode' || t === 'caveman off';
 }
 

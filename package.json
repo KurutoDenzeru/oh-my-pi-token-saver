@@ -1,6 +1,6 @@
 {
   "name": "@krtclcdy/tersio",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Amanai reward detector and three toggleable OMP extensions for terse replies, compact shell output, and minimal code decisions — with a manual updater and dry-run support.",
   "keywords": [
     "omp",
@@ -109,6 +109,7 @@
   "scripts": {
     "clean": "rm -f tersio.js extensions/**/*.js",
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "check": "tsc --noEmit",
     "doctor": "node tersio.js --doctor",
     "dry-run": "node tersio.js --dry-run --scope user --yes",

@@ -1,0 +1,4 @@
+# npm pack/publish consults this file instead of .gitignore.
+# Build output (tersio.js, extensions/**/*.js) must ship in the tarball;
+# .gitignore cannot be used for packing, or the tersio bin link is skipped.
+test/

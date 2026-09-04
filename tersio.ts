@@ -1026,11 +1026,7 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
     });
     if (lines.length !== before) {
       if (shouldDryRun) console.log(`  [dry-run] would remove ${before - lines.length} config.yml entries`);
-      else {
-        await backupFile(configPath);
-        await fs.writeFile(configPath, lines.join('\n'), 'utf8');
-        console.log(`  [write] Updated config.yml (removed ${before - lines.length} entries)`);
-      }
+      else await writeConfigLines(configPath, lines, `  [write] Updated config.yml (removed ${before - lines.length} entries)`);
     }
   }
 

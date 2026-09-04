@@ -26,6 +26,7 @@ import {
 } from './extensions/lib/utils.ts';
 
 const IS_WINDOWS = process.platform === 'win32';
+const RTK_BINARY_NAME = IS_WINDOWS ? 'rtk.exe' : 'rtk';
 const HOME = process.env.HOME || process.env.USERPROFILE || '';
 
 const PACKAGE_NAME = '@krtclcdy/tersio';
@@ -641,7 +642,7 @@ async function stepRtk(binDir: string, options: InstallOptions): Promise<void> {
     if (!triple) return;
     const asset = findRtkAsset(release, triple);
     if (!asset) return;
-    const binDest = path.join(binDir, IS_WINDOWS ? 'rtk.exe' : 'rtk');
+    const binDest = path.join(binDir, RTK_BINARY_NAME);
 
     if (options.dryRun) {
       console.log(`  [dry-run] would download ${asset.name} from release ${release.tag_name}`);
@@ -662,10 +663,9 @@ async function stepRtk(binDir: string, options: InstallOptions): Promise<void> {
       const extractDir = path.join(tmpDir, 'extracted');
       if (!await extractRtkArchive(archivePath, extractDir)) return;
 
-      const binaryName = IS_WINDOWS ? 'rtk.exe' : 'rtk';
-      const found = await findFile(extractDir, binaryName);
+      const found = await findFile(extractDir, RTK_BINARY_NAME);
       if (!found) {
-        console.log(`  [fail] Could not find ${binaryName} in extracted archive`);
+        console.log(`  [fail] Could not find ${RTK_BINARY_NAME} in extracted archive`);
         return;
       }
 
@@ -795,7 +795,7 @@ async function runDoctor(): Promise<void> {
   const extDir = path.join(agentDir, 'extensions');
   const configPath = path.join(agentDir, 'config.yml');
   const pluginsDir = path.join(HOME, '.omp', 'plugins');
-  const rtkBin = path.join(HOME, '.bun', 'bin', IS_WINDOWS ? 'rtk.exe' : 'rtk');
+  const rtkBin = path.join(HOME, '.bun', 'bin', RTK_BINARY_NAME);
 
   // Ponytail
   const ponytailPkg = path.join(pluginsDir, 'node_modules', '@dietrichgebert', 'ponytail', 'package.json');
@@ -960,7 +960,7 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
 
   const extDir = path.join(HOME, '.omp', 'agent', 'extensions');
   const configPath = path.join(HOME, '.omp', 'agent', 'config.yml');
-  const rtkBin = path.join(HOME, '.bun', 'bin', IS_WINDOWS ? 'rtk.exe' : 'rtk');
+  const rtkBin = path.join(HOME, '.bun', 'bin', RTK_BINARY_NAME);
   const pluginsDir = path.join(HOME, '.omp', 'plugins');
   const ponytailPkgDir = path.join(pluginsDir, 'node_modules', '@dietrichgebert', 'ponytail');
 

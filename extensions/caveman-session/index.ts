@@ -75,7 +75,8 @@ export default function cavemanSessionExtension(pi: ExtensionApi): void {
     pi.appendEntry?.('caveman-mode', { mode: normalized });
     setSharedComboMode('caveman', normalized);
     syncStatus(ctx);
-    ctx?.ui?.notify?.(`Caveman mode ${normalized === 'off' ? 'off' : `set to ${normalized}`}.`, 'info');
+    const msg = normalized === 'off' ? 'Caveman mode off.' : `Caveman mode set to ${normalized}.`;
+    ctx?.ui?.notify?.(msg, 'info');
     return true;
   }
 

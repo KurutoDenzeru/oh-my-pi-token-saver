@@ -575,7 +575,7 @@ async function downloadRtkChecksums(release: RtkRelease): Promise<string | null>
   }
 }
 
-async function verifyRtkArchive(archivePath: string, assetName: string, checksumsText: string | null, tmpDir: string): Promise<boolean> {
+async function verifyRtkArchive(archivePath: string, assetName: string, checksumsText: string | null): Promise<boolean> {
   if (!checksumsText) {
     console.log('  [warn] No checksums.txt available — skipping verification');
     return true;
@@ -593,7 +593,7 @@ async function verifyRtkArchive(archivePath: string, assetName: string, checksum
   console.log(`  [fail] Checksum mismatch for ${assetName}`);
   console.log(`  [fail] Expected: ${expected}`);
   console.log(`  [fail] Got:      ${actual}`);
-  await fs.rm(tmpDir, { recursive: true, force: true });
+  // Caller finally removes the temp dir.
   return false;
 }
 
@@ -651,7 +651,7 @@ async function stepRtk(binDir: string, options: InstallOptions): Promise<void> {
         downloadRtkChecksums(release),
         httpsDownload(asset.browser_download_url, archivePath),
       ]);
-      if (!await verifyRtkArchive(archivePath, asset.name, checksumsText, tmpDir)) return;
+      if (!await verifyRtkArchive(archivePath, asset.name, checksumsText)) return;
 
       const extractDir = path.join(tmpDir, 'extracted');
       if (!await extractRtkArchive(archivePath, extractDir)) return;

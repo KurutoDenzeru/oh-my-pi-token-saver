@@ -366,9 +366,7 @@ export default function aiAddonsUpdaterExtension(pi: AddonUpdaterPi): void {
         };
         if (target === 'all') {
           notify(ctx, `ai-addons update all${dryRun ? ' dry-run' : ''}: starting ponytail → rtk → caveman sequentially…`, 'info');
-          results.push(await updatePonytail(pi, ctx, dryRun));
-          results.push(await updateRtk(ctx, dryRun));
-          results.push(await updateCaveman(ctx, dryRun));
+          for (const name of ['ponytail', 'rtk', 'caveman']) results.push(await updaters[name]());
           if (!dryRun) results.push(RELOAD_MSG);
           notify(ctx, `ai-addons update all ${dryRun ? 'dry-run ' : ''}complete.${dryRun ? '' : ` ${RELOAD_MSG}`}`, 'info');
         } else if (Object.hasOwn(updaters, target)) {

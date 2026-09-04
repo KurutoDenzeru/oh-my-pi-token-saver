@@ -1,6 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
-import { asPromptArray, getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, normalizeInputCommand, paintStatusBar, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
+import { asPromptArray, getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, lastCustomValue, normalizeInputCommand, paintStatusBar, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
 import { readRtkDefault } from '../shared/plugin-settings.ts';
 import type { ExtensionApi, ExtensionCtx, InputEvent, SessionEntry, SystemPromptEvent } from '../shared/types.ts';
 
@@ -14,14 +14,7 @@ function asBoolean(value: unknown): boolean | null {
 }
 
 function resolveEnabled(entries: SessionEntry[] | null | undefined): boolean | null {
-  if (!Array.isArray(entries)) return null;
-  for (let i = entries.length - 1; i >= 0; i -= 1) {
-    const entry = entries[i];
-    if (entry?.type !== 'custom' || entry?.customType !== 'rtk-mode') continue;
-    const enabled = asBoolean(entry?.data?.enabled);
-    if (enabled !== null) return enabled;
-  }
-  return null;
+  return lastCustomValue(entries, 'rtk-mode', (data) => asBoolean(data?.enabled));
 }
 
 const IS_WINDOWS = process.platform === 'win32';

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { asPromptArray, getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, normalizeInputCommand, paintStatusBar, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
+import { asPromptArray, getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, lastCustomValue, normalizeInputCommand, paintStatusBar, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
 import { readCavemanDefault } from '../shared/plugin-settings.ts';
 import type { ExtensionApi, ExtensionCtx, InputEvent, SessionEntry, SystemPromptEvent } from '../shared/types.ts';
 
@@ -43,14 +43,7 @@ function normalizeMode(value: unknown): string | null {
 }
 
 function resolveMode(entries: SessionEntry[] | null | undefined, fallback: string = DEFAULT_MODE): string {
-  if (!Array.isArray(entries)) return fallback;
-  for (let i = entries.length - 1; i >= 0; i -= 1) {
-    const entry = entries[i];
-    if (entry?.type !== 'custom' || entry?.customType !== 'caveman-mode') continue;
-    const mode = normalizeMode(entry?.data?.mode);
-    if (mode) return mode;
-  }
-  return fallback;
+  return lastCustomValue(entries, 'caveman-mode', (data) => normalizeMode(data?.mode)) ?? fallback;
 }
 
 function isOffCommand(text: unknown): boolean {

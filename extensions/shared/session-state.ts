@@ -107,6 +107,19 @@ export function paintStatusBar(ui: UiApi | undefined, key: string, emoji: string
   ui?.setStatus?.(key, theme?.fg ? `${indicator} ${theme.fg('muted', label)}` : `${indicator} ${label}`);
 }
 
+// Last-wins scan for a custom session entry; skips entries whose value fails
+// to parse so a corrupt write never shadows an older valid one.
+export function lastCustomValue<T>(entries: SessionEntry[] | null | undefined, customType: string, pick: (data: SessionEntry['data']) => T | null | undefined): T | null {
+  if (!Array.isArray(entries)) return null;
+  for (let i = entries.length - 1; i >= 0; i -= 1) {
+    const entry = entries[i];
+    if (entry?.type !== 'custom' || entry?.customType !== customType) continue;
+    const value = pick(entry?.data);
+    if (value !== null && value !== undefined) return value;
+  }
+  return null;
+}
+
 export function sessionEntries(ctx: ExtensionCtx | undefined): SessionEntry[] {
   return ctx?.sessionManager?.getBranch?.() || ctx?.sessionManager?.getEntries?.() || [];
 }

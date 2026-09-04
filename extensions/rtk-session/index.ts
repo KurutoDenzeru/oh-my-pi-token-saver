@@ -18,7 +18,8 @@ function resolveEnabled(entries: SessionEntry[] | null | undefined): boolean | n
   for (let i = entries.length - 1; i >= 0; i -= 1) {
     const entry = entries[i];
     if (entry?.type !== 'custom' || entry?.customType !== 'rtk-mode') continue;
-    return asBoolean(entry?.data?.enabled);
+    const enabled = asBoolean(entry?.data?.enabled);
+    if (enabled !== null) return enabled;
   }
   return null;
 }

@@ -777,16 +777,7 @@ async function runDoctor(): Promise<void> {
   // Node
   console.log(`  Node: ok ${process.version}`);
 
-  // OMP CLI
-  try {
-    const v = (await execP(OMP_BIN, ['--version'])).stdout.trim();
-    console.log(`  OMP CLI: ok ${v}`);
-  } catch {
-    console.log('  OMP CLI: MISSING');
-  }
-
-  // Home
-  console.log(`  Home: ${HOME}`);
+  // OMP CLI version joins FS probes below; logs keep fixed order.
 
   // Directories
   const agentDir = OMP_AGENT_DIR;
@@ -808,6 +799,7 @@ async function runDoctor(): Promise<void> {
 
   // Independent probes run concurrently; logs below keep fixed order.
   const [
+    ompVersion,
     agentEntries,
     extEntries,
     sharedStateText,
@@ -824,6 +816,7 @@ async function runDoctor(): Promise<void> {
     comboIndexText,
     modeReinforcementText,
   ] = await Promise.all([
+    execP(OMP_BIN, ['--version']).then((r) => r.stdout.trim(), () => null),
     fs.readdir(agentDir).catch(() => null),
     fs.readdir(extDir).catch(() => null),
     readTextIfExists(path.join(extDir, 'shared', 'session-state.js')),
@@ -840,6 +833,9 @@ async function runDoctor(): Promise<void> {
     readTextIfExists(comboIndex),
     readTextIfExists(modeReinforcement),
   ]);
+
+  console.log(ompVersion !== null ? `  OMP CLI: ok ${ompVersion}` : '  OMP CLI: MISSING');
+  console.log(`  Home: ${HOME}`);
 
   locationLine('OMP agent dir', agentEntries !== null, agentDir);
 

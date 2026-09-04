@@ -20,6 +20,12 @@ const MODE_VALUES: Record<string, Set<string>> = {
 type ModeName = 'caveman' | 'rtk' | 'ponytail';
 type Modes = Record<ModeName, string>;
 
+const MODE_ENTRY_TYPES: Record<string, ModeName> = {
+  'caveman-mode': 'caveman',
+  'rtk-mode': 'rtk',
+  'ponytail-mode': 'ponytail',
+};
+
 interface Bridge {
   state: Readonly<ComboState>;
   listener: ((state: Readonly<ComboState>) => void) | null;
@@ -130,13 +136,7 @@ export function reconcileSharedComboEntries(entries: SessionEntry[] | null | und
         }
         continue;
       }
-      const name = entry.customType === 'caveman-mode'
-        ? 'caveman'
-        : entry.customType === 'rtk-mode'
-          ? 'rtk'
-          : entry.customType === 'ponytail-mode'
-            ? 'ponytail'
-            : null;
+      const name = MODE_ENTRY_TYPES[entry.customType ?? ''] ?? null;
       if (!name) continue;
       const value = name === 'rtk' ? entry?.data?.enabled : entry?.data?.mode;
       const mode = normalizeMode(name, value);

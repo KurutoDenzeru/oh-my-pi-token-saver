@@ -1300,8 +1300,6 @@ async function main(): Promise<void> {
 
   const userDir = OMP_AGENT_DIR;
   const userExtDir = path.join(userDir, 'extensions');
-  const userPluginsDir = path.join(userDir, '..', 'plugins');
-  const bunBinDir = BUN_BIN_DIR;
   const projectExtDir = path.join(process.cwd(), '.omp', 'extensions');
 
   const options: InstallOptions = { dryRun, verbose, yes, scope, reinstall };
@@ -1318,10 +1316,10 @@ async function main(): Promise<void> {
   if (scope === '1' || scope === '3') {
     console.log('\n--- User-level install ---');
     await stepSharedSessionState(userExtDir, options);
-    await stepPonytail(userPluginsDir, userDir, options);
-    const selfPlugin = await stepSelfPlugin(userPluginsDir, options);
-    const ponytailExtPath = path.join(userPluginsDir, 'node_modules', '@dietrichgebert', 'ponytail', 'pi-extension', 'index.js');
-    await stepRtk(bunBinDir, options);
+    await stepPonytail(OMP_PLUGINS_DIR, userDir, options);
+    const selfPlugin = await stepSelfPlugin(OMP_PLUGINS_DIR, options);
+    const ponytailExtPath = path.join(OMP_PLUGINS_DIR, 'node_modules', '@dietrichgebert', 'ponytail', 'pi-extension', 'index.js');
+    await stepRtk(BUN_BIN_DIR, options);
     await stepRtkSession(userExtDir, options);
     await stepCaveman(userExtDir, options);
     await stepCombo(userExtDir, options);

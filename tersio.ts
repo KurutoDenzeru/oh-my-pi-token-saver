@@ -239,6 +239,13 @@ function normalizeExtensionsKey(lines: string[]): boolean {
   return true;
 }
 
+async function writeConfigLines(configPath: string, lines: string[], logMsg: string): Promise<void> {
+  await fs.mkdir(path.dirname(configPath), { recursive: true });
+  await backupFile(configPath);
+  await fs.writeFile(configPath, lines.join('\n'), 'utf8');
+  console.log(logMsg);
+}
+
 async function ensureExtensionInConfig(configPath: string, extensionPath: string, label: string, options: WriteOptions = {}): Promise<boolean> {
   const normalizedPath = extensionPath.replace(/\\/g, '/');
   const line = `  - ${normalizedPath}`;
@@ -268,10 +275,7 @@ async function ensureExtensionInConfig(configPath: string, extensionPath: string
     lines.splice(extLineIdx + 1, 0, line);
   }
 
-  await fs.mkdir(path.dirname(configPath), { recursive: true });
-  await backupFile(configPath);
-  await fs.writeFile(configPath, lines.join('\n'), 'utf8');
-  console.log(`  [write] Added ${label} to config.yml`);
+  await writeConfigLines(configPath, lines, `  [write] Added ${label} to config.yml`);
   return true;
 }
 
@@ -304,10 +308,7 @@ async function ensureExtensionAfterConfigEntry(configPath: string, extensionPath
     }
   }
 
-  await fs.mkdir(path.dirname(configPath), { recursive: true });
-  await backupFile(configPath);
-  await fs.writeFile(configPath, lines.join('\n'), 'utf8');
-  console.log(`  [write] Placed ${label} after Ponytail in config.yml`);
+  await writeConfigLines(configPath, lines, `  [write] Placed ${label} after Ponytail in config.yml`);
   return true;
 }
 

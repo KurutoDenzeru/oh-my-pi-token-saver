@@ -203,10 +203,6 @@ interface WriteOptions {
   dryRun?: boolean;
 }
 
-async function backupFile(filePath: string): Promise<void> {
-  await fs.copyFile(filePath, `${filePath}.bak`).catch(() => {});
-}
-
 async function writeIfChanged(dest: string, content: string, options: WriteOptions = {}): Promise<boolean> {
   const existing = await readTextIfExists(dest);
   if (existing === content) {
@@ -241,7 +237,7 @@ function normalizeExtensionsKey(lines: string[]): boolean {
 
 async function writeConfigLines(configPath: string, lines: string[], logMsg: string): Promise<void> {
   await fs.mkdir(path.dirname(configPath), { recursive: true });
-  await backupFile(configPath);
+  await fs.copyFile(configPath, `${configPath}.bak`).catch(() => {});
   await fs.writeFile(configPath, lines.join('\n'), 'utf8');
   console.log(logMsg);
 }

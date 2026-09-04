@@ -90,6 +90,10 @@ export function httpsDownload(url: string, dest: string, opts: HttpOptions = {})
   return promise;
 }
 
+export async function fetchJson<T>(url: string): Promise<T> {
+  return JSON.parse(await httpsGet(url)) as T;
+}
+
 export function sha256Hex(text: string): string {
   return createHash('sha256').update(text, 'utf8').digest('hex');
 }

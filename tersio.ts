@@ -15,6 +15,7 @@ import { createRequire } from 'node:module';
 import {
   CAVEMAN_REMOTE_RULE,
   RTK_RELEASE_API,
+  fetchJson,
   findFile,
   httpsGet,
   httpsDownload,
@@ -643,7 +644,7 @@ async function extractRtkArchive(archivePath: string, extractDir: string): Promi
 async function stepRtk(binDir: string, options: InstallOptions): Promise<void> {
   console.log('\n[3/7] Installing RTK binary...');
   try {
-    const release = JSON.parse(await httpsGet(RTK_RELEASE_API)) as RtkRelease;
+    const release = await fetchJson<RtkRelease>(RTK_RELEASE_API);
     const triple = resolveRtkTriple();
     if (!triple) return;
     const asset = findRtkAsset(release, triple);

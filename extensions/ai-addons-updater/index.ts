@@ -13,6 +13,7 @@ import path from 'node:path';
 import {
   CAVEMAN_REMOTE_RULE as CAVEMAN_REMOTE,
   RTK_RELEASE_API,
+  fetchJson,
   findFile,
   httpsGet,
   httpsDownload,
@@ -86,8 +87,7 @@ function checkFailed(name: string, e: unknown): AddonStatus {
 // Check: no mutation. Probes run concurrently via checkAddons below.
 async function checkPonytail(): Promise<AddonStatus> {
   try {
-    const remoteRaw = await httpsGet(PONYTAIL_REMOTE);
-    const remoteJson = JSON.parse(remoteRaw) as { version?: string };
+    const remoteJson = await fetchJson<{ version?: string }>(PONYTAIL_REMOTE);
     const localRaw = await readTextIfExists(PONYTAIL_LOCAL);
     const localVer = localRaw ? (JSON.parse(localRaw) as { version?: string }).version ?? null : null;
     const remoteVer = remoteJson.version;
@@ -102,7 +102,7 @@ async function checkPonytail(): Promise<AddonStatus> {
 }
 
 async function fetchRelease(): Promise<GitHubRelease> {
-  return JSON.parse(await httpsGet(RTK_RELEASE_API)) as GitHubRelease;
+  return fetchJson<GitHubRelease>(RTK_RELEASE_API);
 }
 
 async function checkRtk(): Promise<AddonStatus> {

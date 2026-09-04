@@ -43,10 +43,20 @@ interface InstallOptions {
 const COMBO_DEFAULTS: Record<string, true> = { off: true, medium: true, balanced: true, max: true };
 const CAVEMAN_DEFAULTS: Record<string, true> = { off: true, lite: true, full: true, ultra: true, wenyan: true };
 
+// ponytail: Combo preset implies all three modes. Mirrors COMBO_LEVELS in
+// extensions/shared/session-state.ts (rtk as boolean here). Single source.
+const COMBO_PRESET_MODES: Record<string, { caveman: string; rtk: boolean; ponytail: string }> = {
+  off: { caveman: "off", rtk: false, ponytail: "off" },
+  medium: { caveman: "lite", rtk: true, ponytail: "lite" },
+  balanced: { caveman: "full", rtk: true, ponytail: "full" },
+  max: { caveman: "ultra", rtk: true, ponytail: "ultra" },
+};
+
 interface Profile {
   comboDefault: string;
   cavemanDefault: string;
   rtkDefault: boolean;
+  ponytailDefault: string;
 }
 
 function parseEnum(value: string | undefined, valid: Record<string, true>, flag: string): string | undefined {
@@ -120,9 +130,9 @@ Commands:
 
 Options:
   --scope user|project|both
-  --combo-default off|medium|balanced|max
-  --caveman-default off|lite|full|ultra|wenyan
-  --rtk-default on|off
+  --combo-default off|medium|balanced|max (implies caveman, rtk, ponytail)
+  --caveman-default off|lite|full|ultra|wenyan (override; default follows combo)
+  --rtk-default on|off (override; default follows combo)
   --yes, -y
   --dry-run
   --verbose
@@ -224,8 +234,8 @@ async function ensureExtensionInConfig(configPath: string, extensionPath: string
     return true;
   }
 
-  // Handle "extensions: []" (empty YAML array)
-  const emptyArrayIdx = lines.findIndex((l) => /^\s*extensions\s*:\s*\[\s*\]\s*$/i.test(l));
+  // ponytail: omp ships "extensions: null"; appending list items under a null scalar breaks YAML parsing. Normalize null/~/[]/empty to a mapping key first.
+  const emptyArrayIdx = lines.findIndex((l) => /^\s*extensions\s*:\s*(?:\[\s*\]|null|~)?\s*$/i.test(l));
   if (emptyArrayIdx !== -1) {
     lines[emptyArrayIdx] = "extensions:";
     lines.splice(emptyArrayIdx + 1, 0, line, "");
@@ -267,6 +277,7 @@ async function ensureExtensionAfterConfigEntry(configPath: string, extensionPath
     if (extensionsIndex === -1) {
       lines.push("extensions:", line, "");
     } else {
+      if (/^\s*extensions\s*:\s*(?:\[\s*\]|null|~)?\s*$/i.test(lines[extensionsIndex])) lines[extensionsIndex] = "extensions:";
       lines.splice(extensionsIndex + 1, 0, line);
     }
   }
@@ -1075,6 +1086,7 @@ function defaultProfile(): Profile {
     comboDefault: "off",
     cavemanDefault: "off",
     rtkDefault: false,
+    ponytailDefault: "off",
   };
 }
 
@@ -1085,24 +1097,45 @@ function tty(): boolean {
 async function resolveProfile(): Promise<Profile> {
   const profile = defaultProfile();
 
-  // Interactive prompt: only for a real user at a terminal, only when no
-  // default flags were given, and never for --apply-update runs.
+  // Single interactive prompt: the Combo preset implies all three modes.
+  // Only for a real user at a terminal, only when no default flags were
+  // given, and never for --apply-update runs.
   if (tty() && !profileFlagsGiven && !applyUpdate && (install || reinstall)) {
     const comboAnswer = (await ask("  Default Combo preset on session start? [off/medium/balanced/max] (off): ")).trim().toLowerCase();
     if (comboAnswer && comboAnswer in COMBO_DEFAULTS) profile.comboDefault = comboAnswer;
-    const cavemanAnswer = (await ask("  Default Caveman mode on session start? [off/lite/full/ultra/wenyan] (off): ")).trim().toLowerCase();
-    if (cavemanAnswer && cavemanAnswer in CAVEMAN_DEFAULTS) profile.cavemanDefault = cavemanAnswer;
-    const rtkAnswer = (await ask("  Default RTK state on session start? [on/off] (off): ")).trim().toLowerCase();
-    if (rtkAnswer === "on" || rtkAnswer === "off") profile.rtkDefault = rtkAnswer === "on";
   }
 
-  // Explicit flags always win over the prompt.
+  // Explicit flags always win. Caveman/RTK flags override the Combo preset.
   if (comboDefaultFlag !== undefined) profile.comboDefault = comboDefaultFlag;
+  const preset = COMBO_PRESET_MODES[profile.comboDefault] ?? COMBO_PRESET_MODES.off;
+  profile.cavemanDefault = preset.caveman;
+  profile.rtkDefault = preset.rtk;
+  profile.ponytailDefault = preset.ponytail;
   if (cavemanDefaultFlag !== undefined) profile.cavemanDefault = cavemanDefaultFlag;
   if (rtkDefaultFlag !== undefined) profile.rtkDefault = rtkDefaultFlag === "on";
 
-  console.log(`  Profile: combo default=${profile.comboDefault} · caveman default=${profile.cavemanDefault} · rtk default=${profile.rtkDefault ? "on" : "off"}`);
+  console.log(`  Profile: combo default=${profile.comboDefault} (caveman=${profile.cavemanDefault} · rtk=${profile.rtkDefault ? "on" : "off"} · ponytail=${profile.ponytailDefault})`);
   return profile;
+}
+
+// ponytail: post-install guard. List entries under `extensions: null` break
+// OMP launch, so fail loudly here instead of at the next OMP start.
+async function validateConfigExtensions(agentDir: string, options: WriteOptions): Promise<void> {
+  if (options.dryRun) return;
+  const raw = await readTextIfExists(path.join(agentDir, "config.yml"));
+  if (!raw) return;
+  const lines = raw.split("\n");
+  const keyIdx = lines.findIndex((l) => /^\s*extensions\s*:/i.test(l));
+  if (keyIdx === -1) return;
+  const scalarNull = /^\s*extensions\s*:\s*(null|~|\[\s*\])\s*$/i.test(lines[keyIdx]);
+  const hasEntries = lines.slice(keyIdx + 1).some((l) => /^\s*-\s+\S/.test(l));
+  if (scalarNull && hasEntries) {
+    console.log("  [fail] config.yml lists extensions under `extensions: null` — OMP will fail to launch.");
+    console.log("  [hint] Replace the `extensions: null` line with `extensions:`, then reinstall.");
+    process.exitCode = 1;
+  } else {
+    console.log("  [ok] config.yml extensions key valid");
+  }
 }
 
 // Persist the profile as omp plugin settings so `omp plugin config get`
@@ -1121,6 +1154,7 @@ async function writePluginSettings(profile: Profile, options: WriteOptions): Pro
   settings.comboDefault = profile.comboDefault;
   settings.cavemanDefault = profile.cavemanDefault;
   settings.rtkDefault = profile.rtkDefault;
+  settings.ponytailDefault = profile.ponytailDefault;
   config.settings[PACKAGE_NAME] = settings;
 
   if (options.dryRun) {
@@ -1245,6 +1279,7 @@ async function main(): Promise<void> {
     await stepUpdater(userExtDir, options);
     await stepAmanaiReward(userExtDir, options, selfPlugin);
     if (selfPlugin) await writePluginSettings(profile, options);
+    await validateConfigExtensions(userDir, options);
   }
 
   if (scope === "2" || scope === "3") {

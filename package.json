@@ -1,7 +1,7 @@
 {
   "name": "@krtclcdy/tersio",
-  "version": "1.0.2",
-  "description": "Amanai reward detector and three toggleable OMP extensions for terse replies, compact shell output, and minimal code decisions — with a manual updater and dry-run support.",
+  "version": "1.0.3",
+  "description": "Amanai reward detector and three toggleable OMP extensions for terse replies, compact shell output, and minimal code decisions \u2014 with a manual updater and dry-run support.",
   "keywords": [
     "omp",
     "tersio",
@@ -94,6 +94,18 @@
         "type": "boolean",
         "description": "RTK mode applied on session start when no session state exists",
         "default": false
+      },
+      "ponytailDefault": {
+        "type": "enum",
+        "description": "Ponytail mode applied on session start when no session state exists (follows combo preset unless overridden)",
+        "values": [
+          "off",
+          "lite",
+          "full",
+          "ultra",
+          "review"
+        ],
+        "default": "off"
       }
     }
   },

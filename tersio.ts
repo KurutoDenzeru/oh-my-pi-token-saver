@@ -507,7 +507,8 @@ async function stepSelfPlugin(pluginsDir: string, options: InstallOptions): Prom
     return false;
   }
 
-  if (!options.reinstall && pkg.dependencies[PACKAGE_NAME]) {
+  // pkg.dependencies[PACKAGE_NAME] was assigned above, so only reinstall skips this fast path.
+  if (!options.reinstall) {
     const installedRaw = await readTextIfExists(path.join(pluginsDir, 'node_modules', PACKAGE_NAME, 'package.json'));
     if (installedRaw) {
       try {

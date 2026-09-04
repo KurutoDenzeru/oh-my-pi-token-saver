@@ -28,6 +28,7 @@ const IS_WINDOWS = process.platform === 'win32';
 const HOME = os.homedir();
 
 const PONYTAIL_REMOTE = 'https://raw.githubusercontent.com/DietrichGebert/ponytail/main/package.json';
+const PONYTAIL_NPM_SPEC = '@dietrichgebert/ponytail@latest';
 const PONYTAIL_LOCAL = path.join(HOME, '.omp', 'plugins', 'node_modules', '@dietrichgebert', 'ponytail', 'package.json');
 const RTK_BINARY = path.join(HOME, '.bun', 'bin', IS_WINDOWS ? 'rtk.exe' : 'rtk');
 const CAVEMAN_LOCAL = path.join(HOME, '.omp', 'agent', 'extensions', 'caveman-session', 'rule.md');
@@ -154,7 +155,7 @@ async function checkAddons(ctx: AddonUpdaterCtx): Promise<string> {
 async function updatePonytail(pi: AddonUpdaterPi, ctx: AddonUpdaterCtx, dryRun = false): Promise<string> {
   const pluginsDir = path.join(HOME, '.omp', 'plugins');
   if (dryRun) {
-    const m = `Ponytail dry-run: would run \`npm install @dietrichgebert/ponytail@latest --save --no-audit --no-fund\` in ${pluginsDir}.`;
+    const m = `Ponytail dry-run: would run \`npm install ${PONYTAIL_NPM_SPEC} --save --no-audit --no-fund\` in ${pluginsDir}.`;
     return report(ctx, m, 'info');
   }
   notify(ctx, 'Ponytail: ensuring plugin directory exists…', 'info');
@@ -171,7 +172,7 @@ async function updatePonytail(pi: AddonUpdaterPi, ctx: AddonUpdaterCtx, dryRun =
   notify(ctx, 'Ponytail: running npm install…', 'info');
   let out = '';
   try {
-    const r = await pi.exec('npm', ['install', '@dietrichgebert/ponytail@latest', '--save', '--no-audit', '--no-fund'], { cwd: pluginsDir });
+    const r = await pi.exec('npm', ['install', PONYTAIL_NPM_SPEC, '--save', '--no-audit', '--no-fund'], { cwd: pluginsDir });
     out = [r.stdout, r.stderr].filter(Boolean).join('\n').trim();
     if (r.code !== 0) throw new Error(r.stderr || `npm exited ${r.code}`);
   } catch (e) {

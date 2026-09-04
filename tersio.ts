@@ -400,6 +400,9 @@ async function readPluginsPackage(pkgPath: string): Promise<PluginsPackage & { d
   return { ...pkg, name: pkg.name || 'omp-plugins', private: true, dependencies: pkg.dependencies || {} };
 }
 
+const PONYTAIL_GITHUB_SPEC = 'github:DietrichGebert/ponytail';
+const PONYTAIL_NPM_SPEC = '@dietrichgebert/ponytail@latest';
+
 // --- Steps ---
 
 async function stepPonytail(pluginsDir: string, userDir: string, options: InstallOptions): Promise<void> {
@@ -407,7 +410,7 @@ async function stepPonytail(pluginsDir: string, userDir: string, options: Instal
   await fs.mkdir(pluginsDir, { recursive: true });
   const pkgPath = path.join(pluginsDir, 'package.json');
   const pkg = await readPluginsPackage(pkgPath);
-  pkg.dependencies['@dietrichgebert/ponytail'] = 'github:DietrichGebert/ponytail';
+  pkg.dependencies['@dietrichgebert/ponytail'] = PONYTAIL_GITHUB_SPEC;
 
   if (options.dryRun) {
     console.log(`  [dry-run] would write ${pkgPath}`);
@@ -425,15 +428,15 @@ async function stepPonytail(pluginsDir: string, userDir: string, options: Instal
     debug('Ponytail pi-extension already installed; skipping network refresh');
   } else if (options.dryRun) {
     // Dry runs preview the wiring below without touching the network.
-    console.log('  [dry-run] would run: omp plugin install github:DietrichGebert/ponytail');
+    console.log(`  [dry-run] would run: omp plugin install ${PONYTAIL_GITHUB_SPEC}`);
     if (options.reinstall) {
-      console.log('  [dry-run] would run: npm install @dietrichgebert/ponytail@latest --save --no-audit --no-fund');
+      console.log(`  [dry-run] would run: npm install ${PONYTAIL_NPM_SPEC} --save --no-audit --no-fund`);
     }
     ponytailExtExists = 'dry-run';
   } else {
     // Try omp plugin install first
     try {
-      await execP(OMP_BIN, ['plugin', 'install', 'github:DietrichGebert/ponytail'], { cwd: pluginsDir });
+      await execP(OMP_BIN, ['plugin', 'install', PONYTAIL_GITHUB_SPEC], { cwd: pluginsDir });
       console.log('  [ok] omp plugin install ran');
     } catch (e) {
       console.log(`  [warn] omp plugin install failed: ${(e as Error).message}`);
@@ -441,11 +444,11 @@ async function stepPonytail(pluginsDir: string, userDir: string, options: Instal
 
     if (options.reinstall) {
       try {
-        await execP('npm', ['install', '@dietrichgebert/ponytail@latest', '--save', '--no-audit', '--no-fund'], { cwd: pluginsDir, timeout: 120000 });
+        await execP('npm', ['install', PONYTAIL_NPM_SPEC, '--save', '--no-audit', '--no-fund'], { cwd: pluginsDir, timeout: 120000 });
         console.log('  [ok] Ponytail refreshed');
       } catch (e) {
         console.log(`  [fail] Could not refresh ponytail: ${(e as Error).message}`);
-        console.log('  [hint] Manual: cd ~/.omp/plugins && npm install @dietrichgebert/ponytail@latest --save --no-audit --no-fund');
+        console.log(`  [hint] Manual: cd ~/.omp/plugins && npm install ${PONYTAIL_NPM_SPEC} --save --no-audit --no-fund`);
       }
     }
 

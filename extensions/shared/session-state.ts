@@ -31,7 +31,7 @@ interface Bridge {
   listener: ((state: Readonly<ComboState>) => void) | null;
 }
 
-function normalizeMode(name: ModeName, value: unknown): string | null {
+export function normalizeMode(name: ModeName, value: unknown): string | null {
   if (name === 'rtk' && typeof value === 'boolean') return value ? 'on' : 'off';
   const mode = String(value ?? '').trim().toLowerCase();
   return MODE_VALUES[name]?.has(mode) ? mode : null;

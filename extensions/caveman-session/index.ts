@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { asPromptArray, getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, lastCustomValue, normalizeInputCommand, paintStatusBar, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
+import { asPromptArray, getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, lastCustomValue, normalizeInputCommand, normalizeMode, paintStatusBar, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
 import { readCavemanDefault } from '../shared/plugin-settings.ts';
 import type { ExtensionApi, ExtensionCtx, InputEvent, SessionEntry, SystemPromptEvent } from '../shared/types.ts';
 
@@ -25,8 +25,6 @@ function readFullRule(): string {
 }
 
 const DEFAULT_MODE = 'off';
-const MODES = new Set(['off', 'lite', 'full', 'ultra', 'wenyan']);
-
 const INSTRUCTIONS: Record<string, string | (() => string)> = {
   lite: `Caveman lite active for this session.
 Respond concise. Drop pleasantries, filler, and hedging. Keep complete technical substance. Code, commands, paths, errors, commits, and PR text stay normal/exact.`,
@@ -37,13 +35,8 @@ Maximum terse prose. Fragments preferred. No pleasantries, no tour, no recap unl
 Use ultra-terse classical-Chinese-style prose only where it preserves clarity for the user. Keep technical terms, code, commands, commits, PR text, paths, and errors exact. If clarity would suffer, use caveman full instead.`,
 };
 
-function normalizeMode(value: unknown): string | null {
-  const mode = String(value || '').trim().toLowerCase();
-  return MODES.has(mode) ? mode : null;
-}
-
 function resolveMode(entries: SessionEntry[] | null | undefined, fallback: string = DEFAULT_MODE): string {
-  return lastCustomValue(entries, 'caveman-mode', (data) => normalizeMode(data?.mode)) ?? fallback;
+  return lastCustomValue(entries, 'caveman-mode', (data) => normalizeMode('caveman', data?.mode)) ?? fallback;
 }
 
 function isOffCommand(text: unknown): boolean {
@@ -69,7 +62,7 @@ export default function cavemanSessionExtension(pi: ExtensionApi): void {
   }
 
   function setMode(mode: string, ctx?: ExtensionCtx): boolean {
-    const normalized = normalizeMode(mode);
+    const normalized = normalizeMode('caveman', mode);
     if (!normalized) return false;
     currentMode = normalized;
     pi.appendEntry?.('caveman-mode', { mode: normalized });

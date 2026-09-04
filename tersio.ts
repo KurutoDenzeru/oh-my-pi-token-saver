@@ -1086,9 +1086,11 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
   return true;
 }
 
+const SCOPE_MAP: Record<string, string> = { user: '1', project: '2', both: '3' };
+
 async function runLatestUpdate(): Promise<void> {
   const updateScope = scopeFlag || 'user';
-  if (!['user', 'project', 'both'].includes(updateScope)) {
+  if (!Object.hasOwn(SCOPE_MAP, updateScope)) {
     console.error(`[fail] Invalid --scope: ${updateScope}. Use: user, project, both`);
     process.exitCode = 1;
     return;
@@ -1148,8 +1150,6 @@ function defaultProfile(): Profile {
 function tty(): boolean {
   return Boolean(process.stdin.isTTY && process.stdout.isTTY);
 }
-
-const SCOPE_MAP: Record<string, string> = { user: '1', project: '2', both: '3' };
 
 // Determine install scope: reinstall > flag > non-interactive default > prompt.
 async function resolveScope(): Promise<string> {

@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import amanaiRewardExtension from "../extensions/amanai-reward/pi.js";
-import type { ExtensionApi } from "../extensions/shared/types.js";
+import amanaiRewardExtension from "../../extensions/amanai-reward/pi.js";
+import type { ExtensionApi } from "../../extensions/shared/types.js";
 
 const NOTIFICATION = "Amanai reward key detected in the final response. Redeem it manually in the Amanai billing dashboard.";
 const KEY = "AMANAI-GACHA-Alpha9-Reward42";

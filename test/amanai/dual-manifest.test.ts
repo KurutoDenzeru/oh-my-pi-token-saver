@@ -3,8 +3,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-const root = new URL("../", import.meta.url);
-const manifest = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+const root = new URL("../../", import.meta.url);
+const manifest = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"));
 const extensionPaths = [...manifest.omp.extensions, ...manifest.pi.extensions];
 
 test("declares discoverable OMP and Pi Amanai reward extensions", () => {

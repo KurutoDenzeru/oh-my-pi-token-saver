@@ -22,12 +22,13 @@ import type { ComboState, ExtensionApi, ExtensionCtx, SystemPromptEvent } from '
 
 const require = createRequire(import.meta.url);
 
+const PONYTAIL_FALLBACK_INTENSITY: Record<string, string> = {
+  lite: 'Prefer the simplest correct solution.',
+  review: 'Review only for avoidable complexity; recommend the smallest correct replacement.',
+};
+
 function ponytailFallback(mode: string): string {
-  const intensity = mode === 'lite'
-    ? 'Prefer the simplest correct solution.'
-    : mode === 'review'
-      ? 'Review only for avoidable complexity; recommend the smallest correct replacement.'
-      : 'Use the minimum correct solution. Delete or reuse before adding.';
+  const intensity = PONYTAIL_FALLBACK_INTENSITY[mode] ?? 'Use the minimum correct solution. Delete or reuse before adding.';
   return `🦥 PONYTAIL MODE ACTIVE — level: ${mode}\n${intensity} Understand the path first and fix root causes, not symptoms. Prefer the standard library and YAGNI. Avoid speculative abstractions and dependencies. Preserve correctness. Verify changed behavior.`;
 }
 

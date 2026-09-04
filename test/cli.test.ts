@@ -164,3 +164,21 @@ test("uninstall dry-run without the flag keeps ponytail", () => {
   assert.equal(result.status, 0, result.stderr);
   assert.doesNotMatch(result.stdout, /dietrichgebert/);
 });
+
+test("uninstall dry-run never prompts for confirmation", () => {
+  const missingHome = path.join(root, "test", "definitely-missing-home");
+  const result = spawnSync(
+    process.execPath,
+    [installer, "uninstall", "--dry-run"],
+    {
+      cwd: root,
+      encoding: "utf8",
+      timeout: 10000,
+      env: { ...process.env, HOME: missingHome, USERPROFILE: missingHome },
+    }
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.doesNotMatch(result.stdout, /Proceed\?/);
+  assert.match(result.stdout, /\[dry-run\] would remove .*extensions[\\/]shared(?:\r?\n|$)/);
+});

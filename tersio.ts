@@ -918,10 +918,10 @@ function dropKey(section: unknown, key: string): boolean {
 }
 
 async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
-  const confirmed = options.yes ?? yes;
+  const shouldDryRun = options.dryRun ?? dryRun;
+  const confirmed = (options.yes ?? yes) || shouldDryRun;
   const shouldRemovePonytail = options.removePonytail ?? removePonytail;
   const shouldRemoveRtk = options.removeRtk ?? removeRtk;
-  const shouldDryRun = options.dryRun ?? dryRun;
 
   console.log('\n=== Tersio Uninstall ===\n');
 

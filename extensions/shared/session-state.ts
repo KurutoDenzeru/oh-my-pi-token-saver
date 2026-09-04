@@ -31,10 +31,10 @@ function normalizeMode(name: ModeName, value: unknown): string | null {
   return MODE_VALUES[name]?.has(mode) ? mode : null;
 }
 
-export function deriveLevel(modes: Modes): ComboLevel {
+export function deriveLevel(modes: Modes | null | undefined): ComboLevel {
   for (const level of Object.keys(COMBO_LEVELS) as ComboLevel[]) {
     const preset = COMBO_LEVELS[level];
-    if (preset.caveman === modes.caveman && preset.rtk === modes.rtk && preset.ponytail === modes.ponytail) return level;
+    if (preset.caveman === modes?.caveman && preset.rtk === modes?.rtk && preset.ponytail === modes?.ponytail) return level;
   }
   return 'custom';
 }

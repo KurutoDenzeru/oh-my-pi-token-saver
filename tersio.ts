@@ -848,10 +848,8 @@ async function runDoctor(): Promise<void> {
   const configOk = configText !== null;
   console.log(`  OMP config.yml: ${configOk ? 'ok' : 'MISSING'} ${configPath}`);
 
-  const ponytailInstalled = ponytailPkgText !== null;
-  const ponytailExtInstalled = ponytailExtText !== null;
-  console.log(`  Ponytail package: ${ponytailInstalled ? 'installed' : 'MISSING'}`);
-  console.log(`  Ponytail extension: ${ponytailExtInstalled ? 'installed' : 'MISSING'}`);
+  presence('Ponytail package', ponytailPkgText);
+  presence('Ponytail extension', ponytailExtText);
 
   if (configText) {
     const hasPonytailPath = configText.includes('ponytail') && configText.includes('pi-extension');

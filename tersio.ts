@@ -323,15 +323,19 @@ interface PonytailConfig {
   [key: string]: unknown;
 }
 
-function parsePonytailConfig(existing: string | null): PonytailConfig {
-  if (!existing) return {};
+function parseJsonObject<T extends Record<string, unknown>>(text: string | null): T | null {
+  if (!text) return null;
   try {
-    const cfg: unknown = JSON.parse(existing.replace(/^\uFEFF/, ''));
-    if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg)) return {};
-    return cfg as PonytailConfig;
+    const parsed: unknown = JSON.parse(text.replace(/^\uFEFF/, ''));
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    return parsed as T;
   } catch {
-    return {};
+    return null;
   }
+}
+
+function parsePonytailConfig(existing: string | null): PonytailConfig {
+  return parseJsonObject<PonytailConfig>(existing) ?? {};
 }
 
 async function patchPonytailConfig(
@@ -370,14 +374,7 @@ async function ensurePonytailConfigValue<K extends keyof PonytailConfig>(
 // Read plugins/package.json tolerantly; corrupt or missing files start fresh
 // with installer-managed defaults.
 async function readPluginsPackage(pkgPath: string): Promise<PluginsPackage & { dependencies: Record<string, string> }> {
-  let pkg: PluginsPackage = {};
-  const existing = await readTextIfExists(pkgPath);
-  if (existing) {
-    try {
-      const parsed: unknown = JSON.parse(existing);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) pkg = parsed as PluginsPackage;
-    } catch { /* fall through with defaults */ }
-  }
+  const pkg = parseJsonObject<PluginsPackage>(await readTextIfExists(pkgPath)) ?? {};
   return { ...pkg, name: pkg.name || 'omp-plugins', private: true, dependencies: pkg.dependencies || {} };
 }
 
@@ -856,10 +853,7 @@ async function runDoctor(): Promise<void> {
   }
 
   // Self plugin registration (Settings → Plugins listing)
-  let selfDep = false;
-  if (pluginsPkgRaw) {
-    try { selfDep = PACKAGE_NAME in ((JSON.parse(pluginsPkgRaw) as { dependencies?: Record<string, string> }).dependencies || {}); } catch { /* ignore */ }
-  }
+  const selfDep = PACKAGE_NAME in (parseJsonObject<{ dependencies?: Record<string, string> }>(pluginsPkgRaw)?.dependencies || {});
   console.log(`  Self plugin in plugins/package.json: ${selfDep ? 'registered' : 'MISSING'}`);
   console.log(`  Self plugin package: ${selfPkgText !== null ? 'installed' : 'MISSING'}`);
 

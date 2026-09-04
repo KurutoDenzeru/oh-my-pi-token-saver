@@ -39,7 +39,7 @@ Savings from `caveman`, `rtk`, `ponytail`, and `combo` presets: measured overhea
 | Prose reply, caveman ultra | ~400 tok | ~200 tok (−50%) | ~200 | ~1 reply |
 | Shell-heavy turn, rtk on | see measured table below | | | first noisy command |
 
-### 3a. RTK measured (rtk 0.47.0, this repo, 2026-09-04)
+### 3a. RTK measured (rtk 0.47.0, this repo, 2026-09-04; re-run post-refactor, same results)
 
 Raw command vs `rtk` equivalent, bytes counted, tokens ≈ bytes ÷ 4.
 

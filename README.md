@@ -70,7 +70,7 @@ User-level installs also register the package in `~/.omp/plugins` (visible in OM
 | `tersio uninstall` | Remove extensions and registration (`--remove-rtk`, `--remove-ponytail` for more) |
 | `tersio version` | Print version |
 
-Flags: `--dry-run`, `--yes`/`-y`, `--verbose`, `--scope`, `--combo-default`/`--caveman-default`/`--rtk-default`. Legacy `--doctor` / `--uninstall` forms still work.
+Flags: `--dry-run`, `--yes`/`-y`, `--verbose`, `--scope`, `--combo-default`/`--caveman-default`/`--rtk-default`/`--ponytail-default`. Legacy `--doctor` / `--uninstall` forms still work.
 
 ## Commands reference
 

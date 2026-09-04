@@ -670,6 +670,7 @@ async function stepRtk(binDir: string, options: InstallOptions): Promise<void> {
       }
 
       await fs.mkdir(path.dirname(binDest), { recursive: true });
+      await fs.copyFile(binDest, `${binDest}.bak`).catch(() => {});
       await fs.copyFile(found, binDest);
       console.log(`  [write] ${binDest}`);
 

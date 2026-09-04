@@ -736,8 +736,21 @@ async function stepCaveman(extDir: string, options: WriteOptions): Promise<void>
   if (!options.dryRun) await fs.mkdir(cavemanDir, { recursive: true });
 
   // Dry runs stay offline; the bundled rule is enough to preview its destination.
-  const rule = options.dryRun ? await readTextIfExists(path.join(path.dirname(CAVEMAN_INDEX), 'rule.md')) || '' : await httpsGet(CAVEMAN_REMOTE_RULE);
-  await writeIfChanged(path.join(cavemanDir, 'rule.md'), rule, options);
+  let rule: string | null = null;
+  try {
+    rule = options.dryRun ? await readTextIfExists(path.join(path.dirname(CAVEMAN_INDEX), 'rule.md')) || '' : await httpsGet(CAVEMAN_REMOTE_RULE);
+  } catch (e) {
+    console.log(`  [warn] Could not fetch caveman rule: ${(e as Error).message}`);
+  }
+  const ruleDest = path.join(cavemanDir, 'rule.md');
+  if (rule === null && (await readTextIfExists(ruleDest)) !== null) {
+    console.log('  [info] Keeping existing rule.md');
+  } else if (rule === null) {
+    console.log('  [skip] Caveman rule.md unavailable');
+    console.log(`  [hint] Manual: ${CAVEMAN_REMOTE_RULE}`);
+  } else {
+    await writeIfChanged(ruleDest, rule, options);
+  }
 
   await copySources(extDir, [[CAVEMAN_INDEX, path.join('caveman-session', 'index.js')]], 'caveman-session/index.js', options);
 }
@@ -1362,4 +1375,4 @@ async function main(): Promise<void> {
   closeRL();
 }
 
-main().catch((e) => { closeRL(); console.error(e); });
+main().catch((e) => { closeRL(); console.error(e); process.exitCode = 1; });

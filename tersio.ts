@@ -363,22 +363,24 @@ async function patchPonytailConfig(
   console.log(`  [write] ${writeNote} in ${config.path}`);
 }
 
-async function ensurePonytailDefaultOff(options: WriteOptions = {}): Promise<void> {
+async function ensurePonytailConfigValue<K extends keyof PonytailConfig>(
+  key: K, value: PonytailConfig[K], options: WriteOptions = {},
+): Promise<void> {
   await patchPonytailConfig((cfg) => {
-    if (cfg.defaultMode === 'off') return false;
-    cfg.defaultMode = 'off';
+    if (cfg[key] === value) return false;
+    cfg[key] = value;
     return true;
-  }, 'would set Ponytail defaultMode=off', 'Set Ponytail defaultMode=off', options);
+  }, `would set Ponytail ${key}=${value}`, `Set Ponytail ${key}=${value}`, options);
+}
+
+async function ensurePonytailDefaultOff(options: WriteOptions = {}): Promise<void> {
+  await ensurePonytailConfigValue('defaultMode', 'off', options);
 }
 
 // Sets ~/.config/ponytail/config.json#hideStatus=true so the upstream ponytail
 // status bar doesn't render — the combo extension owns the bar instead.
 async function ensurePonytailHideStatus(options: WriteOptions = {}): Promise<void> {
-  await patchPonytailConfig((cfg) => {
-    if (cfg.hideStatus === true) return false;
-    cfg.hideStatus = true;
-    return true;
-  }, 'would set Ponytail hideStatus=true', 'Set Ponytail hideStatus=true', options);
+  await ensurePonytailConfigValue('hideStatus', true, options);
 }
 
 

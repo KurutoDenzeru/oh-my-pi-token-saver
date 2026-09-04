@@ -39,8 +39,12 @@ export function deriveLevel(modes: Modes | null | undefined): ComboLevel {
   return 'custom';
 }
 
+function isPresetLevel(value: string): value is ComboLevel {
+  return Object.prototype.hasOwnProperty.call(COMBO_LEVELS, value);
+}
+
 function isKnownLevel(value: string): boolean {
-  return value === 'custom' || Object.prototype.hasOwnProperty.call(COMBO_LEVELS, value);
+  return value === 'custom' || isPresetLevel(value);
 }
 
 function levelForIndividualModes(modes: Modes): ComboLevel {
@@ -77,7 +81,7 @@ export function isOmpSubagentPrompt(systemPrompt: string | string[]): boolean {
 
 export function normalizeComboLevel(value: unknown): ComboLevel | null {
   const level = String(value || '').trim().toLowerCase();
-  return Object.prototype.hasOwnProperty.call(COMBO_LEVELS, level) ? (level as ComboLevel) : null;
+  return isPresetLevel(level) ? level : null;
 }
 
 export function sessionEntries(ctx: ExtensionCtx | undefined): SessionEntry[] {
@@ -90,7 +94,7 @@ export function getSharedComboState(): Readonly<ComboState> {
 
 export function isComboPresetActive(): boolean {
   const level = getSharedComboState().level;
-  return level !== 'off' && Object.prototype.hasOwnProperty.call(COMBO_LEVELS, level);
+  return level !== 'off' && isPresetLevel(level);
 }
 
 export function setSharedComboLevel(value: unknown): Readonly<ComboState> {

@@ -235,6 +235,7 @@ async function writeIfChanged(dest: string, content: string, options: WriteOptio
 
 // omp ships 'extensions: null'; appending list items under a null scalar breaks
 // YAML parsing. Normalize null/~/[]/empty to a mapping key first.
+const EXTENSIONS_KEY_RE = /^\s*extensions\s*:/i;
 const EXTENSIONS_NULL_RE = /^\s*extensions\s*:\s*(?:\[\s*\]|null|~)?\s*$/i;
 
 function normalizeExtensionsKey(lines: string[]): boolean {
@@ -256,7 +257,7 @@ async function ensureExtensionInConfig(configPath: string, extensionPath: string
     return false;
   }
 
-  const extLineIdx = lines.findIndex((l) => /^\s*extensions\s*:/i.test(l));
+  const extLineIdx = lines.findIndex((l) => EXTENSIONS_KEY_RE.test(l));
 
   if (options.dryRun) {
     console.log(`  [dry-run] would add ${label} to config.yml: ${normalizedPath}`);
@@ -264,7 +265,7 @@ async function ensureExtensionInConfig(configPath: string, extensionPath: string
   }
 
   if (normalizeExtensionsKey(lines)) {
-    lines.splice(lines.findIndex((l) => /^\s*extensions\s*:/i.test(l)) + 1, 0, line, '');
+    lines.splice(extLineIdx + 1, 0, line, '');
   } else if (extLineIdx === -1) {
     lines.push('extensions:');
     lines.push(line);
@@ -300,7 +301,7 @@ async function ensureExtensionAfterConfigEntry(configPath: string, extensionPath
   if (refreshedAfterIndex !== -1) {
     lines.splice(refreshedAfterIndex + 1, 0, line);
   } else {
-    const extensionsIndex = lines.findIndex((entry) => /^\s*extensions\s*:/i.test(entry));
+    const extensionsIndex = lines.findIndex((entry) => EXTENSIONS_KEY_RE.test(entry));
     if (extensionsIndex === -1) {
       lines.push('extensions:', line, '');
     } else {
@@ -1225,7 +1226,7 @@ async function validateConfigExtensions(agentDir: string, options: WriteOptions)
   const raw = await readTextIfExists(path.join(agentDir, 'config.yml'));
   if (!raw) return;
   const lines = raw.split('\n');
-  const keyIdx = lines.findIndex((l) => /^\s*extensions\s*:/i.test(l));
+  const keyIdx = lines.findIndex((l) => EXTENSIONS_KEY_RE.test(l));
   if (keyIdx === -1) return;
   const scalarNull = /^\s*extensions\s*:\s*(null|~|\[\s*\])\s*$/i.test(lines[keyIdx]);
   const hasEntries = lines.slice(keyIdx + 1).some((l) => /^\s*-\s+\S/.test(l));

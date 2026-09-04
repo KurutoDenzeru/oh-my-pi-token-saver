@@ -23,7 +23,6 @@ import {
   parseChecksum,
   readTextIfExists,
   rtkPlatformSpec,
-  withResolvers,
 } from './extensions/lib/utils.ts';
 
 const IS_WINDOWS = process.platform === 'win32';
@@ -161,9 +160,7 @@ function debug(...a: unknown[]): void {
 const RL = readline.createInterface({ input: process.stdin, output: process.stdout });
 let rlOpen = true;
 function ask(q: string): Promise<string> {
-  const { promise, resolve } = withResolvers<string>();
-  RL.question(q, resolve);
-  return promise;
+  return new Promise<string>((resolve) => RL.question(q, resolve));
 }
 function closeRL(): void { if (rlOpen) { RL.close(); rlOpen = false; } }
 

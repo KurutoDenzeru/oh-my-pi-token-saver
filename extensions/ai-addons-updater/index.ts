@@ -101,10 +101,13 @@ async function checkPonytail(): Promise<AddonStatus> {
   }
 }
 
+async function fetchRelease(): Promise<GitHubRelease> {
+  return JSON.parse(await httpsGet(RTK_RELEASE_API)) as GitHubRelease;
+}
+
 async function checkRtk(): Promise<AddonStatus> {
   try {
-    const releaseRaw = await httpsGet(RTK_RELEASE_API);
-    const release = JSON.parse(releaseRaw) as GitHubRelease;
+    const release = await fetchRelease();
     const latestTag = release.tag_name || null;
     let localVer: string | null = null;
     try {
@@ -183,8 +186,7 @@ async function updatePonytail(pi: AddonUpdaterPi, ctx: AddonUpdaterCtx, dryRun =
 async function updateRtk(ctx: AddonUpdaterCtx, dryRun = false): Promise<string> {
   let release: GitHubRelease;
   try {
-    const raw = await httpsGet(RTK_RELEASE_API);
-    release = JSON.parse(raw) as GitHubRelease;
+    release = await fetchRelease();
   } catch (e) {
     const m = `RTK: cannot fetch release info: ${(e as Error).message}`;
     return report(ctx, m, 'warning');

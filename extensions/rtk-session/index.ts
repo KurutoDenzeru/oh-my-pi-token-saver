@@ -95,7 +95,7 @@ export default function rtkSessionExtension(pi: ExtensionApi): void {
       }
       onUpdate?.({ content: [{ type: 'text', text: `rtk ${params.args.join(' ')}` }], details: { phase: 'start' } });
       const result = await pi.exec!(RTK_BINARY, params.args, { signal, cwd: ctx?.cwd || pi.cwd });
-      const text = [result.stdout, result.stderr].filter(Boolean).join(result.stdout && result.stderr ? '\n' : '');
+      const text = [result.stdout, result.stderr].filter(Boolean).join('\n');
       return {
         isError: result.code !== 0,
         content: [{ type: 'text', text: text || `rtk exited ${result.code}` }],

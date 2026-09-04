@@ -956,6 +956,20 @@ function dropKey(section: unknown, key: string): boolean {
   return true;
 }
 
+async function removeUninstallTarget(target: string, shouldDryRun: boolean, recursive = true): Promise<void> {
+  try {
+    if (shouldDryRun) {
+      console.log(`  [dry-run] would remove ${target}`);
+      return;
+    }
+    if (recursive) await fs.rm(target, { recursive: true, force: true });
+    else await fs.unlink(target);
+    console.log(`  [rm] ${target}`);
+  } catch {
+    debug(`Could not remove ${target}`);
+  }
+}
+
 async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
   const shouldDryRun = options.dryRun ?? dryRun;
   const confirmed = (options.yes ?? yes) || shouldDryRun;
@@ -1006,17 +1020,7 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
   }
 
   // Remove extension directories
-  for (const t of targets) {
-    try {
-      if (shouldDryRun) console.log(`  [dry-run] would remove ${t}`);
-      else {
-        await fs.rm(t, { recursive: true, force: true });
-        console.log(`  [rm] ${t}`);
-      }
-    } catch {
-      debug(`Could not remove ${t}`);
-    }
-  }
+  for (const t of targets) await removeUninstallTarget(t, shouldDryRun);
 
   // Remove Combo and mode-reinforcement registrations; Ponytail only when requested.
   const configRaw = await readTextIfExists(configPath);
@@ -1072,29 +1076,11 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
     `Removed ${PACKAGE_NAME} from plugins/package.json`, shouldDryRun);
   const selfPluginDir = path.join(pluginsDir, 'node_modules', PACKAGE_NAME);
   if ((await readTextIfExists(path.join(selfPluginDir, 'package.json'))) !== null) {
-    try {
-      if (shouldDryRun) console.log(`  [dry-run] would remove ${selfPluginDir}`);
-      else {
-        await fs.rm(selfPluginDir, { recursive: true, force: true });
-        console.log(`  [rm] ${selfPluginDir}`);
-      }
-    } catch {
-      debug(`Could not remove ${selfPluginDir}`);
-    }
+    await removeUninstallTarget(selfPluginDir, shouldDryRun);
   }
 
   // Remove RTK binary if requested
-  if (shouldRemoveRtk) {
-    try {
-      if (shouldDryRun) console.log(`  [dry-run] would remove ${rtkBin}`);
-      else {
-        await fs.unlink(rtkBin);
-        console.log(`  [rm] ${rtkBin}`);
-      }
-    } catch {
-      debug(`Could not remove ${rtkBin}`);
-    }
-  }
+  if (shouldRemoveRtk) await removeUninstallTarget(rtkBin, shouldDryRun, false);
 
   console.log('\nDone. Restart OMP for changes to take effect.');
   return true;

@@ -7,11 +7,7 @@ import fs from 'node:fs/promises';
 import https from 'node:https';
 import path from 'node:path';
 
-export interface HttpGetOptions {
-  maxRedirects?: number;
-}
-
-export interface HttpDownloadOptions {
+export interface HttpOptions {
   maxRedirects?: number;
 }
 
@@ -45,7 +41,7 @@ export function rtkPlatformSpec(platform: string = process.platform, arch: strin
   return RTK_PLATFORM_SPECS[`${platform}/${arch}`] || null;
 }
 
-export function httpsGet(url: string, opts: HttpGetOptions = {}): Promise<string> {
+export function httpsGet(url: string, opts: HttpOptions = {}): Promise<string> {
   const { promise, resolve, reject } = withResolvers<string>();
   const maxRedirects = opts.maxRedirects ?? 5;
   const req = https.get(url, { headers: { 'User-Agent': 'tersio', Accept: 'application/json,*/*' } }, (res) => {
@@ -68,7 +64,7 @@ export function httpsGet(url: string, opts: HttpGetOptions = {}): Promise<string
   return promise;
 }
 
-export function httpsDownload(url: string, dest: string, opts: HttpDownloadOptions = {}): Promise<void> {
+export function httpsDownload(url: string, dest: string, opts: HttpOptions = {}): Promise<void> {
   const { promise, resolve, reject } = withResolvers<void>();
   const maxRedirects = opts.maxRedirects ?? 5;
   const req = https.get(url, { headers: { 'User-Agent': 'tersio', Accept: '*/*' } }, (res) => {

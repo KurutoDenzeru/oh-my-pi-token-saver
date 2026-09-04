@@ -39,6 +39,13 @@ interface InstallOptions {
   reinstall: boolean;
 }
 
+interface PluginsPackage {
+  name?: string;
+  private?: boolean;
+  dependencies?: Record<string, string>;
+  [key: string]: unknown;
+}
+
 // Session-start mode defaults for fresh installs.
 const COMBO_DEFAULTS = new Set(["off", "medium", "balanced", "max"]);
 const CAVEMAN_DEFAULTS = new Set(["off", "lite", "full", "ultra", "wenyan"]);
@@ -362,123 +369,99 @@ async function ensurePonytailHideStatus(options: WriteOptions = {}): Promise<voi
 // --- Steps ---
 
 async function stepPonytail(pluginsDir: string, userDir: string, options: InstallOptions): Promise<void> {
-  console.log("\n[1/8] Installing Ponytail plugin...");
+  console.log('\n[1/8] Installing Ponytail plugin...');
   await fs.mkdir(pluginsDir, { recursive: true });
-  const pkgPath = path.join(pluginsDir, "package.json");
-  let pkg: Record<string, any> = {};
+  const pkgPath = path.join(pluginsDir, 'package.json');
+  let pkg: PluginsPackage = {};
   const existing = await readTextIfExists(pkgPath);
   if (existing) pkg = JSON.parse(existing);
 
-  pkg.name = pkg.name || "omp-plugins";
+  pkg.name = pkg.name || 'omp-plugins';
   pkg.private = true;
   pkg.dependencies = pkg.dependencies || {};
-  pkg.dependencies["@dietrichgebert/ponytail"] = "github:DietrichGebert/ponytail";
+  pkg.dependencies['@dietrichgebert/ponytail'] = 'github:DietrichGebert/ponytail';
 
   if (options.dryRun) {
     console.log(`  [dry-run] would write ${pkgPath}`);
   } else {
-    await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
-    console.log(`  [write] package.json`);
+    await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+    console.log('  [write] package.json');
   }
 
+  const ponytailExtPath = path.join(pluginsDir, 'node_modules', '@dietrichgebert', 'ponytail', 'pi-extension', 'index.js');
+  // Dry runs preview the wiring below without touching the network.
+  let ponytailExtExists: string | null = 'dry-run';
   if (options.dryRun) {
-    console.log("  [dry-run] would run: omp plugin install github:DietrichGebert/ponytail");
+    console.log('  [dry-run] would run: omp plugin install github:DietrichGebert/ponytail');
     if (options.reinstall) {
-      console.log("  [dry-run] would run: npm install @dietrichgebert/ponytail@latest --save --no-audit --no-fund");
+      console.log('  [dry-run] would run: npm install @dietrichgebert/ponytail@latest --save --no-audit --no-fund');
     }
-
-    const ponytailExtPath = path.join(
-      pluginsDir,
-      "node_modules",
-      "@dietrichgebert",
-      "ponytail",
-      "pi-extension",
-      "index.js"
-    );
-
-    const configPath = path.join(userDir, "config.yml");
-    await ensureExtensionInConfig(configPath, ponytailExtPath, "ponytail", options);
-    await ensurePonytailDefaultOff(options);
-    await ensurePonytailHideStatus(options);
-    return;
-  }
-
-  // Try omp plugin install first
-  try {
-    await execP(IS_WINDOWS ? "omp.cmd" : "omp", ["plugin", "install", "github:DietrichGebert/ponytail"],
-      { cwd: pluginsDir });
-    console.log("  [ok] omp plugin install ran");
-  } catch (e) {
-    console.log(`  [warn] omp plugin install failed: ${(e as Error).message}`);
-  }
-
-  if (options.reinstall) {
+  } else {
+    // Try omp plugin install first
     try {
-      await execP("npm", [
-        "install",
-        "@dietrichgebert/ponytail@latest",
-        "--save",
-        "--no-audit",
-        "--no-fund",
-      ], { cwd: pluginsDir, timeout: 120000 });
-      console.log("  [ok] Ponytail refreshed");
+      await execP(IS_WINDOWS ? 'omp.cmd' : 'omp', ['plugin', 'install', 'github:DietrichGebert/ponytail'], { cwd: pluginsDir });
+      console.log('  [ok] omp plugin install ran');
     } catch (e) {
-      console.log(`  [fail] Could not refresh ponytail: ${(e as Error).message}`);
-      console.log(`  [hint] Manual: cd ~/.omp/plugins && npm install @dietrichgebert/ponytail@latest --save --no-audit --no-fund`);
+      console.log(`  [warn] omp plugin install failed: ${(e as Error).message}`);
     }
-  }
 
-  // Verify the pi-extension/index.js actually exists
-  const ponytailExtPath = path.join(pluginsDir, "node_modules", "@dietrichgebert", "ponytail", "pi-extension", "index.js");
-  let ponytailExtExists = await readTextIfExists(ponytailExtPath);
-
-  // Fallback: try bun install or npm install
-  if (!ponytailExtExists) {
-    console.log("  [info] pi-extension/index.js not found after omp plugin install — trying npm/bun install...");
-    try {
-      await execP("npm", ["install"], { cwd: pluginsDir, timeout: 120000 });
-      console.log("  [ok] npm install completed");
-    } catch {
+    if (options.reinstall) {
       try {
-        await execP("bun", ["install"], { cwd: pluginsDir, timeout: 120000 });
-        console.log("  [ok] bun install completed");
-      } catch (e2) {
-        console.log(`  [fail] Could not install ponytail: ${(e2 as Error).message}`);
-        console.log(`  [hint] Manual: cd ~/.omp/plugins && npm install`);
+        await execP('npm', ['install', '@dietrichgebert/ponytail@latest', '--save', '--no-audit', '--no-fund'], { cwd: pluginsDir, timeout: 120000 });
+        console.log('  [ok] Ponytail refreshed');
+      } catch (e) {
+        console.log(`  [fail] Could not refresh ponytail: ${(e as Error).message}`);
+        console.log('  [hint] Manual: cd ~/.omp/plugins && npm install @dietrichgebert/ponytail@latest --save --no-audit --no-fund');
       }
     }
-    ponytailExtExists = await readTextIfExists(ponytailExtPath);
-  }
 
-  // Last-resort fallback: git clone the repo into node_modules
-  if (!ponytailExtExists) {
-    console.log("  [info] npm/bun did not produce pi-extension — trying git clone...");
-    try {
-      const dest = path.join(pluginsDir, "node_modules", "@dietrichgebert", "ponytail");
-      await fs.mkdir(path.dirname(dest), { recursive: true });
-      await execP("git", ["clone", "--depth", "1", "https://github.com/DietrichGebert/ponytail.git", dest],
-        { timeout: 180000 });
-      console.log("  [ok] git clone completed");
+    // Verify the pi-extension/index.js actually exists
+    ponytailExtExists = await readTextIfExists(ponytailExtPath);
+
+    // Fallback: try bun install or npm install
+    if (!ponytailExtExists) {
+      console.log('  [info] pi-extension/index.js not found after omp plugin install — trying npm/bun install...');
+      try {
+        await execP('npm', ['install'], { cwd: pluginsDir, timeout: 120000 });
+        console.log('  [ok] npm install completed');
+      } catch {
+        try {
+          await execP('bun', ['install'], { cwd: pluginsDir, timeout: 120000 });
+          console.log('  [ok] bun install completed');
+        } catch (e2) {
+          console.log(`  [fail] Could not install ponytail: ${(e2 as Error).message}`);
+          console.log('  [hint] Manual: cd ~/.omp/plugins && npm install');
+        }
+      }
       ponytailExtExists = await readTextIfExists(ponytailExtPath);
-    } catch (e3) {
-      console.log(`  [fail] git clone failed: ${(e3 as Error).message}`);
-      console.log(`  [hint] Install git or check network: https://github.com/DietrichGebert/ponytail`);
+    }
+
+    // Last-resort fallback: git clone the repo into node_modules
+    if (!ponytailExtExists) {
+      console.log('  [info] npm/bun did not produce pi-extension — trying git clone...');
+      try {
+        const dest = path.join(pluginsDir, 'node_modules', '@dietrichgebert', 'ponytail');
+        await fs.mkdir(path.dirname(dest), { recursive: true });
+        await execP('git', ['clone', '--depth', '1', 'https://github.com/DietrichGebert/ponytail.git', dest], { timeout: 180000 });
+        console.log('  [ok] git clone completed');
+        ponytailExtExists = await readTextIfExists(ponytailExtPath);
+      } catch (e3) {
+        console.log(`  [fail] git clone failed: ${(e3 as Error).message}`);
+        console.log('  [hint] Install git or check network: https://github.com/DietrichGebert/ponytail');
+      }
     }
   }
 
   if (!ponytailExtExists) {
-    console.log("  [skip] Ponytail pi-extension/index.js still not found — skill-only mode");
-    console.log("  [hint] The /ponytail command won't work, but ponytail skills will still load");
-    // Still set Ponytail config defaultMode=off even without the extension command
-    await ensurePonytailDefaultOff(options);
-    await ensurePonytailHideStatus(options);
-    return;
+    console.log('  [skip] Ponytail pi-extension/index.js still not found — skill-only mode');
+    console.log('  [hint] The /ponytail command won\'t work, but ponytail skills will still load');
+  } else if (!options.dryRun) {
+    // Wire extension into config.yml so /ponytail command loads
+    console.log('  [ok] Ponytail pi-extension found');
   }
-
-  // Wire extension into config.yml so /ponytail command loads
-  console.log("  [ok] Ponytail pi-extension found");
-  const configPath = path.join(userDir, "config.yml");
-  await ensureExtensionInConfig(configPath, ponytailExtPath, "ponytail", options);
+  // Still set Ponytail config defaults even without the extension command
+  const configPath = path.join(userDir, 'config.yml');
+  await ensureExtensionInConfig(configPath, ponytailExtPath, 'ponytail', options);
   await ensurePonytailDefaultOff(options);
   await ensurePonytailHideStatus(options);
 }
@@ -491,7 +474,7 @@ async function stepPonytail(pluginsDir: string, userDir: string, options: Instal
 async function stepSelfPlugin(pluginsDir: string, options: InstallOptions): Promise<boolean> {
   console.log("\n[2/8] Registering tersio as OMP plugin...");
   const pkgPath = path.join(pluginsDir, "package.json");
-  let pkg: Record<string, any> = {};
+  let pkg: PluginsPackage = {};
   const existing = await readTextIfExists(pkgPath);
   if (existing) {
     try { pkg = JSON.parse(existing); } catch { pkg = {}; }
@@ -537,120 +520,133 @@ async function stepSelfPlugin(pluginsDir: string, options: InstallOptions): Prom
   return true;
 }
 
-async function stepRtk(binDir: string, options: InstallOptions): Promise<void> {
-  console.log("\n[3/8] Installing RTK binary...");
+interface RtkAsset { name: string; browser_download_url: string }
+interface RtkRelease { tag_name: string; assets?: RtkAsset[] }
+
+// Map (platform, arch) to Rust triple stem.
+const RTK_TRIPLES: Record<string, string> = {
+  'win32/x64': 'x86_64-pc-windows-msvc',
+  'linux/x64': 'x86_64-unknown-linux-musl',
+  'linux/arm64': 'aarch64-unknown-linux-gnu',
+  'darwin/x64': 'x86_64-apple-darwin',
+  'darwin/arm64': 'aarch64-apple-darwin',
+};
+
+function resolveRtkTriple(): string | null {
+  const triple = RTK_TRIPLES[`${process.platform}/${process.arch}`];
+  if (triple) return triple;
+  console.log(`  [fail] Unsupported platform: ${process.platform}/${process.arch}`);
+  console.log('  [hint] Manual: https://github.com/rtk-ai/rtk/releases');
+  return null;
+}
+
+function findRtkAsset(release: RtkRelease, triple: string): RtkAsset | null {
+  const assets = release.assets || [];
+  const asset = assets.find((a) => a.name === `rtk-${triple}.zip` || a.name === `rtk-${triple}.tar.gz`);
+  if (asset) return asset;
+  console.log(`  [fail] No rtk-${triple}.<zip|tar.gz> in release ${release.tag_name}`);
+  console.log(`  [hint] Available: ${assets.map((a) => a.name).filter((n) => n.startsWith('rtk-')).join(', ')}`);
+  return null;
+}
+
+async function downloadRtkChecksums(release: RtkRelease): Promise<string | null> {
+  const checksumsAsset = (release.assets || []).find((a) => a.name === 'checksums.txt');
+  if (!checksumsAsset) return null;
   try {
-    const raw = await httpsGet(RTK_RELEASE_API);
-    const release = JSON.parse(raw);
-    const tag = release.tag_name;
+    return await httpsGet(checksumsAsset.browser_download_url);
+  } catch (e) {
+    debug(`Could not download checksums.txt: ${(e as Error).message}`);
+    return null;
+  }
+}
 
-    // Map (platform, arch) → Rust triple stem.
-    const PLATFORM = process.platform;
-    const ARCH = process.arch;
-    let assetTriple: string;
-    if (PLATFORM === "win32" && ARCH === "x64") {
-      assetTriple = "x86_64-pc-windows-msvc";
-    } else if (PLATFORM === "linux" && ARCH === "x64") {
-      assetTriple = "x86_64-unknown-linux-musl";
-    } else if (PLATFORM === "linux" && ARCH === "arm64") {
-      assetTriple = "aarch64-unknown-linux-gnu";
-    } else if (PLATFORM === "darwin" && ARCH === "x64") {
-      assetTriple = "x86_64-apple-darwin";
-    } else if (PLATFORM === "darwin" && ARCH === "arm64") {
-      assetTriple = "aarch64-apple-darwin";
+async function verifyRtkArchive(archivePath: string, assetName: string, checksumsText: string | null, tmpDir: string): Promise<boolean> {
+  if (!checksumsText) {
+    console.log('  [warn] No checksums.txt available — skipping verification');
+    return true;
+  }
+  const expected = parseChecksum(checksumsText, assetName);
+  const actual = await sha256File(archivePath);
+  if (!expected) {
+    console.log(`  [warn] checksums.txt missing entry for ${assetName} — skipping verification`);
+    return true;
+  }
+  if (actual === expected) {
+    console.log(`  [ok] Checksum verified for ${assetName}`);
+    return true;
+  }
+  console.log(`  [fail] Checksum mismatch for ${assetName}`);
+  console.log(`  [fail] Expected: ${expected}`);
+  console.log(`  [fail] Got:      ${actual}`);
+  await fs.rm(tmpDir, { recursive: true, force: true });
+  return false;
+}
+
+function shortError(e: unknown): string {
+  return (((e as Error & { stderr?: string }).stderr) || (e as Error).message || '').trim().slice(0, 200);
+}
+
+async function extractRtkArchive(archivePath: string, extractDir: string): Promise<boolean> {
+  await fs.mkdir(extractDir, { recursive: true });
+  if (archivePath.endsWith('.zip')) {
+    if (IS_WINDOWS) {
+      await execP('powershell', ['Expand-Archive', '-Path', archivePath, '-DestinationPath', extractDir, '-Force'], { timeout: 60000 });
     } else {
-      console.log(`  [fail] Unsupported platform: ${PLATFORM}/${ARCH}`);
-      console.log(`  [hint] Manual: https://github.com/rtk-ai/rtk/releases`);
-      return;
+      await execP('unzip', [archivePath, '-d', extractDir], { timeout: 60000 });
     }
-
-    const asset = (release.assets || []).find((a: { name: string }) =>
-      a.name === `rtk-${assetTriple}.zip` || a.name === `rtk-${assetTriple}.tar.gz`
-    );
-    if (!asset) {
-      console.log(`  [fail] No rtk-${assetTriple}.<zip|tar.gz> in release ${tag}`);
-      console.log(`  [hint] Available: ${(release.assets || []).map((a: { name: string }) => a.name).filter((n: string) => n.startsWith("rtk-")).join(", ")}`);
-      return;
+    return true;
+  }
+  if (archivePath.endsWith('.tar.gz') || archivePath.endsWith('.tgz')) {
+    try {
+      await execP('tar', ['xzf', archivePath, '-C', extractDir], { timeout: 60000 });
+      debug('tar xzf ok');
+    } catch (e) {
+      debug(`tar xzf failed: ${shortError(e)}`);
+      try {
+        await execP('sh', ['-c', `gunzip < "${archivePath}" | tar xf - -C "${extractDir}"`], { timeout: 60000 });
+        debug('gunzip|tar fallback ok');
+      } catch (e2) {
+        debug(`gunzip|tar fallback failed: ${shortError(e2)}`);
+      }
     }
+    return true;
+  }
+  console.log(`  [fail] Unknown archive format: ${archivePath}`);
+  return false;
+}
 
-    const binDest = path.join(binDir, IS_WINDOWS ? "rtk.exe" : "rtk");
+async function stepRtk(binDir: string, options: InstallOptions): Promise<void> {
+  console.log('\n[3/8] Installing RTK binary...');
+  try {
+    const release = JSON.parse(await httpsGet(RTK_RELEASE_API)) as RtkRelease;
+    const triple = resolveRtkTriple();
+    if (!triple) return;
+    const asset = findRtkAsset(release, triple);
+    if (!asset) return;
+    const binDest = path.join(binDir, IS_WINDOWS ? 'rtk.exe' : 'rtk');
 
     if (options.dryRun) {
-      console.log(`  [dry-run] would download ${asset.name} from release ${tag}`);
-      console.log(`  [dry-run] would verify checksum against checksums.txt`);
+      console.log(`  [dry-run] would download ${asset.name} from release ${release.tag_name}`);
+      console.log('  [dry-run] would verify checksum against checksums.txt');
       console.log(`  [dry-run] would extract and install to ${binDest}`);
       return;
     }
 
-    // Also download checksums.txt for verification
-    const checksumsAsset = (release.assets || []).find((a: { name: string }) => a.name === "checksums.txt");
-    let checksumsText: string | null = null;
-    if (checksumsAsset) {
-      try {
-        checksumsText = await httpsGet(checksumsAsset.browser_download_url);
-      } catch (e) {
-        debug(`Could not download checksums.txt: ${(e as Error).message}`);
-      }
-    }
-
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "omp-rtk-"));
+    const checksumsText = await downloadRtkChecksums(release);
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'omp-rtk-'));
     const archivePath = path.join(tmpDir, asset.name);
-
     await httpsDownload(asset.browser_download_url, archivePath);
+    if (!await verifyRtkArchive(archivePath, asset.name, checksumsText, tmpDir)) return;
 
-    // Verify checksum
-    if (checksumsText) {
-      const expected = parseChecksum(checksumsText, asset.name);
-      const actual = await sha256File(archivePath);
-      if (!expected) {
-        console.log(`  [warn] checksums.txt missing entry for ${asset.name} — skipping verification`);
-      } else if (actual !== expected) {
-        console.log(`  [fail] Checksum mismatch for ${asset.name}`);
-        console.log(`  [fail] Expected: ${expected}`);
-        console.log(`  [fail] Got:      ${actual}`);
-        await fs.rm(tmpDir, { recursive: true, force: true });
-        return;
-      } else {
-        console.log(`  [ok] Checksum verified for ${asset.name}`);
-      }
-    } else {
-      console.log(`  [warn] No checksums.txt available — skipping verification`);
-    }
-
-    // Extract by extension (not OS)
-    const extractDir = path.join(tmpDir, "extracted");
-    await fs.mkdir(extractDir, { recursive: true });
-
-    if (asset.name.endsWith(".zip")) {
-      if (IS_WINDOWS) {
-        await execP("powershell", ["Expand-Archive", "-Path", archivePath, "-DestinationPath", extractDir, "-Force"],
-          { timeout: 60000 });
-      } else {
-        await execP("unzip", [archivePath, "-d", extractDir], { timeout: 60000 });
-      }
-    } else if (asset.name.endsWith(".tar.gz") || asset.name.endsWith(".tgz")) {
-      try {
-        await execP("tar", ["xzf", archivePath, "-C", extractDir], { timeout: 60000 });
-        debug("tar xzf ok");
-      } catch (e) {
-        debug(`tar xzf failed: ${(((e as Error & { stderr?: string }).stderr) || (e as Error).message || "").trim().slice(0, 200)}`);
-        try {
-          await execP("sh", ["-c", `gunzip < "${archivePath}" | tar xf - -C "${extractDir}"`], { timeout: 60000 });
-          debug("gunzip|tar fallback ok");
-        } catch (e2) {
-          debug(`gunzip|tar fallback failed: ${(((e2 as Error & { stderr?: string }).stderr) || (e2 as Error).message || "").trim().slice(0, 200)}`);
-        }
-      }
-    } else {
-      console.log(`  [fail] Unknown archive format: ${asset.name}`);
+    const extractDir = path.join(tmpDir, 'extracted');
+    if (!await extractRtkArchive(archivePath, extractDir)) {
       await fs.rm(tmpDir, { recursive: true, force: true });
       return;
     }
 
-    // Find binary
-    const binaryName = IS_WINDOWS ? "rtk.exe" : "rtk";
+    const binaryName = IS_WINDOWS ? 'rtk.exe' : 'rtk';
     const entries = await fs.readdir(extractDir, { recursive: true });
-    debug(`extracted entries: ${entries.join(", ")}`);
+    debug(`extracted entries: ${entries.join(', ')}`);
     const found = entries.find((e) => path.basename(e) === binaryName);
     if (!found) {
       console.log(`  [fail] Could not find ${binaryName} in extracted archive`);
@@ -662,64 +658,60 @@ async function stepRtk(binDir: string, options: InstallOptions): Promise<void> {
     await fs.copyFile(path.join(extractDir, found), binDest);
     console.log(`  [write] ${binDest}`);
 
-    // Set executable bit on Unix
     if (!IS_WINDOWS) {
       await fs.chmod(binDest, 0o755);
       debug(`chmod 755 ${binDest}`);
     }
 
-    // Verify
     try {
-      const v = (await execP(binDest, ["--version"], { timeout: 10000, shell: false })).stdout.trim();
+      const v = (await execP(binDest, ['--version'], { timeout: 10000, shell: false })).stdout.trim();
       console.log(`  [ok] ${binDest} → ${v}`);
     } catch {
       console.log(`  [hint] Verify manually: ${binDest} --version`);
     }
 
-    // Cleanup
     await fs.rm(tmpDir, { recursive: true, force: true });
   } catch (e) {
     console.log(`  [fail] RTK: ${(e as Error).message}`);
-    console.log(`  [hint] Manual: https://github.com/rtk-ai/rtk/releases`);
+    console.log('  [hint] Manual: https://github.com/rtk-ai/rtk/releases');
   }
 }
 
-async function stepSharedSessionState(extDir: string, options: WriteOptions): Promise<void> {
-  const src = await readTextIfExists(SHARED_SESSION_STATE);
+// Copy repo source files into the target extension dir. First entry is
+// required (skip label on missing); rest are optional companions.
+async function copySources(extDir: string, files: Array<[string, string]>, skipLabel: string, options: WriteOptions): Promise<boolean> {
+  const src = await readTextIfExists(files[0][0]);
   if (!src) {
-    console.log("  [skip] shared/session-state.js not found in repo");
-    return;
+    console.log(`  [skip] ${skipLabel} not found in repo`);
+    return false;
   }
-  await writeIfChanged(path.join(extDir, "shared", "session-state.js"), src, options);
-  const typesSrc = await readTextIfExists(SHARED_TYPES);
-  if (typesSrc) await writeIfChanged(path.join(extDir, "shared", "types.js"), typesSrc, options);
-  const utilsSrc = await readTextIfExists(LIB_UTILS);
-  if (utilsSrc) await writeIfChanged(path.join(extDir, "lib", "utils.js"), utilsSrc, options);
-  const settingsSrc = await readTextIfExists(SHARED_PLUGIN_SETTINGS);
-  if (settingsSrc) await writeIfChanged(path.join(extDir, "shared", "plugin-settings.js"), settingsSrc, options);
+  await writeIfChanged(path.join(extDir, files[0][1]), src, options);
+  for (const [from, to] of files.slice(1)) {
+    const extra = await readTextIfExists(from);
+    if (extra) await writeIfChanged(path.join(extDir, to), extra, options);
+  }
+  return true;
+}
+
+async function stepSharedSessionState(extDir: string, options: WriteOptions): Promise<void> {
+  await copySources(extDir, [
+    [SHARED_SESSION_STATE, path.join("shared", "session-state.js")],
+    [SHARED_TYPES, path.join("shared", "types.js")],
+    [LIB_UTILS, path.join("lib", "utils.js")],
+    [SHARED_PLUGIN_SETTINGS, path.join("shared", "plugin-settings.js")],
+  ], "shared/session-state.js", options);
 }
 
 async function stepModeReinforcement(extDir: string, ponytailExtPath: string, options: WriteOptions): Promise<void> {
   console.log("\n[7/8] Installing mode reinforcement extension...");
-  const src = await readTextIfExists(MODE_REINFORCEMENT_INDEX);
-  if (!src) {
-    console.log("  [skip] shared/mode-reinforcement.js not found in repo");
-    return;
-  }
   const dest = path.join(extDir, "shared", "mode-reinforcement.js");
-  await writeIfChanged(dest, src, options);
+  if (!await copySources(extDir, [[MODE_REINFORCEMENT_INDEX, dest]], "shared/mode-reinforcement.js", options)) return;
   await ensureExtensionAfterConfigEntry(path.join(path.dirname(extDir), "config.yml"), dest, ponytailExtPath, "mode reinforcement", options);
 }
 
 async function stepRtkSession(extDir: string, options: WriteOptions): Promise<void> {
   console.log("\n[4/8] Installing RTK session extension...");
-  const src = await readTextIfExists(RTK_SESSION_INDEX);
-  if (!src) {
-    console.log("  [skip] rtk-session/index.js not found in repo");
-    return;
-  }
-  const dest = path.join(extDir, "rtk-session", "index.js");
-  await writeIfChanged(dest, src, options);
+  await copySources(extDir, [[RTK_SESSION_INDEX, path.join("rtk-session", "index.js")]], "rtk-session/index.js", options);
 }
 
 async function stepCaveman(extDir: string, options: WriteOptions): Promise<void> {
@@ -731,34 +723,17 @@ async function stepCaveman(extDir: string, options: WriteOptions): Promise<void>
   const rule = options.dryRun ? await readTextIfExists(path.join(path.dirname(CAVEMAN_INDEX), "rule.md")) || "" : await httpsGet(CAVEMAN_REMOTE_RULE);
   await writeIfChanged(path.join(cavemanDir, "rule.md"), rule, options);
 
-  // Write index.js
-  const src = await readTextIfExists(CAVEMAN_INDEX);
-  if (!src) {
-    console.log("  [skip] caveman-session/index.js not found in repo");
-    return;
-  }
-  await writeIfChanged(path.join(cavemanDir, "index.js"), src, options);
-
+  await copySources(extDir, [[CAVEMAN_INDEX, path.join("caveman-session", "index.js")]], "caveman-session/index.js", options);
 }
 
 async function stepUpdater(extDir: string, options: WriteOptions): Promise<void> {
-  const updaterSrc = await readTextIfExists(UPDATER_INDEX);
-  if (!updaterSrc) {
-    console.log("  [skip] ai-addons-updater/index.js not found in repo");
-    return;
-  }
-  await writeIfChanged(path.join(extDir, "ai-addons-updater", "index.js"), updaterSrc, options);
+  await copySources(extDir, [[UPDATER_INDEX, path.join("ai-addons-updater", "index.js")]], "ai-addons-updater/index.js", options);
 }
 
 async function stepCombo(extDir: string, options: WriteOptions): Promise<void> {
   console.log("\n[6/8] Installing Combo toggle extension...");
-  const src = await readTextIfExists(COMBO_TOGGLE_INDEX);
-  if (!src) {
-    console.log("  [skip] combo-toggle/index.js not found in repo");
-    return;
-  }
   const dest = path.join(extDir, "combo-toggle", "index.js");
-  await writeIfChanged(dest, src, options);
+  if (!await copySources(extDir, [[COMBO_TOGGLE_INDEX, path.join("combo-toggle", "index.js")]], "combo-toggle/index.js", options)) return;
 
   // Auto-register combo in config.yml
   const configPath = path.join(path.dirname(extDir), "config.yml");
@@ -781,12 +756,7 @@ async function stepAmanaiReward(extDir: string, options: WriteOptions, pluginPro
     console.log("  [ok] detector loads via the tersio plugin manifest");
     return;
   }
-  const src = await readTextIfExists(AMANAI_REWARD_INDEX);
-  if (!src) {
-    console.log("  [skip] amanai-reward/index.js not found in repo");
-    return;
-  }
-  await writeIfChanged(path.join(destDir, "index.js"), src, options);
+  await copySources(extDir, [[AMANAI_REWARD_INDEX, path.join("amanai-reward", "index.js")]], "amanai-reward/index.js", options);
 }
 
 // --- Doctor ---

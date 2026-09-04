@@ -385,21 +385,27 @@ async function ensurePonytailHideStatus(options: WriteOptions = {}): Promise<voi
 
 
 
+// Read plugins/package.json tolerantly; corrupt or missing files start fresh
+// with installer-managed defaults.
+async function readPluginsPackage(pkgPath: string): Promise<PluginsPackage & { dependencies: Record<string, string> }> {
+  let pkg: PluginsPackage = {};
+  const existing = await readTextIfExists(pkgPath);
+  if (existing) {
+    try {
+      const parsed: unknown = JSON.parse(existing);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) pkg = parsed as PluginsPackage;
+    } catch { /* fall through with defaults */ }
+  }
+  return { ...pkg, name: pkg.name || 'omp-plugins', private: true, dependencies: pkg.dependencies || {} };
+}
+
 // --- Steps ---
 
 async function stepPonytail(pluginsDir: string, userDir: string, options: InstallOptions): Promise<void> {
   console.log('\n[1/7] Installing Ponytail plugin...');
   await fs.mkdir(pluginsDir, { recursive: true });
   const pkgPath = path.join(pluginsDir, 'package.json');
-  let pkg: PluginsPackage = {};
-  const existing = await readTextIfExists(pkgPath);
-  if (existing) {
-    try { pkg = JSON.parse(existing); } catch { pkg = {}; }
-  }
-
-  pkg.name = pkg.name || 'omp-plugins';
-  pkg.private = true;
-  pkg.dependencies = pkg.dependencies || {};
+  const pkg = await readPluginsPackage(pkgPath);
   pkg.dependencies['@dietrichgebert/ponytail'] = 'github:DietrichGebert/ponytail';
 
   if (options.dryRun) {
@@ -499,14 +505,7 @@ async function stepPonytail(pluginsDir: string, userDir: string, options: Instal
 async function stepSelfPlugin(pluginsDir: string, options: InstallOptions): Promise<boolean> {
   console.log('\n[2/7] Registering tersio as OMP plugin...');
   const pkgPath = path.join(pluginsDir, 'package.json');
-  let pkg: PluginsPackage = {};
-  const existing = await readTextIfExists(pkgPath);
-  if (existing) {
-    try { pkg = JSON.parse(existing); } catch { pkg = {}; }
-  }
-  pkg.name = pkg.name || 'omp-plugins';
-  pkg.private = true;
-  pkg.dependencies = pkg.dependencies || {};
+  const pkg = await readPluginsPackage(pkgPath);
   pkg.dependencies[PACKAGE_NAME] = `^${PACKAGE_VERSION}`;
   for (const legacy of ['oh-my-pi-token-saver', 'tersio-omp']) {
     if (legacy in pkg.dependencies) {

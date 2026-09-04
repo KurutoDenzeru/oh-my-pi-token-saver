@@ -1,6 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
-import { getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
+import { asPromptArray, getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
 import { readRtkDefault } from '../shared/plugin-settings.ts';
 import type { ExtensionApi, ExtensionCtx, InputEvent, SessionEntry, SystemPromptEvent } from '../shared/types.ts';
 
@@ -154,7 +154,7 @@ export default function rtkSessionExtension(pi: ExtensionApi): void {
   pi.on<SystemPromptEvent>('before_agent_start', async (event) => {
     const active = isOmpSubagentPrompt(event.systemPrompt) ? getSharedComboState().rtk === 'on' : enabled;
     if (!active) return;
-    const base = Array.isArray(event.systemPrompt) ? event.systemPrompt : [event.systemPrompt];
+    const base = asPromptArray(event.systemPrompt);
     return { systemPrompt: [...base, RTK_PROMPT] };
   });
 }

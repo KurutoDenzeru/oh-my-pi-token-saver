@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import {
+  asPromptArray,
   COMBO_LEVELS,
   getSharedComboState,
   isComboPresetActive,
@@ -187,7 +188,7 @@ export default function comboToggleExtension(pi: ExtensionApi): void {
 
     const mode = getSharedComboState().ponytail;
     if (mode === 'off' || hasPonytailInstructions(event.systemPrompt)) return;
-    const base = Array.isArray(event.systemPrompt) ? event.systemPrompt : [event.systemPrompt];
+    const base = asPromptArray(event.systemPrompt);
     return { systemPrompt: [...base, loadPonytailInstructions(mode)] };
   });
 

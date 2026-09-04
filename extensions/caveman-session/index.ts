@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
+import { asPromptArray, getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
 import { readCavemanDefault } from '../shared/plugin-settings.ts';
 import type { ExtensionApi, ExtensionCtx, InputEvent, SessionEntry, SystemPromptEvent } from '../shared/types.ts';
 
@@ -152,7 +152,7 @@ export default function cavemanSessionExtension(pi: ExtensionApi): void {
     const def = INSTRUCTIONS[mode];
     if (!def) return;
     const instruction = typeof def === 'function' ? def() : def;
-    const base = Array.isArray(event.systemPrompt) ? event.systemPrompt : [event.systemPrompt];
+    const base = asPromptArray(event.systemPrompt);
     return { systemPrompt: [...base, instruction] };
   });
 }

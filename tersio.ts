@@ -30,6 +30,7 @@ const RTK_BINARY_NAME = IS_WINDOWS ? 'rtk.exe' : 'rtk';
 const HOME = process.env.HOME || process.env.USERPROFILE || '';
 const OMP_AGENT_DIR = path.join(HOME, '.omp', 'agent');
 const OMP_PLUGINS_DIR = path.join(HOME, '.omp', 'plugins');
+const BUN_BIN_DIR = path.join(HOME, '.bun', 'bin');
 
 const PACKAGE_NAME = '@krtclcdy/tersio';
 const PACKAGE_BIN = 'tersio';
@@ -797,7 +798,7 @@ async function runDoctor(): Promise<void> {
   const extDir = path.join(agentDir, 'extensions');
   const configPath = path.join(agentDir, 'config.yml');
   const pluginsDir = OMP_PLUGINS_DIR;
-  const rtkBin = path.join(HOME, '.bun', 'bin', RTK_BINARY_NAME);
+  const rtkBin = path.join(BUN_BIN_DIR, RTK_BINARY_NAME);
 
   // Ponytail
   const ponytailPkg = path.join(pluginsDir, 'node_modules', '@dietrichgebert', 'ponytail', 'package.json');
@@ -962,22 +963,22 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
 
   const extDir = path.join(OMP_AGENT_DIR, 'extensions');
   const configPath = path.join(OMP_AGENT_DIR, 'config.yml');
-  const rtkBin = path.join(HOME, '.bun', 'bin', RTK_BINARY_NAME);
+  const rtkBin = path.join(BUN_BIN_DIR, RTK_BINARY_NAME);
   const pluginsDir = OMP_PLUGINS_DIR;
   const ponytailPkgDir = path.join(pluginsDir, 'node_modules', '@dietrichgebert', 'ponytail');
 
   const targets = [
-    path.join(extDir, 'caveman-session'),
-    path.join(extDir, 'rtk-session'),
-    path.join(extDir, 'ai-addons-updater'),
-    path.join(extDir, 'combo-toggle'),
-    path.join(extDir, 'shared'),
+    'caveman-session',
+    'rtk-session',
+    'ai-addons-updater',
+    'combo-toggle',
+    'shared',
     // Only consumed by ai-addons-updater (removed above); otherwise orphaned.
-    path.join(extDir, 'lib'),
+    'lib',
     // Legacy always-on combo helper; imports shared/session-state.js, so it
     // breaks with a module-not-found warning once the shared dir is removed.
-    path.join(extDir, 'aaa-combo-boot'),
-  ];
+    'aaa-combo-boot',
+  ].map((dir) => path.join(extDir, dir));
 
   console.log('Will remove:');
   for (const t of targets) {
@@ -1327,7 +1328,7 @@ async function main(): Promise<void> {
   const userDir = OMP_AGENT_DIR;
   const userExtDir = path.join(userDir, 'extensions');
   const userPluginsDir = path.join(userDir, '..', 'plugins');
-  const bunBinDir = path.join(HOME, '.bun', 'bin');
+  const bunBinDir = BUN_BIN_DIR;
   const projectExtDir = path.join(process.cwd(), '.omp', 'extensions');
 
   const options: InstallOptions = { dryRun, verbose, yes, scope, reinstall };

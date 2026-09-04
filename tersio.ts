@@ -876,6 +876,41 @@ interface UninstallOptions {
   dryRun?: boolean;
 }
 
+// Read-modify-write a JSON file. mutate returns true when it changed
+// something; no change (or unreadable file) means no output at all.
+async function updateJsonFile(
+  filePath: string,
+  mutate: (data: Record<string, unknown>) => boolean,
+  dryRunNote: string,
+  writeNote: string,
+  options: WriteOptions,
+): Promise<void> {
+  const raw = await readTextIfExists(filePath);
+  if (!raw) return;
+  let data: Record<string, unknown>;
+  try {
+    data = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    debug(`Could not parse ${filePath}`);
+    return;
+  }
+  if (!mutate(data)) return;
+  if (options.dryRun) {
+    console.log(`  [dry-run] ${dryRunNote}`);
+    return;
+  }
+  await fs.writeFile(filePath, JSON.stringify(data, null, 2) + "\n", "utf8");
+  console.log(`  [write] ${writeNote}`);
+}
+
+function dropKey(section: unknown, key: string): boolean {
+  if (!section || typeof section !== "object") return false;
+  const record = section as Record<string, unknown>;
+  if (!(key in record)) return false;
+  delete record[key];
+  return true;
+}
+
 async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
   const confirmed = options.yes ?? yes;
   const shouldRemovePonytail = options.removePonytail ?? removePonytail;
@@ -962,22 +997,10 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
   // lock entry); the config.yml entry was filtered above.
   if (shouldRemovePonytail) {
     const pluginsPkgPath = path.join(pluginsDir, "package.json");
-    const ponytailRaw = await readTextIfExists(pluginsPkgPath);
-    if (ponytailRaw) {
-      try {
-        const pkg = JSON.parse(ponytailRaw) as { dependencies?: Record<string, string> };
-        if (pkg.dependencies && "@dietrichgebert/ponytail" in pkg.dependencies) {
-          if (shouldDryRun) console.log(`  [dry-run] would remove @dietrichgebert/ponytail from ${pluginsPkgPath}`);
-          else {
-            delete pkg.dependencies["@dietrichgebert/ponytail"];
-            await fs.writeFile(pluginsPkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf8");
-            console.log("  [write] Removed @dietrichgebert/ponytail from plugins/package.json");
-          }
-        }
-      } catch {
-        debug("Could not update plugins/package.json for ponytail");
-      }
-    }
+    await updateJsonFile(pluginsPkgPath,
+      (data) => dropKey(data.dependencies, "@dietrichgebert/ponytail"),
+      `would remove @dietrichgebert/ponytail from ${pluginsPkgPath}`,
+      "Removed @dietrichgebert/ponytail from plugins/package.json", options);
     try {
       if (shouldDryRun) console.log(`  [dry-run] would remove ${ponytailPkgDir}`);
       else {
@@ -990,42 +1013,18 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
       debug("Could not remove ponytail package dir (scope may hold other packages)");
     }
     const lockPath = path.join(pluginsDir, "omp-plugins.lock.json");
-    const lockRaw = await readTextIfExists(lockPath);
-    if (lockRaw) {
-      try {
-        const lock = JSON.parse(lockRaw) as { plugins?: Record<string, unknown> };
-        if (lock.plugins && "@dietrichgebert/ponytail" in lock.plugins) {
-          if (shouldDryRun) console.log(`  [dry-run] would remove @dietrichgebert/ponytail from ${lockPath}`);
-          else {
-            delete lock.plugins["@dietrichgebert/ponytail"];
-            await fs.writeFile(lockPath, JSON.stringify(lock, null, 2) + "\n", "utf8");
-            console.log(`  [write] Removed @dietrichgebert/ponytail from ${lockPath}`);
-          }
-        }
-      } catch {
-        debug("Could not update omp-plugins.lock.json for ponytail");
-      }
-    }
+    await updateJsonFile(lockPath,
+      (data) => dropKey(data.plugins, "@dietrichgebert/ponytail"),
+      `would remove @dietrichgebert/ponytail from ${lockPath}`,
+      `Removed @dietrichgebert/ponytail from ${lockPath}`, options);
   }
 
   // Remove our plugin registration from ~/.omp/plugins
   const pluginsPkgPath = path.join(pluginsDir, "package.json");
-  const pluginsPkgRaw = await readTextIfExists(pluginsPkgPath);
-  if (pluginsPkgRaw) {
-    try {
-      const pkg = JSON.parse(pluginsPkgRaw) as { dependencies?: Record<string, string> };
-      if (pkg.dependencies && PACKAGE_NAME in pkg.dependencies) {
-        if (shouldDryRun) console.log(`  [dry-run] would remove ${PACKAGE_NAME} from ${pluginsPkgPath}`);
-        else {
-          delete pkg.dependencies[PACKAGE_NAME];
-          await fs.writeFile(pluginsPkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf8");
-          console.log(`  [write] Removed ${PACKAGE_NAME} from plugins/package.json`);
-        }
-      }
-    } catch {
-      debug("Could not update plugins/package.json");
-    }
-  }
+  await updateJsonFile(pluginsPkgPath,
+    (data) => dropKey(data.dependencies, PACKAGE_NAME),
+    `would remove ${PACKAGE_NAME} from ${pluginsPkgPath}`,
+    `Removed ${PACKAGE_NAME} from plugins/package.json`, options);
   const selfPluginDir = path.join(pluginsDir, "node_modules", PACKAGE_NAME);
   if ((await readTextIfExists(path.join(selfPluginDir, "package.json"))) !== null) {
     try {
@@ -1117,6 +1116,35 @@ function defaultProfile(): Profile {
 
 function tty(): boolean {
   return Boolean(process.stdin.isTTY && process.stdout.isTTY);
+}
+
+const SCOPE_MAP: Record<string, string> = { user: "1", project: "2", both: "3" };
+
+// Determine install scope: reinstall > flag > non-interactive default > prompt.
+async function resolveScope(): Promise<string> {
+  if (reinstall) {
+    console.log("  Scope: user (reinstall)");
+    return "1";
+  }
+  if (scopeFlag) {
+    const scope = SCOPE_MAP[scopeFlag];
+    if (!scope) {
+      console.log(`  [fail] Invalid --scope: ${scopeFlag}. Use: user, project, both`);
+      closeRL();
+      process.exit(1);
+    }
+    console.log(`  Scope: ${scopeFlag}`);
+    return scope;
+  }
+  if (install || yes) {
+    console.log(`  Scope: user (${install ? "install default" : "--scope omitted, defaulting to user with --yes"})`);
+    return "1";
+  }
+  console.log("\nInstall scope:");
+  console.log("  1) User-level (all OMP sessions)");
+  console.log("  2) Project-level (this repo only)");
+  console.log("  3) Both");
+  return (await ask("\nChoose [1-3] (default 1): ")).trim() || "1";
 }
 
 async function resolveProfile(): Promise<Profile> {
@@ -1243,30 +1271,7 @@ async function main(): Promise<void> {
   console.log(`  Arch: ${process.arch}`);
   console.log(`  Home: ${HOME}`);
 
-  // Determine install scope
-  let scope: string;
-  if (reinstall) {
-    scope = "1";
-    console.log("  Scope: user (reinstall)");
-  } else if (scopeFlag) {
-    const map: Record<string, string> = { user: "1", project: "2", both: "3" };
-    scope = map[scopeFlag];
-    if (!scope) {
-      console.log(`  [fail] Invalid --scope: ${scopeFlag}. Use: user, project, both`);
-      closeRL();
-      process.exit(1);
-    }
-    console.log(`  Scope: ${scopeFlag}`);
-  } else if (install || yes) {
-    scope = "1";
-    console.log(`  Scope: user (${install ? "install default" : "--scope omitted, defaulting to user with --yes"})`);
-  } else {
-    console.log("\nInstall scope:");
-    console.log("  1) User-level (all OMP sessions)");
-    console.log("  2) Project-level (this repo only)");
-    console.log("  3) Both");
-    scope = (await ask("\nChoose [1-3] (default 1): ")).trim() || "1";
-  }
+  const scope = await resolveScope();
 
 
   // Resolve session defaults: flags > interactive prompt > defaults.

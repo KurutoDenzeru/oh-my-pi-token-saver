@@ -5,12 +5,20 @@
 // the status bar showed both `🪨 caveman: FULL` and the combo bar.
 import test from "node:test";
 import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import cavemanSessionExtension from "../extensions/caveman-session/index.js";
 import comboToggleExtension from "../extensions/combo-toggle/index.js";
 import rtkSessionExtension from "../extensions/rtk-session/index.js";
-import { resetSharedComboState } from "../extensions/shared/session-state.js";
+import { getSharedComboState, resetSharedComboState } from "../extensions/shared/session-state.js";
 import type { ExtensionApi, ExtensionCtx, SessionEntry } from "../extensions/shared/types.js";
+
+// ponytail: hermetic HOME — the combo fallback reads the real lock file, so
+// without this the suite depends on the developer's own comboDefault.
+process.env.HOME = new URL("./definitely-missing-home", import.meta.url).pathname;
+process.env.USERPROFILE = process.env.HOME;
 
 interface Harness {
   statuses: Map<string, string>;
@@ -106,4 +114,34 @@ test("every preset suppresses individual bars; off and custom behave correctly",
   assert.ok(!custom.statuses.has("combo"), "no combo bar for a custom mix");
   assert.ok(custom.statuses.has("caveman") && custom.statuses.has("rtk"), "individual bars restored for a custom mix");
   resetSharedComboState();
+});
+
+test("combo default persists preset entries so resume keeps the bar", async () => {
+  const home = mkdtempSync(path.join(os.tmpdir(), "combo-fallback-"));
+  mkdirSync(path.join(home, ".omp", "plugins"), { recursive: true });
+  writeFileSync(
+    path.join(home, ".omp", "plugins", "omp-plugins.lock.json"),
+    JSON.stringify({ plugins: {}, settings: { "@krtclcdy/tersio": { comboDefault: "balanced" } } }),
+    "utf8",
+  );
+  const previous = process.env.HOME;
+  process.env.HOME = home;
+  try {
+    resetSharedComboState();
+    const h = harness();
+    await h.pi.combo.handlers.get("session_start")!({}, h.ctx);
+    assert.deepEqual(
+      h.entries.map((e) => e.customType).sort(),
+      ["caveman-mode", "combo-level", "ponytail-mode", "rtk-mode"],
+    );
+    assert.equal(h.entries.find((e) => e.customType === "combo-level")?.data?.level, "balanced");
+    assert.equal(getSharedComboState().level, "balanced");
+    assert.match(h.statuses.get("combo") || "", /BALANCED/);
+    assert.match(h.statuses.get("combo") || "", /ponytail=FULL/);
+  } finally {
+    if (previous === undefined) delete process.env.HOME;
+    else process.env.HOME = previous;
+    rmSync(home, { recursive: true, force: true });
+    resetSharedComboState();
+  }
 });

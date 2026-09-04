@@ -88,6 +88,17 @@ export default function comboToggleExtension(pi: ExtensionApi): void {
     c.ui.setStatus("ponytail", undefined);
   }
 
+  // ponytail: same persistence as /combo — siblings (incl. upstream ponytail)
+  // restore from these entries, so the fallback must write them too or the
+  // preset evaporates on resume and ponytail never activates.
+  function persistPreset(level: string): void {
+    const modes = COMBO_LEVELS[level];
+    pi.appendEntry?.("caveman-mode", { mode: modes.caveman });
+    pi.appendEntry?.("rtk-mode", { enabled: modes.rtk === "on" });
+    pi.appendEntry?.("ponytail-mode", { mode: modes.ponytail });
+    pi.appendEntry?.("combo-level", { level });
+  }
+
   function useState(state: Readonly<ComboState>, ctx?: ExtensionCtx): Readonly<ComboState> {
     currentState = state;
     syncStatus(ctx);
@@ -137,14 +148,7 @@ export default function comboToggleExtension(pi: ExtensionApi): void {
         return;
       }
 
-      const modes = COMBO_LEVELS[level];
-
-      // Persist per-extension state so they restore on session_start
-      pi.appendEntry?.("caveman-mode", { mode: modes.caveman });
-      pi.appendEntry?.("rtk-mode", { enabled: modes.rtk === "on" });
-      pi.appendEntry?.("ponytail-mode", { mode: modes.ponytail });
-      pi.appendEntry?.("combo-level", { level });
-
+      persistPreset(level);
       useState(setSharedComboLevel(level), ctx);
 
       ctx?.ui?.notify?.(
@@ -165,6 +169,7 @@ export default function comboToggleExtension(pi: ExtensionApi): void {
     if (getSharedComboState().level === "off" && !(ctx?.sessionManager?.getBranch?.() || ctx?.sessionManager?.getEntries?.() || []).length) {
       const fallback = readComboDefault();
       if (fallback !== "off") {
+        persistPreset(fallback);
         useState(setSharedComboLevel(fallback), ctx);
         ctx?.ui?.notify?.(`Combo default applied: ${fallback}`, "info");
       }

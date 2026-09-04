@@ -1,6 +1,6 @@
 {
   "name": "@krtclcdy/tersio",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Amanai reward detector and three toggleable OMP extensions for terse replies, compact shell output, and minimal code decisions \u2014 with a manual updater and dry-run support.",
   "keywords": [
     "omp",

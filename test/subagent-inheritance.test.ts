@@ -13,6 +13,11 @@ import {
 } from "../extensions/shared/session-state.js";
 import type { ExtensionApi, ExtensionCtx, SessionEntry } from "../extensions/shared/types.js";
 
+// ponytail: hermetic HOME — session-start fallbacks read the real lock file,
+// so without this the suite depends on the developer's own defaults.
+process.env.HOME = new URL("./definitely-missing-home", import.meta.url).pathname;
+process.env.USERPROFILE = process.env.HOME;
+
 const MARKED_PROMPT = `System instructions.\n${OMP_SUBAGENT_MARKER}`;
 const UNMARKED_PROMPT = "System instructions for an unrelated headless session.";
 

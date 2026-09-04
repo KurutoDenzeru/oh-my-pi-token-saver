@@ -130,6 +130,8 @@ Commands:
 
 Options:
   --scope user|project|both
+  --remove-ponytail (uninstall: also remove the Ponytail plugin)
+  --remove-rtk (uninstall: also remove the RTK binary)
   --combo-default off|medium|balanced|max (implies caveman, rtk, ponytail)
   --caveman-default off|lite|full|ultra|wenyan (override; default follows combo)
   --rtk-default on|off (override; default follows combo)
@@ -919,6 +921,8 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
   const extDir = path.join(HOME, ".omp", "agent", "extensions");
   const configPath = path.join(HOME, ".omp", "agent", "config.yml");
   const rtkBin = path.join(HOME, ".bun", "bin", IS_WINDOWS ? "rtk.exe" : "rtk");
+  const pluginsDir = path.join(HOME, ".omp", "plugins");
+  const ponytailPkgDir = path.join(pluginsDir, "node_modules", "@dietrichgebert", "ponytail");
 
   const targets = [
     path.join(extDir, "caveman-session"),
@@ -927,6 +931,8 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
     path.join(extDir, "combo-toggle"),
     path.join(extDir, "shared"),
     path.join(extDir, "amanai-reward"),
+    // Only consumed by ai-addons-updater (removed above); otherwise orphaned.
+    path.join(extDir, "lib"),
     // Legacy always-on combo helper; imports shared/session-state.js, so it
     // breaks with a module-not-found warning once the shared dir is removed.
     path.join(extDir, "aaa-combo-boot"),
@@ -935,6 +941,10 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
   console.log("Will remove:");
   for (const t of targets) {
     console.log(`  ${t}`);
+  }
+
+  if (shouldRemovePonytail) {
+    console.log(`  ${ponytailPkgDir} (ponytail plugin package)`);
   }
 
   if (shouldRemoveRtk) {
@@ -982,8 +992,57 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
     }
   }
 
+  // Remove the Ponytail plugin package the installer added (dep, files,
+  // lock entry); the config.yml entry was filtered above.
+  if (shouldRemovePonytail) {
+    const pluginsPkgPath = path.join(pluginsDir, "package.json");
+    const ponytailRaw = await readTextIfExists(pluginsPkgPath);
+    if (ponytailRaw) {
+      try {
+        const pkg = JSON.parse(ponytailRaw) as { dependencies?: Record<string, string> };
+        if (pkg.dependencies && "@dietrichgebert/ponytail" in pkg.dependencies) {
+          if (shouldDryRun) console.log(`  [dry-run] would remove @dietrichgebert/ponytail from ${pluginsPkgPath}`);
+          else {
+            delete pkg.dependencies["@dietrichgebert/ponytail"];
+            await fs.writeFile(pluginsPkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf8");
+            console.log("  [write] Removed @dietrichgebert/ponytail from plugins/package.json");
+          }
+        }
+      } catch {
+        debug("Could not update plugins/package.json for ponytail");
+      }
+    }
+    try {
+      if (shouldDryRun) console.log(`  [dry-run] would remove ${ponytailPkgDir}`);
+      else {
+        await fs.rm(ponytailPkgDir, { recursive: true, force: true });
+        console.log(`  [rm] ${ponytailPkgDir}`);
+        await fs.rm(path.dirname(ponytailPkgDir));
+        console.log(`  [rm] ${path.dirname(ponytailPkgDir)} (empty scope)`);
+      }
+    } catch {
+      debug("Could not remove ponytail package dir (scope may hold other packages)");
+    }
+    const lockPath = path.join(pluginsDir, "omp-plugins.lock.json");
+    const lockRaw = await readTextIfExists(lockPath);
+    if (lockRaw) {
+      try {
+        const lock = JSON.parse(lockRaw) as { plugins?: Record<string, unknown> };
+        if (lock.plugins && "@dietrichgebert/ponytail" in lock.plugins) {
+          if (shouldDryRun) console.log(`  [dry-run] would remove @dietrichgebert/ponytail from ${lockPath}`);
+          else {
+            delete lock.plugins["@dietrichgebert/ponytail"];
+            await fs.writeFile(lockPath, JSON.stringify(lock, null, 2) + "\n", "utf8");
+            console.log(`  [write] Removed @dietrichgebert/ponytail from ${lockPath}`);
+          }
+        }
+      } catch {
+        debug("Could not update omp-plugins.lock.json for ponytail");
+      }
+    }
+  }
+
   // Remove our plugin registration from ~/.omp/plugins
-  const pluginsDir = path.join(HOME, ".omp", "plugins");
   const pluginsPkgPath = path.join(pluginsDir, "package.json");
   const pluginsPkgRaw = await readTextIfExists(pluginsPkgPath);
   if (pluginsPkgRaw) {

@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
@@ -112,4 +113,56 @@ test("uninstall dry-run previews shared bridge removal", () => {
   assert.match(result.stdout, /\[dry-run\] would remove .*extensions[\\/]shared(?:\r?\n|$)/);
   assert.match(result.stdout, /\[dry-run\] would remove .*extensions[\\/]amanai-reward(?:\r?\n|$)/);
   assert.match(result.stdout, /\[dry-run\] would remove .*extensions[\\/]aaa-combo-boot(?:\r?\n|$)/);
+});
+
+test("uninstall dry-run with --remove-ponytail previews full ponytail removal", () => {
+  const home = mkdtempSync(path.join(os.tmpdir(), "tersio-uninstall-"));
+  try {
+    const pluginsDir = path.join(home, ".omp", "plugins");
+    mkdirSync(path.join(pluginsDir, "node_modules", "@dietrichgebert"), { recursive: true });
+    writeFileSync(
+      path.join(pluginsDir, "package.json"),
+      JSON.stringify({ name: "omp-plugins", private: true, dependencies: { "@dietrichgebert/ponytail": "github:DietrichGebert/ponytail" } }),
+      "utf8",
+    );
+    writeFileSync(
+      path.join(pluginsDir, "omp-plugins.lock.json"),
+      JSON.stringify({ plugins: { "@dietrichgebert/ponytail": { version: "4.9.0" } }, settings: {} }),
+      "utf8",
+    );
+    const result = spawnSync(
+      process.execPath,
+      [installer, "uninstall", "--dry-run", "--yes", "--remove-ponytail"],
+      {
+        cwd: root,
+        encoding: "utf8",
+        timeout: 10000,
+        env: { ...process.env, HOME: home, USERPROFILE: home },
+      }
+    );
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /\[dry-run\] would remove @dietrichgebert\/ponytail from .*package\.json/);
+    assert.match(result.stdout, /\[dry-run\] would remove .*@dietrichgebert[\\/]ponytail(?:\r?\n|$)/);
+    assert.match(result.stdout, /\[dry-run\] would remove @dietrichgebert\/ponytail from .*omp-plugins\.lock\.json/);
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("uninstall dry-run without the flag keeps ponytail", () => {
+  const missingHome = path.join(root, "test", "definitely-missing-home");
+  const result = spawnSync(
+    process.execPath,
+    [installer, "uninstall", "--dry-run", "--yes"],
+    {
+      cwd: root,
+      encoding: "utf8",
+      timeout: 10000,
+      env: { ...process.env, HOME: missingHome, USERPROFILE: missingHome },
+    }
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.doesNotMatch(result.stdout, /dietrichgebert/);
 });

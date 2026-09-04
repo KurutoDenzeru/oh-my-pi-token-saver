@@ -35,10 +35,6 @@ function levelSummary(state: ComboState): string {
   return `caveman=${state.caveman} rtk=${state.rtk} ponytail=${state.ponytail}`;
 }
 
-function hasPonytailInstructions(systemPrompt: string | string[]): boolean {
-  return systemPromptIncludes(systemPrompt, 'PONYTAIL MODE ACTIVE');
-}
-
 function loadPonytailInstructions(mode: string): string {
   try {
     const installed = path.join(
@@ -187,7 +183,7 @@ export default function comboToggleExtension(pi: ExtensionApi): void {
     if (!isOmpSubagentPrompt(event.systemPrompt)) return;
 
     const mode = getSharedComboState().ponytail;
-    if (mode === 'off' || hasPonytailInstructions(event.systemPrompt)) return;
+    if (mode === 'off' || systemPromptIncludes(event.systemPrompt, 'PONYTAIL MODE ACTIVE')) return;
     const base = asPromptArray(event.systemPrompt);
     return { systemPrompt: [...base, loadPonytailInstructions(mode)] };
   });

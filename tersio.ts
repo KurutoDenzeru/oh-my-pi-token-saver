@@ -402,10 +402,9 @@ async function stepPonytail(pluginsDir: string, userDir: string, options: Instal
   }
 
   const ponytailExtPath = path.join(pluginsDir, 'node_modules', '@dietrichgebert', 'ponytail', 'pi-extension', 'index.js');
+  const probeExt = async (): Promise<boolean> => (await readTextIfExists(ponytailExtPath)) !== null;
   // Fast path: extension already present and no refresh asked — skip network.
-  let ponytailExtExists: string | null = !options.reinstall && !options.dryRun
-    ? await readTextIfExists(ponytailExtPath)
-    : null;
+  let ponytailExtExists = !options.reinstall && !options.dryRun ? await probeExt() : false;
   if (ponytailExtExists) {
     debug('Ponytail pi-extension already installed; skipping network refresh');
   } else if (options.dryRun) {
@@ -414,7 +413,7 @@ async function stepPonytail(pluginsDir: string, userDir: string, options: Instal
     if (options.reinstall) {
       console.log(`  [dry-run] would run: npm install ${PONYTAIL_NPM_SPEC} --save --no-audit --no-fund`);
     }
-    ponytailExtExists = 'dry-run';
+    ponytailExtExists = true;
   } else {
     // Try omp plugin install first
     try {
@@ -435,7 +434,7 @@ async function stepPonytail(pluginsDir: string, userDir: string, options: Instal
     }
 
     // Verify the pi-extension/index.js actually exists
-    ponytailExtExists = await readTextIfExists(ponytailExtPath);
+    ponytailExtExists = await probeExt();
 
     // Fallback: try bun install or npm install
     if (!ponytailExtExists) {
@@ -452,7 +451,7 @@ async function stepPonytail(pluginsDir: string, userDir: string, options: Instal
           console.log('  [hint] Manual: cd ~/.omp/plugins && npm install');
         }
       }
-      ponytailExtExists = await readTextIfExists(ponytailExtPath);
+      ponytailExtExists = await probeExt();
     }
 
     // Last-resort fallback: git clone the repo into node_modules
@@ -463,7 +462,7 @@ async function stepPonytail(pluginsDir: string, userDir: string, options: Instal
         await fs.mkdir(path.dirname(dest), { recursive: true });
         await execP('git', ['clone', '--depth', '1', 'https://github.com/DietrichGebert/ponytail.git', dest], { timeout: 180000 });
         console.log('  [ok] git clone completed');
-        ponytailExtExists = await readTextIfExists(ponytailExtPath);
+        ponytailExtExists = await probeExt();
       } catch (e3) {
         console.log(`  [fail] git clone failed: ${(e3 as Error).message}`);
         console.log('  [hint] Install git or check network: https://github.com/DietrichGebert/ponytail');

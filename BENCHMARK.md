@@ -16,7 +16,7 @@ Savings from `caveman`, `rtk`, `ponytail`, and `combo` presets: measured overhea
 | caveman full | instruction + `rule.md` | 653 | 163 |
 | caveman ultra | instruction block | 314 | 79 |
 | caveman wenyan | instruction block | 263 | 66 |
-| rtk on | `RTK_PROMPT` | 645 | 161 |
+| rtk on | `RTK_PROMPT` | 627 | 157 |
 | ponytail (fallback, floor) | fallback instruction | 298 | 75 |
 | mode reinforcement | combo state line | ~284 | ~71 |
 

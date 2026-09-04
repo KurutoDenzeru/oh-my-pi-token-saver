@@ -1,4 +1,4 @@
-import { reconcileSharedComboEntries, sessionEntries } from './session-state.ts';
+import { reconcileSharedComboEntries, sessionEntries, systemPromptIncludes } from './session-state.ts';
 import type { ExtensionApi, SystemPromptEvent } from './types.ts';
 
 const MARKER = 'SUPREME TOKEN SAVER MODES ACTIVE';
@@ -23,7 +23,7 @@ export default function modeReinforcementExtension(pi: ExtensionApi): void {
     if (!text) return;
 
     const base = Array.isArray(event.systemPrompt) ? event.systemPrompt : [event.systemPrompt];
-    if (base.some((prompt) => typeof prompt === 'string' && prompt.includes(MARKER))) return;
+    if (systemPromptIncludes(base, MARKER)) return;
     return { systemPrompt: [...base, text] };
   });
 }

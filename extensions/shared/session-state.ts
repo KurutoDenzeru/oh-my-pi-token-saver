@@ -74,9 +74,13 @@ function publish(state: Readonly<ComboState>): Readonly<ComboState> {
   return state;
 }
 
-export function isOmpSubagentPrompt(systemPrompt: string | string[]): boolean {
+export function systemPromptIncludes(systemPrompt: string | string[], marker: string): boolean {
   const prompts = Array.isArray(systemPrompt) ? systemPrompt : [systemPrompt];
-  return prompts.some((prompt) => typeof prompt === 'string' && prompt.includes(OMP_SUBAGENT_MARKER));
+  return prompts.some((prompt) => typeof prompt === 'string' && prompt.includes(marker));
+}
+
+export function isOmpSubagentPrompt(systemPrompt: string | string[]): boolean {
+  return systemPromptIncludes(systemPrompt, OMP_SUBAGENT_MARKER);
 }
 
 export function normalizeComboLevel(value: unknown): ComboLevel | null {

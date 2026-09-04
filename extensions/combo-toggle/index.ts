@@ -14,6 +14,7 @@ import {
   sessionEntries,
   setSharedComboLevel,
   setSharedComboListener,
+  systemPromptIncludes,
 } from '../shared/session-state.ts';
 import { readComboDefault } from '../shared/plugin-settings.ts';
 import type { ComboState, ExtensionApi, ExtensionCtx, SystemPromptEvent } from '../shared/types.ts';
@@ -34,8 +35,7 @@ function levelSummary(state: ComboState): string {
 }
 
 function hasPonytailInstructions(systemPrompt: string | string[]): boolean {
-  const prompts = Array.isArray(systemPrompt) ? systemPrompt : [systemPrompt];
-  return prompts.some((prompt) => typeof prompt === 'string' && prompt.includes('PONYTAIL MODE ACTIVE'));
+  return systemPromptIncludes(systemPrompt, 'PONYTAIL MODE ACTIVE');
 }
 
 function loadPonytailInstructions(mode: string): string {

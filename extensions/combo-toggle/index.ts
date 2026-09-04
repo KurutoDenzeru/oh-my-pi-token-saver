@@ -109,6 +109,11 @@ export default function comboToggleExtension(pi: ExtensionApi): void {
     if (ctx?.hasUI) setSharedComboListener((state) => useState(state));
   }
 
+  function track(ctx?: ExtensionCtx): void {
+    listen(ctx);
+    if (ctx?.hasUI) reconcile(ctx);
+  }
+
   pi.registerCommand?.('combo', {
     description: 'Toggle all 3 OMP add-ons at once. Usage: /combo <off|medium|balanced|max|status>',
     handler: async (args, ctx) => {
@@ -157,9 +162,8 @@ export default function comboToggleExtension(pi: ExtensionApi): void {
   });
 
   pi.on('session_start', async (_event, ctx) => {
-    listen(ctx);
-    if (ctx?.hasUI) reconcile(ctx);
-    else syncStatus(ctx);
+    track(ctx);
+    if (!ctx?.hasUI) syncStatus(ctx);
     // Installer/user-configured default applies only to a fresh session with
     // no persisted state — real session state always wins.
     if (getSharedComboState().level === 'off' && !sessionEntries(ctx).length) {
@@ -174,8 +178,7 @@ export default function comboToggleExtension(pi: ExtensionApi): void {
 
   for (const event of ['session_branch', 'session_tree', 'agent_start']) {
     pi.on(event, async (_event, ctx) => {
-      listen(ctx);
-      if (ctx?.hasUI) reconcile(ctx);
+      track(ctx);
     });
   }
 

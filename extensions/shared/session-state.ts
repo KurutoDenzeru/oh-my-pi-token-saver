@@ -172,12 +172,8 @@ export function reconcileSharedComboEntries(entries: SessionEntry[] | null | und
   return publish(normalizedState(modes, level));
 }
 
-export function setSharedComboListener(listener: ((state: Readonly<ComboState>) => void) | null): () => void {
-  const shared = bridge();
-  shared.listener = typeof listener === 'function' ? listener : null;
-  return () => {
-    if (shared.listener === listener) shared.listener = null;
-  };
+export function setSharedComboListener(listener: ((state: Readonly<ComboState>) => void) | null): void {
+  bridge().listener = typeof listener === 'function' ? listener : null;
 }
 
 export function resetSharedComboState(): Readonly<ComboState> {

@@ -883,7 +883,7 @@ async function updateJsonFile(
   mutate: (data: Record<string, unknown>) => boolean,
   dryRunNote: string,
   writeNote: string,
-  options: WriteOptions,
+  dryRun: boolean,
 ): Promise<void> {
   const raw = await readTextIfExists(filePath);
   if (!raw) return;
@@ -895,7 +895,7 @@ async function updateJsonFile(
     return;
   }
   if (!mutate(data)) return;
-  if (options.dryRun) {
+  if (dryRun) {
     console.log(`  [dry-run] ${dryRunNote}`);
     return;
   }
@@ -1000,7 +1000,7 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
     await updateJsonFile(pluginsPkgPath,
       (data) => dropKey(data.dependencies, '@dietrichgebert/ponytail'),
       `would remove @dietrichgebert/ponytail from ${pluginsPkgPath}`,
-      'Removed @dietrichgebert/ponytail from plugins/package.json', options);
+      'Removed @dietrichgebert/ponytail from plugins/package.json', shouldDryRun);
     try {
       if (shouldDryRun) console.log(`  [dry-run] would remove ${ponytailPkgDir}`);
       else {
@@ -1016,7 +1016,7 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
     await updateJsonFile(lockPath,
       (data) => dropKey(data.plugins, '@dietrichgebert/ponytail'),
       `would remove @dietrichgebert/ponytail from ${lockPath}`,
-      `Removed @dietrichgebert/ponytail from ${lockPath}`, options);
+      `Removed @dietrichgebert/ponytail from ${lockPath}`, shouldDryRun);
   }
 
   // Remove our plugin registration from ~/.omp/plugins
@@ -1024,7 +1024,7 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
   await updateJsonFile(pluginsPkgPath,
     (data) => dropKey(data.dependencies, PACKAGE_NAME),
     `would remove ${PACKAGE_NAME} from ${pluginsPkgPath}`,
-    `Removed ${PACKAGE_NAME} from plugins/package.json`, options);
+    `Removed ${PACKAGE_NAME} from plugins/package.json`, shouldDryRun);
   const selfPluginDir = path.join(pluginsDir, 'node_modules', PACKAGE_NAME);
   if ((await readTextIfExists(path.join(selfPluginDir, 'package.json'))) !== null) {
     try {

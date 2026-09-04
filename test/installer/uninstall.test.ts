@@ -96,3 +96,22 @@ test("uninstall with removal flags drops ponytail, its lock entry, and the rtk b
     rmSync(home, { recursive: true, force: true });
   }
 });
+
+test("uninstall dry-run changes no files", () => {
+  const home = mkdtempSync(path.join(os.tmpdir(), "tersio-uninstall-"));
+  try {
+    seed(home);
+    const pluginsPkg = path.join(home, ".omp", "plugins", "package.json");
+    const configPath = path.join(home, ".omp", "agent", "config.yml");
+    const beforePkg = readFileSync(pluginsPkg, "utf8");
+    const beforeConfig = readFileSync(configPath, "utf8");
+    const result = run(home, "uninstall", "--yes", "--dry-run", "--remove-ponytail", "--remove-rtk");
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(readFileSync(pluginsPkg, "utf8"), beforePkg);
+    assert.equal(readFileSync(configPath, "utf8"), beforeConfig);
+    assert.ok(existsSync(path.join(home, ".omp", "agent", "extensions", "shared")));
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});

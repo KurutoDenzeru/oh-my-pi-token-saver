@@ -65,6 +65,11 @@ function notify(ctx: AddonUpdaterCtx | undefined, msg: string, level: NotifyLeve
   ctx?.ui?.notify?.(String(msg), level);
 }
 
+function report(ctx: AddonUpdaterCtx | undefined, msg: string, level: NotifyLevel): string {
+  notify(ctx, msg, level);
+  return msg;
+}
+
 interface AddonStatus {
   text: string;
   level: NotifyLevel;
@@ -147,21 +152,18 @@ async function updatePonytail(pi: AddonUpdaterPi, ctx: AddonUpdaterCtx, dryRun =
   const pluginsDir = path.join(HOME, '.omp', 'plugins');
   if (dryRun) {
     const m = `Ponytail dry-run: would run \`npm install @dietrichgebert/ponytail@latest --save --no-audit --no-fund\` in ${pluginsDir}.`;
-    notify(ctx, m, 'info');
-    return m;
+    return report(ctx, m, 'info');
   }
   notify(ctx, 'Ponytail: ensuring plugin directory exists…', 'info');
   try {
     await fs.mkdir(pluginsDir, { recursive: true });
   } catch (e) {
     const m = `Ponytail update failed: failed to create ${pluginsDir}: ${(e as Error).message}`;
-    notify(ctx, m, 'warning');
-    return m;
+    return report(ctx, m, 'warning');
   }
   if (!pi.exec) {
     const m = 'Ponytail update failed: extension host does not provide exec';
-    notify(ctx, m, 'warning');
-    return m;
+    return report(ctx, m, 'warning');
   }
   notify(ctx, 'Ponytail: running npm install…', 'info');
   let out = '';
@@ -171,8 +173,7 @@ async function updatePonytail(pi: AddonUpdaterPi, ctx: AddonUpdaterCtx, dryRun =
     if (r.code !== 0) throw new Error(r.stderr || `npm exited ${r.code}`);
   } catch (e) {
     const m = `Ponytail update failed: ${(e as Error).message}`;
-    notify(ctx, m, 'warning');
-    return m;
+    return report(ctx, m, 'warning');
   }
   const m = `Ponytail update finished.${out ? `\n${out}` : ''}\n${RELOAD_MSG}`;
   notify(ctx, 'Ponytail update finished. ' + RELOAD_MSG, 'info');
@@ -186,7 +187,7 @@ async function updateRtk(ctx: AddonUpdaterCtx, dryRun = false): Promise<string> 
     release = JSON.parse(raw) as GitHubRelease;
   } catch (e) {
     const m = `RTK: cannot fetch release info: ${(e as Error).message}`;
-    notify(ctx, m, 'warning'); return m;
+    return report(ctx, m, 'warning');
   }
   const tag = release.tag_name || 'unknown';
   const assets = Array.isArray(release.assets) ? release.assets : [];
@@ -197,7 +198,7 @@ async function updateRtk(ctx: AddonUpdaterCtx, dryRun = false): Promise<string> 
   const spec = rtkPlatformSpec(PLATFORM, ARCH);
   if (!spec) {
     const m = `RTK: unsupported platform ${PLATFORM}/${ARCH}`;
-    notify(ctx, m, 'warning'); return m;
+    return report(ctx, m, 'warning');
   }
   const { triple: assetTriple, ext: assetExt, binary: binaryName } = spec;
 
@@ -205,13 +206,12 @@ async function updateRtk(ctx: AddonUpdaterCtx, dryRun = false): Promise<string> 
   const checksAsset = assets.find((a) => a.name === 'checksums.txt');
   if (!asset || !checksAsset) {
     const m = `RTK: required assets not found in release ${tag} (need rtk-${assetTriple}${assetExt} and checksums.txt)`;
-    notify(ctx, m, 'warning'); return m;
+    return report(ctx, m, 'warning');
   }
 
   if (dryRun) {
     const m = `RTK dry-run: would download ${asset.name} (${tag}), verify checksums.txt, and replace ${RTK_BINARY}.`;
-    notify(ctx, m, 'info');
-    return m;
+    return report(ctx, m, 'info');
   }
 
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'rtk-update-'));
@@ -230,13 +230,13 @@ async function updateRtk(ctx: AddonUpdaterCtx, dryRun = false): Promise<string> 
     const expected = parseChecksum(checks, asset.name);
     if (!expected) {
       const m = `RTK: checksums.txt has no entry for ${asset.name}`;
-      notify(ctx, m, 'warning'); return m;
+      return report(ctx, m, 'warning');
     }
     const archiveBuf = await fs.readFile(archivePath);
     const actual = createHash('sha256').update(archiveBuf).digest('hex').toLowerCase();
     if (actual !== expected) {
       const m = `RTK: checksum mismatch! expected=${expected.slice(0,12)}… actual=${actual.slice(0,12)}…`;
-      notify(ctx, m, 'warning'); return m;
+      return report(ctx, m, 'warning');
     }
     notify(ctx, 'RTK: checksum verified.', 'info');
 
@@ -264,7 +264,7 @@ async function updateRtk(ctx: AddonUpdaterCtx, dryRun = false): Promise<string> 
     const rtkExtracted = await findFile(extractDir, binaryName);
     if (!rtkExtracted) {
       const m = `RTK: ${binaryName} not found in extracted archive`;
-      notify(ctx, m, 'warning'); return m;
+      return report(ctx, m, 'warning');
     }
     await fs.mkdir(path.dirname(RTK_BINARY), { recursive: true });
     const backupPath = `${RTK_BINARY}.bak`;
@@ -299,7 +299,7 @@ async function updateRtk(ctx: AddonUpdaterCtx, dryRun = false): Promise<string> 
     return m;
   } catch (e) {
     const m = `RTK update failed: ${(e as Error).message}`;
-    notify(ctx, m, 'warning'); return m;
+    return report(ctx, m, 'warning');
   } finally {
     fs.rm(tmp, { recursive: true, force: true }).catch(() => {});
   }
@@ -308,7 +308,7 @@ async function updateRtk(ctx: AddonUpdaterCtx, dryRun = false): Promise<string> 
 async function updateCaveman(ctx: AddonUpdaterCtx, dryRun = false): Promise<string> {
   let remote: string;
   try { remote = await httpsGet(CAVEMAN_REMOTE); }
-  catch (e) { const m = `Caveman update failed: ${(e as Error).message}`; notify(ctx, m, 'warning'); return m; }
+  catch (e) { return report(ctx, `Caveman update failed: ${(e as Error).message}`, 'warning'); }
 
   const remoteHash = shortHash(remote);
   const oldLocal = await readTextIfExists(CAVEMAN_LOCAL);
@@ -316,8 +316,7 @@ async function updateCaveman(ctx: AddonUpdaterCtx, dryRun = false): Promise<stri
 
   if (dryRun) {
     const m = `Caveman dry-run: would write ${CAVEMAN_LOCAL}\nold=${oldHash || '—'} new=${remoteHash}.`;
-    notify(ctx, m, 'info');
-    return m;
+    return report(ctx, m, 'info');
   }
 
   try {
@@ -336,8 +335,7 @@ async function updateCaveman(ctx: AddonUpdaterCtx, dryRun = false): Promise<stri
     return m;
   } catch (e) {
     const m = `Caveman update failed: ${(e as Error).message}`;
-    notify(ctx, m, 'warning');
-    return m;
+    return report(ctx, m, 'warning');
   }
 }
 
@@ -377,14 +375,13 @@ export default function aiAddonsUpdaterExtension(pi: AddonUpdaterPi): void {
           results.push(await updaters[target]());
         } else {
           const m = 'Usage: /ai-addons update <ponytail|rtk|caveman|all> [--dry-run]';
-          notify(ctx, m, 'warning'); return m;
+          return report(ctx, m, 'warning');
         }
         return results.join('\n\n');
       }
 
       const m = 'Usage: /ai-addons <check|status|update ponytail|rtk|caveman|all> [--dry-run]';
-      notify(ctx, m, 'warning');
-      return m;
+      return report(ctx, m, 'warning');
     },
   });
 }

@@ -122,12 +122,7 @@ const scopeFlag = flagValue('--scope')?.toLowerCase() ?? null;
 const comboDefaultFlag = parseEnum(flagValue('--combo-default'), COMBO_DEFAULTS, '--combo-default');
 const cavemanDefaultFlag = parseEnum(flagValue('--caveman-default'), CAVEMAN_DEFAULTS, '--caveman-default');
 const ponytailDefaultFlag = parseEnum(flagValue('--ponytail-default'), PONYTAIL_DEFAULTS, '--ponytail-default');
-const rtkDefaultFlag = flagValue('--rtk-default')?.toLowerCase();
-
-if (rtkDefaultFlag !== undefined && !RTK_DEFAULTS.has(rtkDefaultFlag)) {
-  console.error(`[fail] Invalid --rtk-default: ${rtkDefaultFlag}. Use: on, off`);
-  process.exit(1);
-}
+const rtkDefaultFlag = parseEnum(flagValue('--rtk-default'), RTK_DEFAULTS, '--rtk-default');
 
 const profileFlagsGiven = [comboDefaultFlag, cavemanDefaultFlag, rtkDefaultFlag, ponytailDefaultFlag]
   .some((flag) => flag !== undefined);

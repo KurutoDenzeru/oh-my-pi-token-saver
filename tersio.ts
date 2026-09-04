@@ -504,15 +504,11 @@ async function stepSelfPlugin(pluginsDir: string, options: InstallOptions): Prom
 
   // pkg.dependencies[PACKAGE_NAME] was assigned above, so only reinstall skips this fast path.
   if (!options.reinstall) {
-    const installedRaw = await readTextIfExists(path.join(pluginsDir, 'node_modules', PACKAGE_NAME, 'package.json'));
-    if (installedRaw) {
-      try {
-        if ((JSON.parse(installedRaw) as { version?: string }).version === PACKAGE_VERSION) {
-          debug(`${PACKAGE_NAME} already installed at v${PACKAGE_VERSION}; skipping npm install`);
-          console.log('  [ok] Listed in OMP Settings → Plugins as tersio');
-          return true;
-        }
-      } catch { /* fall through to install */ }
+    const installedPkgRaw = await readTextIfExists(path.join(pluginsDir, 'node_modules', PACKAGE_NAME, 'package.json'));
+    if (parseJsonObject<{ version?: string }>(installedPkgRaw)?.version === PACKAGE_VERSION) {
+      debug(`${PACKAGE_NAME} already installed at v${PACKAGE_VERSION}; skipping npm install`);
+      console.log('  [ok] Listed in OMP Settings → Plugins as tersio');
+      return true;
     }
   }
 

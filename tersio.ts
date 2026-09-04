@@ -1010,8 +1010,8 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
     }
   }
 
-  // Remove extension directories
-  for (const t of targets) await removeUninstallTarget(t, shouldDryRun);
+  // Remove extension directories (independent paths, so concurrently).
+  await Promise.all(targets.map((t) => removeUninstallTarget(t, shouldDryRun)));
 
   // Remove Combo and mode-reinforcement registrations; Ponytail only when requested.
   const configRaw = await readTextIfExists(configPath);

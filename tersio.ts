@@ -52,6 +52,7 @@ interface PluginsPackage {
 // Session-start mode defaults for fresh installs.
 const COMBO_DEFAULTS = new Set(['off', 'medium', 'balanced', 'max']);
 const CAVEMAN_DEFAULTS = new Set(['off', 'lite', 'full', 'ultra', 'wenyan']);
+const PONYTAIL_DEFAULTS = new Set(['off', 'lite', 'full', 'ultra', 'review']);
 
 // ponytail: Combo preset implies all three modes. Mirrors COMBO_LEVELS in
 // extensions/shared/session-state.ts (rtk as boolean here). Single source.
@@ -113,6 +114,7 @@ const scopeFlag = flagValue('--scope')?.toLowerCase() ?? null;
 
 const comboDefaultFlag = parseEnum(flagValue('--combo-default'), COMBO_DEFAULTS, '--combo-default');
 const cavemanDefaultFlag = parseEnum(flagValue('--caveman-default'), CAVEMAN_DEFAULTS, '--caveman-default');
+const ponytailDefaultFlag = parseEnum(flagValue('--ponytail-default'), PONYTAIL_DEFAULTS, '--ponytail-default');
 const rtkDefaultFlag = flagValue('--rtk-default')?.toLowerCase();
 
 if (rtkDefaultFlag !== undefined && rtkDefaultFlag !== 'on' && rtkDefaultFlag !== 'off') {
@@ -121,7 +123,8 @@ if (rtkDefaultFlag !== undefined && rtkDefaultFlag !== 'on' && rtkDefaultFlag !=
 }
 
 const profileFlagsGiven = comboDefaultFlag !== undefined
-  || cavemanDefaultFlag !== undefined || rtkDefaultFlag !== undefined;
+  || cavemanDefaultFlag !== undefined || rtkDefaultFlag !== undefined
+  || ponytailDefaultFlag !== undefined;
 
 function printHelp(): void {
   console.log(`Usage: ${PACKAGE_BIN} [command] [options]
@@ -141,6 +144,7 @@ Options:
   --remove-rtk (uninstall: also remove the RTK binary)
   --combo-default off|medium|balanced|max (implies caveman, rtk, ponytail)
   --caveman-default off|lite|full|ultra|wenyan (override; default follows combo)
+  --ponytail-default off|lite|full|ultra|review (override; default follows combo)
   --rtk-default on|off (override; default follows combo)
   --yes, -y
   --dry-run
@@ -627,11 +631,13 @@ async function stepRtk(binDir: string, options: InstallOptions): Promise<void> {
       return;
     }
 
-    const checksumsText = await downloadRtkChecksums(release);
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'omp-rtk-'));
     try {
       const archivePath = path.join(tmpDir, asset.name);
-      await httpsDownload(asset.browser_download_url, archivePath);
+      const [checksumsText] = await Promise.all([
+        downloadRtkChecksums(release),
+        httpsDownload(asset.browser_download_url, archivePath),
+      ]);
       if (!await verifyRtkArchive(archivePath, asset.name, checksumsText, tmpDir)) return;
 
       const extractDir = path.join(tmpDir, 'extracted');
@@ -758,24 +764,65 @@ async function runDoctor(): Promise<void> {
   const pluginsDir = path.join(HOME, '.omp', 'plugins');
   const rtkBin = path.join(HOME, '.bun', 'bin', IS_WINDOWS ? 'rtk.exe' : 'rtk');
 
-  const agentOk = (await fs.readdir(agentDir).catch(() => null)) !== null;
-  console.log(`  OMP agent dir: ${agentOk ? 'ok' : 'MISSING'} ${agentDir}`);
-
-  const extOk = (await fs.readdir(extDir).catch(() => null)) !== null;
-  console.log(`  OMP extensions dir: ${extOk ? 'ok' : 'MISSING'} ${extDir}`);
-
-  const sharedState = path.join(extDir, 'shared', 'session-state.js');
-  console.log(`  Shared session bridge: ${(await readTextIfExists(sharedState)) !== null ? 'installed' : 'MISSING'}`);
-
-  const configText = await readTextIfExists(configPath);
-  const configOk = configText !== null;
-  console.log(`  OMP config.yml: ${configOk ? 'ok' : 'MISSING'} ${configPath}`);
-
   // Ponytail
   const ponytailPkg = path.join(pluginsDir, 'node_modules', '@dietrichgebert', 'ponytail', 'package.json');
   const ponytailExt = path.join(pluginsDir, 'node_modules', '@dietrichgebert', 'ponytail', 'pi-extension', 'index.js');
-  const ponytailInstalled = (await readTextIfExists(ponytailPkg)) !== null;
-  const ponytailExtInstalled = (await readTextIfExists(ponytailExt)) !== null;
+  const cavemanIndex = path.join(extDir, 'caveman-session', 'index.js');
+  const cavemanRule = path.join(extDir, 'caveman-session', 'rule.md');
+  const rtkIndex = path.join(extDir, 'rtk-session', 'index.js');
+  const updaterIndex = path.join(extDir, 'ai-addons-updater', 'index.js');
+  const comboIndex = path.join(extDir, 'combo-toggle', 'index.js');
+  const modeReinforcement = path.join(extDir, 'shared', 'mode-reinforcement.js');
+  const selfPkg = path.join(pluginsDir, 'node_modules', PACKAGE_NAME, 'package.json');
+
+  // Independent probes run concurrently; logs below keep fixed order.
+  const [
+    agentEntries,
+    extEntries,
+    sharedStateText,
+    configText,
+    ponytailPkgText,
+    ponytailExtText,
+    pluginsPkgRaw,
+    selfPkgText,
+    rtkBinText,
+    cavemanIndexText,
+    cavemanRuleText,
+    rtkIndexText,
+    updaterIndexText,
+    comboIndexText,
+    modeReinforcementText,
+  ] = await Promise.all([
+    fs.readdir(agentDir).catch(() => null),
+    fs.readdir(extDir).catch(() => null),
+    readTextIfExists(path.join(extDir, 'shared', 'session-state.js')),
+    readTextIfExists(configPath),
+    readTextIfExists(ponytailPkg),
+    readTextIfExists(ponytailExt),
+    readTextIfExists(path.join(pluginsDir, 'package.json')),
+    readTextIfExists(selfPkg),
+    readTextIfExists(rtkBin),
+    readTextIfExists(cavemanIndex),
+    readTextIfExists(cavemanRule),
+    readTextIfExists(rtkIndex),
+    readTextIfExists(updaterIndex),
+    readTextIfExists(comboIndex),
+    readTextIfExists(modeReinforcement),
+  ]);
+
+  const agentOk = agentEntries !== null;
+  console.log(`  OMP agent dir: ${agentOk ? 'ok' : 'MISSING'} ${agentDir}`);
+
+  const extOk = extEntries !== null;
+  console.log(`  OMP extensions dir: ${extOk ? 'ok' : 'MISSING'} ${extDir}`);
+
+  console.log(`  Shared session bridge: ${sharedStateText !== null ? 'installed' : 'MISSING'}`);
+
+  const configOk = configText !== null;
+  console.log(`  OMP config.yml: ${configOk ? 'ok' : 'MISSING'} ${configPath}`);
+
+  const ponytailInstalled = ponytailPkgText !== null;
+  const ponytailExtInstalled = ponytailExtText !== null;
   console.log(`  Ponytail package: ${ponytailInstalled ? 'installed' : 'MISSING'}`);
   console.log(`  Ponytail extension: ${ponytailExtInstalled ? 'installed' : 'MISSING'}`);
 
@@ -785,17 +832,15 @@ async function runDoctor(): Promise<void> {
   }
 
   // Self plugin registration (Settings → Plugins listing)
-  const pluginsPkgRaw = await readTextIfExists(path.join(pluginsDir, 'package.json'));
   let selfDep = false;
   if (pluginsPkgRaw) {
     try { selfDep = PACKAGE_NAME in ((JSON.parse(pluginsPkgRaw) as { dependencies?: Record<string, string> }).dependencies || {}); } catch { /* ignore */ }
   }
   console.log(`  Self plugin in plugins/package.json: ${selfDep ? 'registered' : 'MISSING'}`);
-  const selfPkg = path.join(pluginsDir, 'node_modules', PACKAGE_NAME, 'package.json');
-  console.log(`  Self plugin package: ${(await readTextIfExists(selfPkg)) !== null ? 'installed' : 'MISSING'}`);
+  console.log(`  Self plugin package: ${selfPkgText !== null ? 'installed' : 'MISSING'}`);
 
   // RTK
-  const rtkExists = (await readTextIfExists(rtkBin)) !== null;
+  const rtkExists = rtkBinText !== null;
   console.log(`  RTK binary: ${rtkExists ? 'installed' : 'MISSING'} ${rtkBin}`);
   if (rtkExists) {
     try {
@@ -807,25 +852,19 @@ async function runDoctor(): Promise<void> {
   }
 
   // Caveman
-  const cavemanIndex = path.join(extDir, 'caveman-session', 'index.js');
-  const cavemanRule = path.join(extDir, 'caveman-session', 'rule.md');
-  console.log(`  Caveman extension: ${(await readTextIfExists(cavemanIndex)) !== null ? 'installed' : 'MISSING'}`);
-  console.log(`  Caveman rule.md: ${(await readTextIfExists(cavemanRule)) !== null ? 'installed' : 'MISSING'}`);
+  console.log(`  Caveman extension: ${cavemanIndexText !== null ? 'installed' : 'MISSING'}`);
+  console.log(`  Caveman rule.md: ${cavemanRuleText !== null ? 'installed' : 'MISSING'}`);
 
   // RTK extension
-  const rtkIndex = path.join(extDir, 'rtk-session', 'index.js');
-  console.log(`  RTK extension: ${(await readTextIfExists(rtkIndex)) !== null ? 'installed' : 'MISSING'}`);
+  console.log(`  RTK extension: ${rtkIndexText !== null ? 'installed' : 'MISSING'}`);
 
   // Updater
-  const updaterIndex = path.join(extDir, 'ai-addons-updater', 'index.js');
-  console.log(`  Updater extension: ${(await readTextIfExists(updaterIndex)) !== null ? 'installed' : 'MISSING'}`);
+  console.log(`  Updater extension: ${updaterIndexText !== null ? 'installed' : 'MISSING'}`);
 
   // Combo
-  const comboIndex = path.join(extDir, 'combo-toggle', 'index.js');
-  console.log(`  Combo extension: ${(await readTextIfExists(comboIndex)) !== null ? 'installed' : 'MISSING'}`);
+  console.log(`  Combo extension: ${comboIndexText !== null ? 'installed' : 'MISSING'}`);
 
-  const modeReinforcement = path.join(extDir, 'shared', 'mode-reinforcement.js');
-  console.log(`  Mode reinforcement extension: ${(await readTextIfExists(modeReinforcement)) !== null ? 'installed' : 'MISSING'}`);
+  console.log(`  Mode reinforcement extension: ${modeReinforcementText !== null ? 'installed' : 'MISSING'}`);
 
 
   if (configText) {
@@ -1137,6 +1176,7 @@ async function resolveProfile(): Promise<Profile> {
   profile.ponytailDefault = preset.ponytail;
   if (cavemanDefaultFlag !== undefined) profile.cavemanDefault = cavemanDefaultFlag;
   if (rtkDefaultFlag !== undefined) profile.rtkDefault = rtkDefaultFlag === 'on';
+  if (ponytailDefaultFlag !== undefined) profile.ponytailDefault = ponytailDefaultFlag;
 
   console.log(`  Profile: combo default=${profile.comboDefault} (caveman=${profile.cavemanDefault} · rtk=${profile.rtkDefault ? 'on' : 'off'} · ponytail=${profile.ponytailDefault})`);
   return profile;

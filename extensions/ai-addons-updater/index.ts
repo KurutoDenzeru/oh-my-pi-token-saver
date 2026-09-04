@@ -65,11 +65,13 @@ function notify(ctx: AddonUpdaterCtx | undefined, msg: string, level: NotifyLeve
   ctx?.ui?.notify?.(String(msg), level);
 }
 
-// Check: no mutation.
-async function checkAddons(ctx: AddonUpdaterCtx): Promise<string> {
-  const lines: string[] = [];
+interface AddonStatus {
+  text: string;
+  level: NotifyLevel;
+}
 
-  // Ponytail
+// Check: no mutation. Probes run concurrently via checkAddons below.
+async function checkPonytail(): Promise<AddonStatus> {
   try {
     const remoteRaw = await httpsGet(PONYTAIL_REMOTE);
     const remoteJson = JSON.parse(remoteRaw) as { version?: string };
@@ -80,13 +82,14 @@ async function checkAddons(ctx: AddonUpdaterCtx): Promise<string> {
       : localVer === remoteVer ? 'up to date'
       : 'update available';
     const m = `Ponytail ${status}: local=${localVer || '—'} latest=${remoteVer}`;
-    lines.push(m); notify(ctx, m, 'info');
+    return { text: m, level: 'info' };
   } catch (e) {
     const m = `Ponytail check failed: ${(e as Error).message}`;
-    lines.push(m); notify(ctx, m, 'warning');
+    return { text: m, level: 'warning' };
   }
+}
 
-  // RTK
+async function checkRtk(): Promise<AddonStatus> {
   try {
     const releaseRaw = await httpsGet(RTK_RELEASE_API);
     const release = JSON.parse(releaseRaw) as GitHubRelease;
@@ -100,13 +103,15 @@ async function checkAddons(ctx: AddonUpdaterCtx): Promise<string> {
       : normalizeRtkVersion(localVer) === normalizeRtkVersion(latestTag ?? undefined) ? 'up to date'
       : 'update available';
     const m = `RTK ${status}: local=${localVer || '—'} latest=${latestTag || '—'}`;
-    lines.push(m); notify(ctx, m, 'info');
+    return { text: m, level: 'info' };
   } catch (e) {
     const m = `RTK check failed: ${(e as Error).message}`;
-    lines.push(m); notify(ctx, m, 'warning');
+    return { text: m, level: 'warning' };
   }
+}
 
-  // Caveman (rule.md)
+// Caveman (rule.md)
+async function checkCaveman(): Promise<AddonStatus> {
   try {
     const remote = await httpsGet(CAVEMAN_REMOTE);
     const remoteHash = sha256Hex(remote).slice(0, 16);
@@ -116,12 +121,20 @@ async function checkAddons(ctx: AddonUpdaterCtx): Promise<string> {
       : localHash === remoteHash ? 'rule.md up to date'
       : 'rule.md update available';
     const m = `Caveman ${status}: local=${localHash || '—'} remote=${remoteHash}`;
-    lines.push(m); notify(ctx, m, 'info');
+    return { text: m, level: 'info' };
   } catch (e) {
     const m = `Caveman check failed: ${(e as Error).message}`;
-    lines.push(m); notify(ctx, m, 'warning');
+    return { text: m, level: 'warning' };
   }
+}
 
+async function checkAddons(ctx: AddonUpdaterCtx): Promise<string> {
+  const [ponytail, rtk, caveman] = await Promise.all([checkPonytail(), checkRtk(), checkCaveman()]);
+  const lines: string[] = [];
+  for (const status of [ponytail, rtk, caveman]) {
+    lines.push(status.text);
+    notify(ctx, status.text, status.level);
+  }
   return lines.join('\n');
 }
 
@@ -202,9 +215,11 @@ async function updateRtk(ctx: AddonUpdaterCtx, dryRun = false): Promise<string> 
 
   try {
     notify(ctx, `RTK: downloading ${asset.name} (${tag})…`, 'info');
-    await httpsDownload(asset.browser_download_url, archivePath);
     notify(ctx, 'RTK: downloading checksums.txt…', 'info');
-    await httpsDownload(checksAsset.browser_download_url, checksPath);
+    await Promise.all([
+      httpsDownload(asset.browser_download_url, archivePath),
+      httpsDownload(checksAsset.browser_download_url, checksPath),
+    ]);
     // Verify SHA256 against checksums.txt
     const checks = await fs.readFile(checksPath, 'utf8');
     const expected = parseChecksum(checks, asset.name);

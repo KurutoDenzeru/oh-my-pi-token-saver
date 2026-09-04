@@ -151,3 +151,15 @@ test("package manifest declares features and settings matching the omp schema", 
   assert.equal(rtk.type, "boolean");
   assert.equal(rtk.default, false);
 });
+
+test("installer accepts --ponytail-default override and reports it", () => {
+  const result = run("install", "--dry-run", "--scope", "project", "--yes", "--ponytail-default", "review");
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /ponytail=review/);
+});
+
+test("installer rejects invalid --ponytail-default values", () => {
+  const bad = run("install", "--dry-run", "--yes", "--ponytail-default", "max");
+  assert.equal(bad.status, 1);
+  assert.match(bad.stderr, /Invalid --ponytail-default/);
+});

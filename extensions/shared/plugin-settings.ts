@@ -31,17 +31,19 @@ export function readPluginSettings(): Record<string, unknown> {
 }
 
 const COMBO_LEVELS = new Set(['off', 'medium', 'balanced', 'max']);
-
-export function readComboDefault(): string {
-  const raw = readPluginSettings().comboDefault;
-  return typeof raw === 'string' && COMBO_LEVELS.has(raw) ? raw : 'off';
-}
-
 const CAVEMAN_MODES = new Set(['off', 'lite', 'full', 'ultra', 'wenyan']);
 
+function readStringDefault(key: string, valid: Set<string>): string {
+  const raw = readPluginSettings()[key];
+  return typeof raw === 'string' && valid.has(raw) ? raw : 'off';
+}
+
+export function readComboDefault(): string {
+  return readStringDefault('comboDefault', COMBO_LEVELS);
+}
+
 export function readCavemanDefault(): string {
-  const raw = readPluginSettings().cavemanDefault;
-  return typeof raw === 'string' && CAVEMAN_MODES.has(raw) ? raw : 'off';
+  return readStringDefault('cavemanDefault', CAVEMAN_MODES);
 }
 
 export function readRtkDefault(): boolean {

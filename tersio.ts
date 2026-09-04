@@ -1230,12 +1230,13 @@ async function writePluginSettings(profile: Profile, options: WriteOptions): Pro
   }
   config.plugins = config.plugins || {};
   config.settings = config.settings || {};
-  const settings = { ...(config.settings[PACKAGE_NAME] || {}) };
-  settings.comboDefault = profile.comboDefault;
-  settings.cavemanDefault = profile.cavemanDefault;
-  settings.rtkDefault = profile.rtkDefault;
-  settings.ponytailDefault = profile.ponytailDefault;
-  config.settings[PACKAGE_NAME] = settings;
+  config.settings[PACKAGE_NAME] = {
+    ...(config.settings[PACKAGE_NAME] || {}),
+    comboDefault: profile.comboDefault,
+    cavemanDefault: profile.cavemanDefault,
+    rtkDefault: profile.rtkDefault,
+    ponytailDefault: profile.ponytailDefault,
+  };
 
   if (options.dryRun) {
     console.log(`  [dry-run] would write plugin settings (${PACKAGE_NAME}) to ${lockPath}`);

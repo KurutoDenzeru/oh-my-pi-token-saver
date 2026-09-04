@@ -28,6 +28,8 @@ import {
 const IS_WINDOWS = process.platform === 'win32';
 const RTK_BINARY_NAME = IS_WINDOWS ? 'rtk.exe' : 'rtk';
 const HOME = process.env.HOME || process.env.USERPROFILE || '';
+const OMP_AGENT_DIR = path.join(HOME, '.omp', 'agent');
+const OMP_PLUGINS_DIR = path.join(HOME, '.omp', 'plugins');
 
 const PACKAGE_NAME = '@krtclcdy/tersio';
 const PACKAGE_BIN = 'tersio';
@@ -791,10 +793,10 @@ async function runDoctor(): Promise<void> {
   console.log(`  Home: ${HOME}`);
 
   // Directories
-  const agentDir = path.join(HOME, '.omp', 'agent');
+  const agentDir = OMP_AGENT_DIR;
   const extDir = path.join(agentDir, 'extensions');
   const configPath = path.join(agentDir, 'config.yml');
-  const pluginsDir = path.join(HOME, '.omp', 'plugins');
+  const pluginsDir = OMP_PLUGINS_DIR;
   const rtkBin = path.join(HOME, '.bun', 'bin', RTK_BINARY_NAME);
 
   // Ponytail
@@ -958,10 +960,10 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
 
   console.log('\n=== Tersio Uninstall ===\n');
 
-  const extDir = path.join(HOME, '.omp', 'agent', 'extensions');
-  const configPath = path.join(HOME, '.omp', 'agent', 'config.yml');
+  const extDir = path.join(OMP_AGENT_DIR, 'extensions');
+  const configPath = path.join(OMP_AGENT_DIR, 'config.yml');
   const rtkBin = path.join(HOME, '.bun', 'bin', RTK_BINARY_NAME);
-  const pluginsDir = path.join(HOME, '.omp', 'plugins');
+  const pluginsDir = OMP_PLUGINS_DIR;
   const ponytailPkgDir = path.join(pluginsDir, 'node_modules', '@dietrichgebert', 'ponytail');
 
   const targets = [
@@ -1238,7 +1240,7 @@ async function validateConfigExtensions(agentDir: string, options: WriteOptions)
 // Persist the profile as omp plugin settings so `omp plugin config get`
 // reflects the choice and the extensions pick it up on session start.
 async function writePluginSettings(profile: Profile, options: WriteOptions): Promise<void> {
-  const pluginsDir = path.join(HOME, '.omp', 'plugins');
+  const pluginsDir = OMP_PLUGINS_DIR;
   const lockPath = path.join(pluginsDir, 'omp-plugins.lock.json');
   let config: { plugins?: Record<string, unknown>; settings?: Record<string, Record<string, unknown>> } = {};
   const existing = await readTextIfExists(lockPath);
@@ -1322,7 +1324,7 @@ async function main(): Promise<void> {
   const profile = await resolveProfile();
 
 
-  const userDir = path.join(HOME, '.omp', 'agent');
+  const userDir = OMP_AGENT_DIR;
   const userExtDir = path.join(userDir, 'extensions');
   const userPluginsDir = path.join(userDir, '..', 'plugins');
   const bunBinDir = path.join(HOME, '.bun', 'bin');

@@ -5,7 +5,7 @@ Savings from `caveman`, `rtk`, `ponytail`, and `combo` presets: measured overhea
 ## Method
 
 - **Overhead (measured).** Exact prompt text each mode injects (`systemPrompt` additions, `rule.md`). Counted from this repo with `node`; tokens ≈ chars ÷ 4 (English prose estimate).
-- **Savings (modeled).** No mechanical caps exist — modes steer the model, so savings depend on compliance. Ranges below state their baselines; verify with the protocol in §5.
+- **Savings (RTK measured, rest modeled).** RTK rows come from the table in §3a (real runs, method above). No mechanical caps exist — modes steer the model, so savings depend on compliance. Ranges below state their baselines; verify with the protocol in §5.
 - **Ponytail upstream text** ships in the external `@dietrichgebert/ponytail` plugin, so only the bundled fallback is measured (floor value).
 
 ## 1. Session overhead (measured)
@@ -37,7 +37,23 @@ Savings from `caveman`, `rtk`, `ponytail`, and `combo` presets: measured overhea
 | Prose reply, caveman lite | ~400 tok | ~340 tok (−15%) | ~60 | ~1 reply |
 | Prose reply, caveman full | ~400 tok | ~250 tok (−35%) | ~150 | ~2 replies |
 | Prose reply, caveman ultra | ~400 tok | ~200 tok (−50%) | ~200 | ~1 reply |
-| Shell-heavy turn, rtk on (e.g. 2 KB raw `git diff` / test log → summary) | ~2,000 tok | ~200 tok | ~1,800 | first noisy command |
+| Shell-heavy turn, rtk on | see measured table below | | | first noisy command |
+
+### 3a. RTK measured (rtk 0.47.0, this repo, 2026-09-04)
+
+Raw command vs `rtk` equivalent, bytes counted, tokens ≈ bytes ÷ 4.
+
+| Command | Raw ≈ tokens | Via RTK ≈ tokens | Saved |
+|---|---:|---:|---:|
+| `npm test` (all pass) | 1,206 | 28 | 97% |
+| repo-wide `grep` (60 hits) | 612 | 145 | 76% |
+| `git status` | 34 | 21 | 37% |
+| `find test -name '*.test.ts'` | 106 | 85 | 20% |
+| `git diff HEAD~1` (small) | 2,513 | 2,484 | 1% |
+| file read (`tersio.ts`, 53 KB) | 13,398 | 13,398 | 0% |
+| `ls` tiny dir | 18 | 20 | −10% |
+
+Reading: RTK pays on noisy repetitive output (passing suites, grep hits, logs). Near-zero on diffs, file reads, and trivial listings — it passes those through.
 | Code task, ponytail lite | ~1,500 tok diff | ~1,200 tok | ~300 | ~1 task |
 | Code task, ponytail full/ultra | ~1,500 tok diff | ~800 tok | ~700 | ~1 task |
 

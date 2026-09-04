@@ -767,6 +767,10 @@ function presence(label: string, text: string | null): void {
   console.log(`  ${label}: ${text !== null ? 'installed' : 'MISSING'}`);
 }
 
+function locationLine(label: string, ok: boolean, loc: string): void {
+  console.log(`  ${label}: ${ok ? 'ok' : 'MISSING'} ${loc}`);
+}
+
 async function runDoctor(): Promise<void> {
   console.log('\n=== Tersio Doctor ===\n');
 
@@ -837,16 +841,13 @@ async function runDoctor(): Promise<void> {
     readTextIfExists(modeReinforcement),
   ]);
 
-  const agentOk = agentEntries !== null;
-  console.log(`  OMP agent dir: ${agentOk ? 'ok' : 'MISSING'} ${agentDir}`);
+  locationLine('OMP agent dir', agentEntries !== null, agentDir);
 
-  const extOk = extEntries !== null;
-  console.log(`  OMP extensions dir: ${extOk ? 'ok' : 'MISSING'} ${extDir}`);
+  locationLine('OMP extensions dir', extEntries !== null, extDir);
 
   console.log(`  Shared session bridge: ${sharedStateText !== null ? 'installed' : 'MISSING'}`);
 
-  const configOk = configText !== null;
-  console.log(`  OMP config.yml: ${configOk ? 'ok' : 'MISSING'} ${configPath}`);
+  locationLine('OMP config.yml', configText !== null, configPath);
 
   presence('Ponytail package', ponytailPkgText);
   presence('Ponytail extension', ponytailExtText);

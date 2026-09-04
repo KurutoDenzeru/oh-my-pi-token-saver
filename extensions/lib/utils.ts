@@ -83,7 +83,11 @@ export function httpsDownload(url: string, dest: string, opts: HttpDownloadOptio
     const file = createWriteStream(dest);
     res.pipe(file);
     file.on('finish', () => file.close(() => resolve()));
-    file.on('error', reject);
+    file.on('error', (err) => {
+      req.destroy();
+      res.resume();
+      reject(err);
+    });
   });
   req.on('error', reject);
   req.setTimeout(120000, () => req.destroy(new Error(`Timeout downloading ${url}`)));

@@ -1200,7 +1200,7 @@ async function resolveProfile(): Promise<Profile> {
     if (comboAnswer && COMBO_DEFAULTS.has(comboAnswer)) profile.comboDefault = comboAnswer;
   }
 
-  // Explicit flags always win. Caveman/RTK flags override the Combo preset.
+  // Explicit flags always win over the Combo preset.
   if (comboDefaultFlag !== undefined) profile.comboDefault = comboDefaultFlag;
   const preset = COMBO_PRESET_MODES[profile.comboDefault] ?? COMBO_PRESET_MODES.off;
   profile.cavemanDefault = preset.caveman;

@@ -1,7 +1,7 @@
 {
   "name": "@krtclcdy/tersio",
   "version": "1.0.4",
-  "description": "Amanai reward detector and three toggleable OMP extensions for terse replies, compact shell output, and minimal code decisions \u2014 with a manual updater and dry-run support.",
+  "description": "✂️ Token-saving OMP add-ons: terse Caveman replies, compact RTK shell output, lean Ponytail code calls — one-command combo presets.",
   "keywords": [
     "omp",
     "tersio",
@@ -11,9 +11,7 @@
     "caveman-mode",
     "rtk-rust-token-killer",
     "ponytail-omp",
-    "extensions",
-    "amanai-reward-detector",
-    "pi-package"
+    "extensions"
   ],
   "license": "MIT",
   "author": "KurutoDenzeru",
@@ -31,10 +29,8 @@
   },
   "omp": {
     "name": "Tersio",
-    "description": "Amanai reward detector plus toggleable Caveman/RTK/Ponytail session modes with Combo presets",
-    "extensions": [
-      "./extensions/amanai-reward/index.js"
-    ],
+    "description": "Toggleable Caveman/RTK/Ponytail session modes with Combo presets",
+    "extensions": [],
     "features": {
       "caveman": {
         "description": "Caveman terse-reply session mode (/caveman)",
@@ -108,11 +104,6 @@
         "default": "off"
       }
     }
-  },
-  "pi": {
-    "extensions": [
-      "./extensions/amanai-reward/pi.js"
-    ]
   },
   "files": [
     "tersio.js",

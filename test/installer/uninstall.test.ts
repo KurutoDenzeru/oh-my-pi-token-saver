@@ -22,7 +22,7 @@ function run(home: string, ...args: string[]) {
 
 function seed(home: string) {
   const extDir = path.join(home, ".omp", "agent", "extensions");
-  for (const dir of ["caveman-session", "rtk-session", "combo-toggle", "shared", "amanai-reward", "lib", "aaa-combo-boot", "ai-addons-updater"]) {
+  for (const dir of ["caveman-session", "rtk-session", "combo-toggle", "shared", "lib", "aaa-combo-boot", "ai-addons-updater"]) {
     mkdirSync(path.join(extDir, dir), { recursive: true });
     writeFileSync(path.join(extDir, dir, "index.js"), "// seeded", "utf8");
   }
@@ -58,7 +58,7 @@ test("uninstall removes extension dirs, self registration, and combo config entr
 
     assert.equal(result.status, 0, result.stderr);
     const extDir = path.join(home, ".omp", "agent", "extensions");
-    for (const dir of ["caveman-session", "rtk-session", "combo-toggle", "shared", "amanai-reward", "lib", "aaa-combo-boot", "ai-addons-updater"]) {
+    for (const dir of ["caveman-session", "rtk-session", "combo-toggle", "shared", "lib", "aaa-combo-boot", "ai-addons-updater"]) {
       assert.ok(!existsSync(path.join(extDir, dir)), `${dir} removed`);
     }
     const pkg = JSON.parse(readFileSync(path.join(home, ".omp", "plugins", "package.json"), "utf8"));

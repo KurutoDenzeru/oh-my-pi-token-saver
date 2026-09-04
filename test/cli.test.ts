@@ -71,7 +71,6 @@ test("project dry-run previews shared bridge before dependent extensions without
   assert.ok(rtk > shared, result.stdout);
   assert.ok(caveman > shared, result.stdout);
   assert.match(result.stdout, /\[dry-run\] would write .*shared[\\/]session-state\.js/);
-  assert.match(result.stdout, /\[dry-run\] would write .*extensions[\\/]amanai-reward[\\/]index\.js/);
   assert.equal(existsSync(path.join(root, "extensions", "shared-session-state.js")), false);
 });
 
@@ -111,7 +110,6 @@ test("uninstall dry-run previews shared bridge removal", () => {
 
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /\[dry-run\] would remove .*extensions[\\/]shared(?:\r?\n|$)/);
-  assert.match(result.stdout, /\[dry-run\] would remove .*extensions[\\/]amanai-reward(?:\r?\n|$)/);
   assert.match(result.stdout, /\[dry-run\] would remove .*extensions[\\/]aaa-combo-boot(?:\r?\n|$)/);
 });
 

@@ -7,7 +7,7 @@
 [![CI](https://github.com/KurutoDenzeru/tersio/actions/workflows/ci.yml/badge.svg)](https://github.com/KurutoDenzeru/tersio/actions)
 [![issues](https://img.shields.io/github/issues/KurutoDenzeru/tersio?color=d97706)](https://github.com/KurutoDenzeru/tersio/issues)
 
-Terse replies, compact shell output, and minimal code decisions for [Oh My Pi (OMP)](https://github.com/can1357/oh-my-pi) — plus a passive Amanai reward detector.
+Terse replies, compact shell output, and minimal code decisions for [Oh My Pi (OMP)](https://github.com/can1357/oh-my-pi).
 
 ## Install
 
@@ -56,9 +56,8 @@ Defaults apply to fresh sessions only — anything persisted with `/combo`, `/ca
 | **Ponytail** | Minimal, YAGNI-oriented code decisions |
 | **Combo** | Toggles all three at once. Presets: `off`, `medium`, `balanced`, `max` |
 | **Updater** | `/ai-addons` checks and updates Ponytail, RTK, and Caveman in-session, with dry-run and backups |
-| **Amanai reward detector** | Local notice when a final response contains a footer-shaped `AMANAI-GACHA-…` key. Never alters output, stores or sends the key, redeems it, or makes requests — redeem keys yourself in the Amanai billing dashboard |
 
-User-level installs also register the package in `~/.omp/plugins` (visible in OMP **Settings → Plugins**), where the detector loads through the plugin manifest instead of a copied extension entry. Active modes reassert after Ponytail's prompt block on every top-level turn, including after history compaction. The package also ships a Pi-native adapter via `pi.extensions` (final settled response only); the OMP installer does not install it.
+User-level installs also register the package in `~/.omp/plugins` (visible in OMP **Settings → Plugins**), directly through the plugin manifest. Active modes reassert after Ponytail's prompt block on every top-level turn, including after history compaction.
 
 ## CLI
 
@@ -137,7 +136,7 @@ Covers noisy commands (`git status`, `git diff`, `read`, `grep`, test, `tsc`, li
 
 | What | Path |
 |---|---|
-| Caveman / RTK / Updater / Combo / Amanai extensions | `~/.omp/agent/extensions/{caveman-session,rtk-session,ai-addons-updater,combo-toggle,amanai-reward}/` |
+| Caveman / RTK / Updater / Combo extensions | `~/.omp/agent/extensions/{caveman-session,rtk-session,ai-addons-updater,combo-toggle}/` |
 | Ponytail package | `~/.omp/plugins/node_modules/@dietrichgebert/ponytail/` |
 | RTK binary | `~/.bun/bin/rtk` (`rtk.exe` on Windows) |
 | Extension registrations | `~/.omp/agent/config.yml` |

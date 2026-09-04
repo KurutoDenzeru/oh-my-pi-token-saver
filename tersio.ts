@@ -166,7 +166,6 @@ const CAVEMAN_INDEX = path.join(EXT_DIR, 'caveman-session', 'index.js');
 const RTK_SESSION_INDEX = path.join(EXT_DIR, 'rtk-session', 'index.js');
 const UPDATER_INDEX = path.join(EXT_DIR, 'ai-addons-updater', 'index.js');
 const COMBO_TOGGLE_INDEX = path.join(EXT_DIR, 'combo-toggle', 'index.js');
-const AMANAI_REWARD_INDEX = path.join(EXT_DIR, 'amanai-reward', 'index.js');
 const MODE_REINFORCEMENT_INDEX = path.join(EXT_DIR, 'shared', 'mode-reinforcement.js');
 const SHARED_TYPES = path.join(EXT_DIR, 'shared', 'types.js');
 const LIB_UTILS = path.join(EXT_DIR, 'lib', 'utils.js');
@@ -369,7 +368,7 @@ async function ensurePonytailHideStatus(options: WriteOptions = {}): Promise<voi
 // --- Steps ---
 
 async function stepPonytail(pluginsDir: string, userDir: string, options: InstallOptions): Promise<void> {
-  console.log('\n[1/8] Installing Ponytail plugin...');
+  console.log('\n[1/7] Installing Ponytail plugin...');
   await fs.mkdir(pluginsDir, { recursive: true });
   const pkgPath = path.join(pluginsDir, 'package.json');
   let pkg: PluginsPackage = {};
@@ -468,11 +467,9 @@ async function stepPonytail(pluginsDir: string, userDir: string, options: Instal
 
 // Registers this package in ~/.omp/plugins so OMP lists it on the
 // Settings → Plugins page (OMP enumerates plugins/package.json dependencies).
-// Returns true when the package is verified in plugins/node_modules — the
-// Amanai detector then loads via the plugin's `omp.extensions` manifest, so
-// the caller must skip copying it into agent/extensions to avoid a double load.
+// Returns true when the package is verified in plugins/node_modules.
 async function stepSelfPlugin(pluginsDir: string, options: InstallOptions): Promise<boolean> {
-  console.log('\n[2/8] Registering tersio as OMP plugin...');
+  console.log('\n[2/7] Registering tersio as OMP plugin...');
   const pkgPath = path.join(pluginsDir, 'package.json');
   let pkg: PluginsPackage = {};
   const existing = await readTextIfExists(pkgPath);
@@ -616,7 +613,7 @@ async function extractRtkArchive(archivePath: string, extractDir: string): Promi
 }
 
 async function stepRtk(binDir: string, options: InstallOptions): Promise<void> {
-  console.log('\n[3/8] Installing RTK binary...');
+  console.log('\n[3/7] Installing RTK binary...');
   try {
     const release = JSON.parse(await httpsGet(RTK_RELEASE_API)) as RtkRelease;
     const triple = resolveRtkTriple();
@@ -703,19 +700,19 @@ async function stepSharedSessionState(extDir: string, options: WriteOptions): Pr
 }
 
 async function stepModeReinforcement(extDir: string, ponytailExtPath: string, options: WriteOptions): Promise<void> {
-  console.log('\n[7/8] Installing mode reinforcement extension...');
+  console.log('\n[7/7] Installing mode reinforcement extension...');
   const dest = path.join(extDir, 'shared', 'mode-reinforcement.js');
   if (!await copySources(extDir, [[MODE_REINFORCEMENT_INDEX, dest]], 'shared/mode-reinforcement.js', options)) return;
   await ensureExtensionAfterConfigEntry(path.join(path.dirname(extDir), 'config.yml'), dest, ponytailExtPath, 'mode reinforcement', options);
 }
 
 async function stepRtkSession(extDir: string, options: WriteOptions): Promise<void> {
-  console.log('\n[4/8] Installing RTK session extension...');
+  console.log('\n[4/7] Installing RTK session extension...');
   await copySources(extDir, [[RTK_SESSION_INDEX, path.join('rtk-session', 'index.js')]], 'rtk-session/index.js', options);
 }
 
 async function stepCaveman(extDir: string, options: WriteOptions): Promise<void> {
-  console.log('\n[5/8] Installing Caveman session extension...');
+  console.log('\n[5/7] Installing Caveman session extension...');
   const cavemanDir = path.join(extDir, 'caveman-session');
   if (!options.dryRun) await fs.mkdir(cavemanDir, { recursive: true });
 
@@ -731,7 +728,7 @@ async function stepUpdater(extDir: string, options: WriteOptions): Promise<void>
 }
 
 async function stepCombo(extDir: string, options: WriteOptions): Promise<void> {
-  console.log('\n[6/8] Installing Combo toggle extension...');
+  console.log('\n[6/7] Installing Combo toggle extension...');
   const dest = path.join(extDir, 'combo-toggle', 'index.js');
   if (!await copySources(extDir, [[COMBO_TOGGLE_INDEX, path.join('combo-toggle', 'index.js')]], 'combo-toggle/index.js', options)) return;
 
@@ -740,24 +737,6 @@ async function stepCombo(extDir: string, options: WriteOptions): Promise<void> {
   await ensureExtensionInConfig(configPath, dest, 'combo', options);
 }
 
-async function stepAmanaiReward(extDir: string, options: WriteOptions, pluginProvided = false): Promise<void> {
-  console.log('\n[8/8] Installing Amanai reward detector...');
-  const destDir = path.join(extDir, 'amanai-reward');
-  if (pluginProvided) {
-    // The plugin's omp.extensions manifest loads the detector from
-    // plugins/node_modules; a copied agent/extensions entry would double-load.
-    if ((await readTextIfExists(path.join(destDir, 'index.js'))) !== null) {
-      if (options.dryRun) console.log(`  [dry-run] would remove ${destDir} (now provided by the plugin)`);
-      else {
-        await fs.rm(destDir, { recursive: true, force: true });
-        console.log(`  [rm] ${destDir} (now provided by the plugin)`);
-      }
-    }
-    console.log('  [ok] detector loads via the tersio plugin manifest');
-    return;
-  }
-  await copySources(extDir, [[AMANAI_REWARD_INDEX, path.join('amanai-reward', 'index.js')]], 'amanai-reward/index.js', options);
-}
 
 // --- Doctor ---
 
@@ -854,11 +833,6 @@ async function runDoctor(): Promise<void> {
   const modeReinforcement = path.join(extDir, 'shared', 'mode-reinforcement.js');
   console.log(`  Mode reinforcement extension: ${(await readTextIfExists(modeReinforcement)) !== null ? 'installed' : 'MISSING'}`);
 
-  // Amanai reward detector
-  const amanaiRewardIndex = path.join(extDir, 'amanai-reward', 'index.js');
-  const amanaiViaPlugin = selfDep && (await readTextIfExists(selfPkg)) !== null;
-  const amanaiState = (await readTextIfExists(amanaiRewardIndex)) !== null ? 'installed' : amanaiViaPlugin ? 'installed (via plugin manifest)' : 'MISSING';
-  console.log(`  Amanai reward detector: ${amanaiState}`);
 
   if (configOk) {
     const configText = (await readTextIfExists(configPath))!;
@@ -931,7 +905,6 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
     path.join(extDir, 'ai-addons-updater'),
     path.join(extDir, 'combo-toggle'),
     path.join(extDir, 'shared'),
-    path.join(extDir, 'amanai-reward'),
     // Only consumed by ai-addons-updater (removed above); otherwise orphaned.
     path.join(extDir, 'lib'),
     // Legacy always-on combo helper; imports shared/session-state.js, so it
@@ -1307,7 +1280,6 @@ async function main(): Promise<void> {
     await stepCombo(userExtDir, options);
     await stepModeReinforcement(userExtDir, ponytailExtPath, options);
     await stepUpdater(userExtDir, options);
-    await stepAmanaiReward(userExtDir, options, selfPlugin);
     if (selfPlugin) await writePluginSettings(profile, options);
     await validateConfigExtensions(userDir, options);
   }
@@ -1318,7 +1290,6 @@ async function main(): Promise<void> {
     await stepRtkSession(projectExtDir, options);
     await stepCaveman(projectExtDir, options);
     await stepUpdater(projectExtDir, options);
-    await stepAmanaiReward(projectExtDir, options);
     console.log('  [note] Ponytail, RTK binary, and Combo toggle require user-level (global) install');
   }
 

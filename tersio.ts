@@ -766,6 +766,10 @@ async function stepCombo(extDir: string, options: WriteOptions): Promise<void> {
 
 // --- Doctor ---
 
+function presence(label: string, text: string | null): void {
+  console.log(`  ${label}: ${text !== null ? 'installed' : 'MISSING'}`);
+}
+
 async function runDoctor(): Promise<void> {
   console.log('\n=== Tersio Doctor ===\n');
 
@@ -878,19 +882,19 @@ async function runDoctor(): Promise<void> {
   }
 
   // Caveman
-  console.log(`  Caveman extension: ${cavemanIndexText !== null ? 'installed' : 'MISSING'}`);
-  console.log(`  Caveman rule.md: ${cavemanRuleText !== null ? 'installed' : 'MISSING'}`);
+  presence('Caveman extension', cavemanIndexText);
+  presence('Caveman rule.md', cavemanRuleText);
 
   // RTK extension
-  console.log(`  RTK extension: ${rtkIndexText !== null ? 'installed' : 'MISSING'}`);
+  presence('RTK extension', rtkIndexText);
 
   // Updater
-  console.log(`  Updater extension: ${updaterIndexText !== null ? 'installed' : 'MISSING'}`);
+  presence('Updater extension', updaterIndexText);
 
   // Combo
-  console.log(`  Combo extension: ${comboIndexText !== null ? 'installed' : 'MISSING'}`);
+  presence('Combo extension', comboIndexText);
 
-  console.log(`  Mode reinforcement extension: ${modeReinforcementText !== null ? 'installed' : 'MISSING'}`);
+  presence('Mode reinforcement extension', modeReinforcementText);
 
 
   if (configText) {

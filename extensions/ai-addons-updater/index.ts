@@ -70,6 +70,14 @@ interface AddonStatus {
   level: NotifyLevel;
 }
 
+function shortHash(text: string): string {
+  return sha256Hex(text).slice(0, 16);
+}
+
+function checkFailed(name: string, e: unknown): AddonStatus {
+  return { text: `${name} check failed: ${(e as Error).message}`, level: 'warning' };
+}
+
 // Check: no mutation. Probes run concurrently via checkAddons below.
 async function checkPonytail(): Promise<AddonStatus> {
   try {
@@ -84,8 +92,7 @@ async function checkPonytail(): Promise<AddonStatus> {
     const m = `Ponytail ${status}: local=${localVer || '—'} latest=${remoteVer}`;
     return { text: m, level: 'info' };
   } catch (e) {
-    const m = `Ponytail check failed: ${(e as Error).message}`;
-    return { text: m, level: 'warning' };
+    return checkFailed('Ponytail', e);
   }
 }
 
@@ -105,8 +112,7 @@ async function checkRtk(): Promise<AddonStatus> {
     const m = `RTK ${status}: local=${localVer || '—'} latest=${latestTag || '—'}`;
     return { text: m, level: 'info' };
   } catch (e) {
-    const m = `RTK check failed: ${(e as Error).message}`;
-    return { text: m, level: 'warning' };
+    return checkFailed('RTK', e);
   }
 }
 
@@ -114,17 +120,16 @@ async function checkRtk(): Promise<AddonStatus> {
 async function checkCaveman(): Promise<AddonStatus> {
   try {
     const remote = await httpsGet(CAVEMAN_REMOTE);
-    const remoteHash = sha256Hex(remote).slice(0, 16);
+    const remoteHash = shortHash(remote);
     const local = await readTextIfExists(CAVEMAN_LOCAL);
-    const localHash = local ? sha256Hex(local).slice(0, 16) : null;
+    const localHash = local ? shortHash(local) : null;
     const status = !local ? 'rule.md missing'
       : localHash === remoteHash ? 'rule.md up to date'
       : 'rule.md update available';
     const m = `Caveman ${status}: local=${localHash || '—'} remote=${remoteHash}`;
     return { text: m, level: 'info' };
   } catch (e) {
-    const m = `Caveman check failed: ${(e as Error).message}`;
-    return { text: m, level: 'warning' };
+    return checkFailed('Caveman', e);
   }
 }
 
@@ -305,9 +310,9 @@ async function updateCaveman(ctx: AddonUpdaterCtx, dryRun = false): Promise<stri
   try { remote = await httpsGet(CAVEMAN_REMOTE); }
   catch (e) { const m = `Caveman update failed: ${(e as Error).message}`; notify(ctx, m, 'warning'); return m; }
 
-  const remoteHash = sha256Hex(remote).slice(0, 16);
+  const remoteHash = shortHash(remote);
   const oldLocal = await readTextIfExists(CAVEMAN_LOCAL);
-  const oldHash = oldLocal ? sha256Hex(oldLocal).slice(0, 16) : null;
+  const oldHash = oldLocal ? shortHash(oldLocal) : null;
 
   if (dryRun) {
     const m = `Caveman dry-run: would write ${CAVEMAN_LOCAL}\nold=${oldHash || '—'} new=${remoteHash}.`;
@@ -321,7 +326,7 @@ async function updateCaveman(ctx: AddonUpdaterCtx, dryRun = false): Promise<stri
     if (oldLocal !== null) await fs.writeFile(backupPath, oldLocal, 'utf8');
     await fs.writeFile(CAVEMAN_LOCAL, remote, 'utf8');
     const written = await fs.readFile(CAVEMAN_LOCAL, 'utf8');
-    const writtenHash = sha256Hex(written).slice(0, 16);
+    const writtenHash = shortHash(written);
     if (writtenHash !== remoteHash) {
       if (oldLocal !== null) await fs.writeFile(CAVEMAN_LOCAL, oldLocal, 'utf8');
       throw new Error(`written hash ${writtenHash} did not match remote ${remoteHash}${oldLocal !== null ? '; restored backup' : ''}`);

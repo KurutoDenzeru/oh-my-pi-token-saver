@@ -85,9 +85,14 @@ function checkFailed(name: string, e: unknown): AddonStatus {
   return { text: `${name} check failed: ${(e as Error).message}`, level: 'warning' };
 }
 
+// Single error-handling source for the three probes; messages unchanged.
+function runCheck(name: string, probe: () => Promise<string>): Promise<AddonStatus> {
+  return probe().then((text) => ({ text, level: 'info' as const }), (e) => checkFailed(name, e));
+}
+
 // Check: no mutation. Probes run concurrently via checkAddons below.
-async function checkPonytail(): Promise<AddonStatus> {
-  try {
+function checkPonytail(): Promise<AddonStatus> {
+  return runCheck('Ponytail', async () => {
     const remoteJson = await fetchJson<{ version?: string }>(PONYTAIL_REMOTE);
     const localRaw = await readTextIfExists(PONYTAIL_LOCAL);
     const localVer = localRaw ? (JSON.parse(localRaw) as { version?: string }).version ?? null : null;
@@ -95,19 +100,16 @@ async function checkPonytail(): Promise<AddonStatus> {
     const status = !localVer ? 'not installed'
       : localVer === remoteVer ? 'up to date'
       : 'update available';
-    const m = `Ponytail ${status}: local=${localVer || '—'} latest=${remoteVer}`;
-    return { text: m, level: 'info' };
-  } catch (e) {
-    return checkFailed('Ponytail', e);
-  }
+    return `Ponytail ${status}: local=${localVer || '—'} latest=${remoteVer}`;
+  });
 }
 
 async function fetchRelease(): Promise<GitHubRelease> {
   return fetchJson<GitHubRelease>(RTK_RELEASE_API);
 }
 
-async function checkRtk(): Promise<AddonStatus> {
-  try {
+function checkRtk(): Promise<AddonStatus> {
+  return runCheck('RTK', async () => {
     const release = await fetchRelease();
     const latestTag = release.tag_name || null;
     let localVer: string | null = null;
@@ -118,16 +120,13 @@ async function checkRtk(): Promise<AddonStatus> {
     const status = localVer === null ? 'not installed'
       : normalizeRtkVersion(localVer) === normalizeRtkVersion(latestTag ?? undefined) ? 'up to date'
       : 'update available';
-    const m = `RTK ${status}: local=${localVer || '—'} latest=${latestTag || '—'}`;
-    return { text: m, level: 'info' };
-  } catch (e) {
-    return checkFailed('RTK', e);
-  }
+    return `RTK ${status}: local=${localVer || '—'} latest=${latestTag || '—'}`;
+  });
 }
 
 // Caveman (rule.md)
-async function checkCaveman(): Promise<AddonStatus> {
-  try {
+function checkCaveman(): Promise<AddonStatus> {
+  return runCheck('Caveman', async () => {
     const remote = await httpsGet(CAVEMAN_REMOTE);
     const remoteHash = shortHash(remote);
     const local = await readTextIfExists(CAVEMAN_LOCAL);
@@ -135,11 +134,8 @@ async function checkCaveman(): Promise<AddonStatus> {
     const status = !local ? 'rule.md missing'
       : localHash === remoteHash ? 'rule.md up to date'
       : 'rule.md update available';
-    const m = `Caveman ${status}: local=${localHash || '—'} remote=${remoteHash}`;
-    return { text: m, level: 'info' };
-  } catch (e) {
-    return checkFailed('Caveman', e);
-  }
+    return `Caveman ${status}: local=${localHash || '—'} remote=${remoteHash}`;
+  });
 }
 
 async function checkAddons(ctx: AddonUpdaterCtx): Promise<string> {

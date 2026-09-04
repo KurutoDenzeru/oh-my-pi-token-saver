@@ -366,16 +366,6 @@ async function ensurePonytailConfigValue<K extends keyof PonytailConfig>(
   }, `would set Ponytail ${key}=${value}`, `Set Ponytail ${key}=${value}`, options);
 }
 
-async function ensurePonytailDefaultOff(options: WriteOptions = {}): Promise<void> {
-  await ensurePonytailConfigValue('defaultMode', 'off', options);
-}
-
-// Sets ~/.config/ponytail/config.json#hideStatus=true so the upstream ponytail
-// status bar doesn't render — the combo extension owns the bar instead.
-async function ensurePonytailHideStatus(options: WriteOptions = {}): Promise<void> {
-  await ensurePonytailConfigValue('hideStatus', true, options);
-}
-
 
 
 // Read plugins/package.json tolerantly; corrupt or missing files start fresh
@@ -491,8 +481,9 @@ async function stepPonytail(pluginsDir: string, userDir: string, options: Instal
   // Still set Ponytail config defaults even without the extension command
   const configPath = path.join(userDir, 'config.yml');
   await ensureExtensionInConfig(configPath, ponytailExtPath, 'ponytail', options);
-  await ensurePonytailDefaultOff(options);
-  await ensurePonytailHideStatus(options);
+  await ensurePonytailConfigValue('defaultMode', 'off', options);
+  // hideStatus=true keeps the upstream ponytail bar hidden; combo owns the bar.
+  await ensurePonytailConfigValue('hideStatus', true, options);
 }
 
 // Registers this package in ~/.omp/plugins so OMP lists it on the

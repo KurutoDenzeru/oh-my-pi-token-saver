@@ -154,6 +154,7 @@ export default function cavemanSessionExtension(pi: ExtensionApi): void {
     const mode = isOmpSubagentPrompt(event.systemPrompt) ? getSharedComboState().caveman : currentMode;
     if (!mode || mode === 'off') return;
     const def = INSTRUCTIONS[mode];
+    if (!def) return;
     const instruction = typeof def === 'function' ? def() : def;
     const base = Array.isArray(event.systemPrompt) ? event.systemPrompt : [event.systemPrompt];
     return { systemPrompt: [...base, instruction] };

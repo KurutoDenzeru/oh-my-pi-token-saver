@@ -201,6 +201,10 @@ interface WriteOptions {
   dryRun?: boolean;
 }
 
+async function backupFile(filePath: string): Promise<void> {
+  await fs.copyFile(filePath, `${filePath}.bak`).catch(() => {});
+}
+
 async function writeIfChanged(dest: string, content: string, options: WriteOptions = {}): Promise<boolean> {
   const existing = await readTextIfExists(dest);
   if (existing === content) {
@@ -262,6 +266,7 @@ async function ensureExtensionInConfig(configPath: string, extensionPath: string
   }
 
   await fs.mkdir(path.dirname(configPath), { recursive: true });
+  await backupFile(configPath);
   await fs.writeFile(configPath, lines.join('\n'), 'utf8');
   console.log(`  [write] Added ${label} to config.yml`);
   return true;
@@ -297,6 +302,7 @@ async function ensureExtensionAfterConfigEntry(configPath: string, extensionPath
   }
 
   await fs.mkdir(path.dirname(configPath), { recursive: true });
+  await backupFile(configPath);
   await fs.writeFile(configPath, lines.join('\n'), 'utf8');
   console.log(`  [write] Placed ${label} after Ponytail in config.yml`);
   return true;
@@ -947,6 +953,7 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
     if (lines.length !== before) {
       if (shouldDryRun) console.log(`  [dry-run] would remove ${before - lines.length} config.yml entries`);
       else {
+        await backupFile(configPath);
         await fs.writeFile(configPath, lines.join('\n'), 'utf8');
         console.log(`  [write] Updated config.yml (removed ${before - lines.length} entries)`);
       }
@@ -1104,7 +1111,11 @@ async function resolveScope(): Promise<string> {
   console.log('  1) User-level (all OMP sessions)');
   console.log('  2) Project-level (this repo only)');
   console.log('  3) Both');
-  return (await ask('\nChoose [1-3] (default 1): ')).trim() || '1';
+  while (true) {
+    const answer = (await ask('\nChoose [1-3] (default 1): ')).trim() || '1';
+    if (answer === '1' || answer === '2' || answer === '3') return answer;
+    console.log(`  [fail] Invalid scope: ${answer}. Choose 1, 2, or 3.`);
+  }
 }
 
 async function resolveProfile(): Promise<Profile> {

@@ -140,10 +140,15 @@ async function updatePonytail(pi: AddonUpdaterPi, ctx: AddonUpdaterCtx, dryRun =
     notify(ctx, m, 'warning');
     return m;
   }
+  if (!pi.exec) {
+    const m = 'Ponytail update failed: extension host does not provide exec';
+    notify(ctx, m, 'warning');
+    return m;
+  }
   notify(ctx, 'Ponytail: running npm install…', 'info');
   let out = '';
   try {
-    const r = await pi.exec!('npm', ['install', '@dietrichgebert/ponytail@latest', '--save', '--no-audit', '--no-fund'], { cwd: pluginsDir });
+    const r = await pi.exec('npm', ['install', '@dietrichgebert/ponytail@latest', '--save', '--no-audit', '--no-fund'], { cwd: pluginsDir });
     out = [r.stdout, r.stderr].filter(Boolean).join('\n').trim();
     if (r.code !== 0) throw new Error(r.stderr || `npm exited ${r.code}`);
   } catch (e) {

@@ -1,6 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
-import { asPromptArray, getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, normalizeInputCommand, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
+import { asPromptArray, getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, normalizeInputCommand, paintStatusBar, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
 import { readRtkDefault } from '../shared/plugin-settings.ts';
 import type { ExtensionApi, ExtensionCtx, InputEvent, SessionEntry, SystemPromptEvent } from '../shared/types.ts';
 
@@ -52,10 +52,7 @@ export default function rtkSessionExtension(pi: ExtensionApi): void {
       c.ui.setStatus('rtk', undefined);
       return;
     }
-    const theme = c.ui.theme;
-    const indicator = isActive && theme?.fg ? theme.fg('accent', '⚡') : '⚡';
-    const label = 'rtk: ON';
-    c.ui.setStatus('rtk', theme?.fg ? `${indicator} ${theme.fg('muted', label)}` : `${indicator} ${label}`);
+    paintStatusBar(c.ui, 'rtk', '⚡', 'rtk: ON', isActive);
   }
 
   function setEnabled(next: unknown, ctx?: ExtensionCtx): void {

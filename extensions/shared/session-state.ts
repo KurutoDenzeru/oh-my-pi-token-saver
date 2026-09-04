@@ -1,4 +1,4 @@
-import type { ComboLevel, ComboState, ExtensionCtx, SessionEntry } from './types.ts';
+import type { ComboLevel, ComboState, ExtensionCtx, SessionEntry, UiApi } from './types.ts';
 
 const BRIDGE_KEY = Symbol.for('tersio/combo-session-state');
 
@@ -99,6 +99,12 @@ export function isOmpSubagentPrompt(systemPrompt: string | string[]): boolean {
 export function normalizeComboLevel(value: unknown): ComboLevel | null {
   const level = String(value || '').trim().toLowerCase();
   return isPresetLevel(level) ? level : null;
+}
+
+export function paintStatusBar(ui: UiApi | undefined, key: string, emoji: string, label: string, isActive: boolean): void {
+  const theme = ui?.theme;
+  const indicator = isActive && theme?.fg ? theme.fg('accent', emoji) : emoji;
+  ui?.setStatus?.(key, theme?.fg ? `${indicator} ${theme.fg('muted', label)}` : `${indicator} ${label}`);
 }
 
 export function sessionEntries(ctx: ExtensionCtx | undefined): SessionEntry[] {

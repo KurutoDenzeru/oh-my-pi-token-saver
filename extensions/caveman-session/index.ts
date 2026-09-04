@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { asPromptArray, getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, normalizeInputCommand, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
+import { asPromptArray, getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, normalizeInputCommand, paintStatusBar, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
 import { readCavemanDefault } from '../shared/plugin-settings.ts';
 import type { ExtensionApi, ExtensionCtx, InputEvent, SessionEntry, SystemPromptEvent } from '../shared/types.ts';
 
@@ -72,10 +72,7 @@ export default function cavemanSessionExtension(pi: ExtensionApi): void {
       c.ui.setStatus('caveman', undefined);
       return;
     }
-    const theme = c.ui.theme;
-    const indicator = isActive && theme?.fg ? theme.fg('accent', '🪨') : '🪨';
-    const label = `caveman: ${currentMode.toUpperCase()}`;
-    c.ui.setStatus('caveman', theme?.fg ? `${indicator} ${theme.fg('muted', label)}` : `${indicator} ${label}`);
+    paintStatusBar(c.ui, 'caveman', '🪨', `caveman: ${currentMode.toUpperCase()}`, isActive);
   }
 
   function setMode(mode: string, ctx?: ExtensionCtx): boolean {

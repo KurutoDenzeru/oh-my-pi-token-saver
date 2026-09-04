@@ -31,6 +31,7 @@ const HOME = process.env.HOME || process.env.USERPROFILE || '';
 const OMP_AGENT_DIR = path.join(HOME, '.omp', 'agent');
 const OMP_PLUGINS_DIR = path.join(HOME, '.omp', 'plugins');
 const BUN_BIN_DIR = path.join(HOME, '.bun', 'bin');
+const OMP_BIN = IS_WINDOWS ? 'omp.cmd' : 'omp';
 
 const PACKAGE_NAME = '@krtclcdy/tersio';
 const PACKAGE_BIN = 'tersio';
@@ -423,7 +424,7 @@ async function stepPonytail(pluginsDir: string, userDir: string, options: Instal
   } else {
     // Try omp plugin install first
     try {
-      await execP(IS_WINDOWS ? 'omp.cmd' : 'omp', ['plugin', 'install', 'github:DietrichGebert/ponytail'], { cwd: pluginsDir });
+      await execP(OMP_BIN, ['plugin', 'install', 'github:DietrichGebert/ponytail'], { cwd: pluginsDir });
       console.log('  [ok] omp plugin install ran');
     } catch (e) {
       console.log(`  [warn] omp plugin install failed: ${(e as Error).message}`);
@@ -785,7 +786,7 @@ async function runDoctor(): Promise<void> {
 
   // OMP CLI
   try {
-    const v = (await execP(IS_WINDOWS ? 'omp.cmd' : 'omp', ['--version'])).stdout.trim();
+    const v = (await execP(OMP_BIN, ['--version'])).stdout.trim();
     console.log(`  OMP CLI: ok ${v}`);
   } catch {
     console.log('  OMP CLI: MISSING');
@@ -1337,7 +1338,7 @@ async function main(): Promise<void> {
   // Check prerequisites
   console.log('\nPrerequisites:');
   try {
-    const v = (await execP(IS_WINDOWS ? 'omp.cmd' : 'omp', ['--version'])).stdout.trim();
+    const v = (await execP(OMP_BIN, ['--version'])).stdout.trim();
     console.log(`  [ok] omp ${v}`);
   } catch {
     console.log('  [fail] omp not found — ensure it\'s installed');

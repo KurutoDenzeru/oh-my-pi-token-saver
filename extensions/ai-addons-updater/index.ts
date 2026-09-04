@@ -267,13 +267,7 @@ async function updateRtk(ctx: AddonUpdaterCtx, dryRun = false): Promise<string> 
     }
     await fs.mkdir(path.dirname(RTK_BINARY), { recursive: true });
     const backupPath = `${RTK_BINARY}.bak`;
-    let backedUp = false;
-    try {
-      await fs.copyFile(RTK_BINARY, backupPath);
-      backedUp = true;
-    } catch {
-      backedUp = false;
-    }
+    const backedUp = await fs.copyFile(RTK_BINARY, backupPath).then(() => true, () => false);
 
     await fs.copyFile(rtkExtracted, RTK_BINARY);
 

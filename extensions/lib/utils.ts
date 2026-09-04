@@ -41,14 +41,22 @@ export function rtkPlatformSpec(platform: string = process.platform, arch: strin
   return RTK_PLATFORM_SPECS[`${platform}/${arch}`] || null;
 }
 
+// Single source for the 3xx+location redirect rule shared by httpsGet/httpsDownload.
+function redirectNext(res: { statusCode?: number; headers: { location?: string } }, url: string): string | null {
+  if (res.statusCode !== undefined && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+    return new URL(res.headers.location, url).href;
+  }
+  return null;
+}
+
 export function httpsGet(url: string, opts: HttpOptions = {}): Promise<string> {
   const { promise, resolve, reject } = withResolvers<string>();
   const maxRedirects = opts.maxRedirects ?? 5;
   const req = https.get(url, { headers: { 'User-Agent': 'tersio', Accept: 'application/json,*/*' } }, (res) => {
-    if (res.statusCode !== undefined && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+    const next = redirectNext(res, url);
+    if (next) {
       if (maxRedirects <= 0) { res.resume(); reject(new Error(`Too many redirects fetching ${url}`)); return; }
       res.resume();
-      const next = new URL(res.headers.location, url).href;
       resolve(httpsGet(next, { maxRedirects: maxRedirects - 1 }));
       return;
     }
@@ -68,10 +76,10 @@ export function httpsDownload(url: string, dest: string, opts: HttpOptions = {})
   const { promise, resolve, reject } = withResolvers<void>();
   const maxRedirects = opts.maxRedirects ?? 5;
   const req = https.get(url, { headers: { 'User-Agent': 'tersio', Accept: '*/*' } }, (res) => {
-    if (res.statusCode !== undefined && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+    const next = redirectNext(res, url);
+    if (next) {
       if (maxRedirects <= 0) { res.resume(); reject(new Error(`Too many redirects downloading ${url}`)); return; }
       res.resume();
-      const next = new URL(res.headers.location, url).href;
       resolve(httpsDownload(next, dest, { maxRedirects: maxRedirects - 1 }));
       return;
     }

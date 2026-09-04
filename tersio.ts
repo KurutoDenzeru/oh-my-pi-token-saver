@@ -402,13 +402,19 @@ async function stepPonytail(pluginsDir: string, userDir: string, options: Instal
   }
 
   const ponytailExtPath = path.join(pluginsDir, 'node_modules', '@dietrichgebert', 'ponytail', 'pi-extension', 'index.js');
-  // Dry runs preview the wiring below without touching the network.
-  let ponytailExtExists: string | null = 'dry-run';
-  if (options.dryRun) {
+  // Fast path: extension already present and no refresh asked — skip network.
+  let ponytailExtExists: string | null = !options.reinstall && !options.dryRun
+    ? await readTextIfExists(ponytailExtPath)
+    : null;
+  if (ponytailExtExists) {
+    debug('Ponytail pi-extension already installed; skipping network refresh');
+  } else if (options.dryRun) {
+    // Dry runs preview the wiring below without touching the network.
     console.log('  [dry-run] would run: omp plugin install github:DietrichGebert/ponytail');
     if (options.reinstall) {
       console.log('  [dry-run] would run: npm install @dietrichgebert/ponytail@latest --save --no-audit --no-fund');
     }
+    ponytailExtExists = 'dry-run';
   } else {
     // Try omp plugin install first
     try {
@@ -505,6 +511,19 @@ async function stepSelfPlugin(pluginsDir: string, options: InstallOptions): Prom
     console.log(`  [dry-run] would add ${PACKAGE_NAME}@^${PACKAGE_VERSION} to ${pkgPath}`);
     console.log(`  [dry-run] would run: npm install --no-audit --no-fund (in ${pluginsDir})`);
     return false;
+  }
+
+  if (!options.reinstall && pkg.dependencies[PACKAGE_NAME]) {
+    const installedRaw = await readTextIfExists(path.join(pluginsDir, 'node_modules', PACKAGE_NAME, 'package.json'));
+    if (installedRaw) {
+      try {
+        if ((JSON.parse(installedRaw) as { version?: string }).version === PACKAGE_VERSION) {
+          debug(`${PACKAGE_NAME} already installed at v${PACKAGE_VERSION}; skipping npm install`);
+          console.log('  [ok] Listed in OMP Settings → Plugins as tersio');
+          return true;
+        }
+      } catch { /* fall through to install */ }
+    }
   }
 
   await fs.mkdir(pluginsDir, { recursive: true });
@@ -702,7 +721,7 @@ async function stepSharedSessionState(extDir: string, options: WriteOptions): Pr
 async function stepModeReinforcement(extDir: string, ponytailExtPath: string, options: WriteOptions): Promise<void> {
   console.log('\n[7/7] Installing mode reinforcement extension...');
   const dest = path.join(extDir, 'shared', 'mode-reinforcement.js');
-  if (!await copySources(extDir, [[MODE_REINFORCEMENT_INDEX, dest]], 'shared/mode-reinforcement.js', options)) return;
+  if (!await copySources(extDir, [[MODE_REINFORCEMENT_INDEX, path.join('shared', 'mode-reinforcement.js')]], 'shared/mode-reinforcement.js', options)) return;
   await ensureExtensionAfterConfigEntry(path.join(path.dirname(extDir), 'config.yml'), dest, ponytailExtPath, 'mode reinforcement', options);
 }
 

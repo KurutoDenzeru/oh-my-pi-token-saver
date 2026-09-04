@@ -50,9 +50,9 @@ interface PluginsPackage {
 }
 
 // Session-start mode defaults for fresh installs.
-const COMBO_DEFAULTS = new Set(['off', 'medium', 'balanced', 'max']);
 const CAVEMAN_DEFAULTS = new Set(['off', 'lite', 'full', 'ultra', 'wenyan']);
 const PONYTAIL_DEFAULTS = new Set(['off', 'lite', 'full', 'ultra', 'review']);
+const RTK_DEFAULTS = new Set(['on', 'off']);
 
 // ponytail: Combo preset implies all three modes. Mirrors COMBO_LEVELS in
 // extensions/shared/session-state.ts (rtk as boolean here). Single source.
@@ -62,6 +62,7 @@ const COMBO_PRESET_MODES: Record<string, { caveman: string; rtk: boolean; ponyta
   balanced: { caveman: 'full', rtk: true, ponytail: 'full' },
   max: { caveman: 'ultra', rtk: true, ponytail: 'ultra' },
 };
+const COMBO_DEFAULTS = new Set(Object.keys(COMBO_PRESET_MODES));
 
 interface Profile {
   comboDefault: string;
@@ -117,14 +118,13 @@ const cavemanDefaultFlag = parseEnum(flagValue('--caveman-default'), CAVEMAN_DEF
 const ponytailDefaultFlag = parseEnum(flagValue('--ponytail-default'), PONYTAIL_DEFAULTS, '--ponytail-default');
 const rtkDefaultFlag = flagValue('--rtk-default')?.toLowerCase();
 
-if (rtkDefaultFlag !== undefined && rtkDefaultFlag !== 'on' && rtkDefaultFlag !== 'off') {
+if (rtkDefaultFlag !== undefined && !RTK_DEFAULTS.has(rtkDefaultFlag)) {
   console.error(`[fail] Invalid --rtk-default: ${rtkDefaultFlag}. Use: on, off`);
   process.exit(1);
 }
 
-const profileFlagsGiven = comboDefaultFlag !== undefined
-  || cavemanDefaultFlag !== undefined || rtkDefaultFlag !== undefined
-  || ponytailDefaultFlag !== undefined;
+const profileFlagsGiven = [comboDefaultFlag, cavemanDefaultFlag, rtkDefaultFlag, ponytailDefaultFlag]
+  .some((flag) => flag !== undefined);
 
 function printHelp(): void {
   console.log(`Usage: ${PACKAGE_BIN} [command] [options]

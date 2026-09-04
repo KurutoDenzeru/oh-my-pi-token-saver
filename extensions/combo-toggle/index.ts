@@ -7,6 +7,7 @@ import { createRequire } from 'node:module';
 import {
   COMBO_LEVELS,
   getSharedComboState,
+  isComboPresetActive,
   isOmpSubagentPrompt,
   normalizeComboLevel,
   reconcileSharedComboEntries,
@@ -70,7 +71,7 @@ export default function comboToggleExtension(pi: ExtensionApi): void {
     if (!c?.ui?.setStatus) return;
     // Single unified bar replaces the three per-extension bars while a preset is
     // active. In custom/off, the individual bars come back and combo stays clear.
-    if (currentState.level !== 'medium' && currentState.level !== 'balanced' && currentState.level !== 'max') {
+    if (!isComboPresetActive()) {
       c.ui.setStatus('combo', undefined);
       return;
     }
@@ -166,7 +167,7 @@ export default function comboToggleExtension(pi: ExtensionApi): void {
     else syncStatus(ctx);
     // Installer/user-configured default applies only to a fresh session with
     // no persisted state — real session state always wins.
-    if (getSharedComboState().level === 'off' && !(ctx?.sessionManager?.getBranch?.() || ctx?.sessionManager?.getEntries?.() || []).length) {
+    if (getSharedComboState().level === 'off' && !entriesFrom(ctx).length) {
       const fallback = readComboDefault();
       if (fallback !== 'off') {
         persistPreset(fallback);
@@ -176,20 +177,12 @@ export default function comboToggleExtension(pi: ExtensionApi): void {
     }
   });
 
-  pi.on('session_branch', async (_event, ctx) => {
-    listen(ctx);
-    if (ctx?.hasUI) reconcile(ctx);
-  });
-
-  pi.on('session_tree', async (_event, ctx) => {
-    listen(ctx);
-    if (ctx?.hasUI) reconcile(ctx);
-  });
-
-  pi.on('agent_start', async (_event, ctx) => {
-    listen(ctx);
-    if (ctx?.hasUI) reconcile(ctx);
-  });
+  for (const event of ['session_branch', 'session_tree', 'agent_start']) {
+    pi.on(event, async (_event, ctx) => {
+      listen(ctx);
+      if (ctx?.hasUI) reconcile(ctx);
+    });
+  }
 
   pi.on<SystemPromptEvent>('before_agent_start', async (event, ctx) => {
     if (ctx?.hasUI) reconcile(ctx);

@@ -1,6 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
-import { COMBO_LEVELS, getSharedComboState, isOmpSubagentPrompt, setSharedComboMode } from '../shared/session-state.ts';
+import { getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, setSharedComboMode } from '../shared/session-state.ts';
 import { readRtkDefault } from '../shared/plugin-settings.ts';
 import type { ExtensionApi, ExtensionCtx, InputEvent, SessionEntry, SystemPromptEvent } from '../shared/types.ts';
 
@@ -47,7 +47,7 @@ export default function rtkSessionExtension(pi: ExtensionApi): void {
     const c = ctx || lastCtx;
     if (!c?.ui?.setStatus) return;
     // Combo owns the bar when any preset is active; keep ours empty to avoid duplication.
-    if (getSharedComboState().level in COMBO_LEVELS && getSharedComboState().level !== 'off') {
+    if (isComboPresetActive()) {
       c.ui.setStatus('rtk', undefined);
       return;
     }

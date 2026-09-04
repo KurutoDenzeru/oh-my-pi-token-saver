@@ -31,8 +31,8 @@ function normalizeMode(name: ModeName, value: unknown): string | null {
   return MODE_VALUES[name]?.has(mode) ? mode : null;
 }
 
-function deriveLevel(modes: Modes): ComboLevel {
-  for (const level of ['off', 'medium', 'max'] as const) {
+export function deriveLevel(modes: Modes): ComboLevel {
+  for (const level of Object.keys(COMBO_LEVELS) as ComboLevel[]) {
     const preset = COMBO_LEVELS[level];
     if (preset.caveman === modes.caveman && preset.rtk === modes.rtk && preset.ponytail === modes.ponytail) return level;
   }
@@ -82,6 +82,11 @@ export function normalizeComboLevel(value: unknown): ComboLevel | null {
 
 export function getSharedComboState(): Readonly<ComboState> {
   return bridge().state;
+}
+
+export function isComboPresetActive(): boolean {
+  const level = getSharedComboState().level;
+  return level !== 'off' && Object.prototype.hasOwnProperty.call(COMBO_LEVELS, level);
 }
 
 export function setSharedComboLevel(value: unknown): Readonly<ComboState> {

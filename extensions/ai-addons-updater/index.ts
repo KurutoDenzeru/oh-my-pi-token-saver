@@ -11,12 +11,15 @@ import os from 'node:os';
 import path from 'node:path';
 
 import {
+  CAVEMAN_REMOTE_RULE as CAVEMAN_REMOTE,
+  RTK_RELEASE_API,
   httpsGet,
   httpsDownload,
   sha256Hex,
   parseChecksum,
   normalizeRtkVersion,
   readTextIfExists,
+  rtkPlatformSpec,
 } from '../lib/utils.ts';
 
 const IS_WINDOWS = process.platform === 'win32';
@@ -24,9 +27,7 @@ const HOME = os.homedir();
 
 const PONYTAIL_REMOTE = 'https://raw.githubusercontent.com/DietrichGebert/ponytail/main/package.json';
 const PONYTAIL_LOCAL = path.join(HOME, '.omp', 'plugins', 'node_modules', '@dietrichgebert', 'ponytail', 'package.json');
-const RTK_RELEASE_API = 'https://api.github.com/repos/rtk-ai/rtk/releases/latest';
 const RTK_BINARY = path.join(HOME, '.bun', 'bin', IS_WINDOWS ? 'rtk.exe' : 'rtk');
-const CAVEMAN_REMOTE = 'https://raw.githubusercontent.com/JuliusBrussee/caveman/main/src/rules/caveman-activate.md';
 const CAVEMAN_LOCAL = path.join(HOME, '.omp', 'agent', 'extensions', 'caveman-session', 'rule.md');
 
 const RELOAD_MSG = 'Reminder: restart OMP (or reload extensions) for updates to take effect.';
@@ -94,7 +95,7 @@ async function checkAddons(ctx: AddonUpdaterCtx): Promise<string> {
       const out = execFileSync(RTK_BINARY, ['--version'], { encoding: 'utf8', windowsHide: true, shell: false, timeout: 10000 }) || '';
       if (out) localVer = out.trim().split(/\r?\n/)[0];
     } catch { localVer = null; }
-    const status = localVer == null ? 'not installed'
+    const status = localVer === null ? 'not installed'
       : normalizeRtkVersion(localVer) === normalizeRtkVersion(latestTag ?? undefined) ? 'up to date'
       : 'update available';
     const m = `RTK ${status}: local=${localVer || '—'} latest=${latestTag || '—'}`;
@@ -154,16 +155,6 @@ async function updatePonytail(pi: AddonUpdaterPi, ctx: AddonUpdaterCtx, dryRun =
   return m;
 }
 
-interface RtkAssetSpec { triple: string; ext: string; binary: string }
-
-const RTK_ASSET_SPECS: Record<string, RtkAssetSpec> = {
-  'win32/x64': { triple: 'x86_64-pc-windows-msvc', ext: '.zip', binary: 'rtk.exe' },
-  'linux/x64': { triple: 'x86_64-unknown-linux-musl', ext: '.tar.gz', binary: 'rtk' },
-  'linux/arm64': { triple: 'aarch64-unknown-linux-gnu', ext: '.tar.gz', binary: 'rtk' },
-  'darwin/x64': { triple: 'x86_64-apple-darwin', ext: '.tar.gz', binary: 'rtk' },
-  'darwin/arm64': { triple: 'aarch64-apple-darwin', ext: '.tar.gz', binary: 'rtk' },
-};
-
 async function updateRtk(ctx: AddonUpdaterCtx, dryRun = false): Promise<string> {
   let release: GitHubRelease;
   try {
@@ -179,7 +170,7 @@ async function updateRtk(ctx: AddonUpdaterCtx, dryRun = false): Promise<string> 
   // Cross-platform asset selection (mirrors installer stepRtk)
   const PLATFORM = process.platform;
   const ARCH = process.arch;
-  const spec = RTK_ASSET_SPECS[`${PLATFORM}/${ARCH}`];
+  const spec = rtkPlatformSpec(PLATFORM, ARCH);
   if (!spec) {
     const m = `RTK: unsupported platform ${PLATFORM}/${ARCH}`;
     notify(ctx, m, 'warning'); return m;

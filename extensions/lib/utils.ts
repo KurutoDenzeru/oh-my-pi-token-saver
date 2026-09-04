@@ -17,11 +17,32 @@ export interface HttpDownloadOptions {
 
 // Promise.withResolvers is Node 22+; the package supports Node 18+.
 // ponytail: swap for the built-in when engines bumps to >=22.
-function withResolvers<T>(): { promise: Promise<T>; resolve: (value: T | PromiseLike<T>) => void; reject: (reason?: unknown) => void } {
+export function withResolvers<T>(): { promise: Promise<T>; resolve: (value: T | PromiseLike<T>) => void; reject: (reason?: unknown) => void } {
   let resolve!: (value: T | PromiseLike<T>) => void;
   let reject!: (reason?: unknown) => void;
   const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
   return { promise, resolve, reject };
+}
+
+export const RTK_RELEASE_API = 'https://api.github.com/repos/rtk-ai/rtk/releases/latest';
+export const CAVEMAN_REMOTE_RULE = 'https://raw.githubusercontent.com/JuliusBrussee/caveman/main/src/rules/caveman-activate.md';
+
+export interface RtkPlatformSpec {
+  triple: string;
+  ext: string;
+  binary: string;
+}
+
+const RTK_PLATFORM_SPECS: Record<string, RtkPlatformSpec> = {
+  'win32/x64': { triple: 'x86_64-pc-windows-msvc', ext: '.zip', binary: 'rtk.exe' },
+  'linux/x64': { triple: 'x86_64-unknown-linux-musl', ext: '.tar.gz', binary: 'rtk' },
+  'linux/arm64': { triple: 'aarch64-unknown-linux-gnu', ext: '.tar.gz', binary: 'rtk' },
+  'darwin/x64': { triple: 'x86_64-apple-darwin', ext: '.tar.gz', binary: 'rtk' },
+  'darwin/arm64': { triple: 'aarch64-apple-darwin', ext: '.tar.gz', binary: 'rtk' },
+};
+
+export function rtkPlatformSpec(platform: string = process.platform, arch: string = process.arch): RtkPlatformSpec | null {
+  return RTK_PLATFORM_SPECS[`${platform}/${arch}`] || null;
 }
 
 export function httpsGet(url: string, opts: HttpGetOptions = {}): Promise<string> {

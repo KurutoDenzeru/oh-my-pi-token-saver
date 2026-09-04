@@ -4,7 +4,6 @@
 // Requires: node/npm and omp CLI
 
 import { execFile } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -14,12 +13,15 @@ import { promisify } from 'node:util';
 import { createRequire } from 'node:module';
 
 import {
+  CAVEMAN_REMOTE_RULE,
+  RTK_RELEASE_API,
   httpsGet,
   httpsDownload,
-  sha256Hex,
   sha256File,
   parseChecksum,
   readTextIfExists,
+  rtkPlatformSpec,
+  withResolvers,
 } from './extensions/lib/utils.ts';
 
 const IS_WINDOWS = process.platform === 'win32';
@@ -152,7 +154,7 @@ function debug(...a: unknown[]): void {
 const RL = readline.createInterface({ input: process.stdin, output: process.stdout });
 let rlOpen = true;
 function ask(q: string): Promise<string> {
-  const { promise, resolve } = Promise.withResolvers<string>();
+  const { promise, resolve } = withResolvers<string>();
   RL.question(q, resolve);
   return promise;
 }
@@ -170,8 +172,6 @@ const MODE_REINFORCEMENT_INDEX = path.join(EXT_DIR, 'shared', 'mode-reinforcemen
 const SHARED_TYPES = path.join(EXT_DIR, 'shared', 'types.js');
 const LIB_UTILS = path.join(EXT_DIR, 'lib', 'utils.js');
 const SHARED_PLUGIN_SETTINGS = path.join(EXT_DIR, 'shared', 'plugin-settings.js');
-const CAVEMAN_REMOTE_RULE = 'https://raw.githubusercontent.com/JuliusBrussee/caveman/main/src/rules/caveman-activate.md';
-const RTK_RELEASE_API = 'https://api.github.com/repos/rtk-ai/rtk/releases/latest';
 
 // --- Helpers ---
 
@@ -520,17 +520,8 @@ async function stepSelfPlugin(pluginsDir: string, options: InstallOptions): Prom
 interface RtkAsset { name: string; browser_download_url: string }
 interface RtkRelease { tag_name: string; assets?: RtkAsset[] }
 
-// Map (platform, arch) to Rust triple stem.
-const RTK_TRIPLES: Record<string, string> = {
-  'win32/x64': 'x86_64-pc-windows-msvc',
-  'linux/x64': 'x86_64-unknown-linux-musl',
-  'linux/arm64': 'aarch64-unknown-linux-gnu',
-  'darwin/x64': 'x86_64-apple-darwin',
-  'darwin/arm64': 'aarch64-apple-darwin',
-};
-
 function resolveRtkTriple(): string | null {
-  const triple = RTK_TRIPLES[`${process.platform}/${process.arch}`];
+  const triple = rtkPlatformSpec()?.triple;
   if (triple) return triple;
   console.log(`  [fail] Unsupported platform: ${process.platform}/${process.arch}`);
   console.log('  [hint] Manual: https://github.com/rtk-ai/rtk/releases');
@@ -764,7 +755,7 @@ async function runDoctor(): Promise<void> {
   const pluginsDir = path.join(HOME, '.omp', 'plugins');
   const rtkBin = path.join(HOME, '.bun', 'bin', IS_WINDOWS ? 'rtk.exe' : 'rtk');
 
-  const agentOk = await readTextIfExists(agentDir) !== null || (await fs.readdir(agentDir).catch(() => null)) !== null;
+  const agentOk = (await fs.readdir(agentDir).catch(() => null)) !== null;
   console.log(`  OMP agent dir: ${agentOk ? 'ok' : 'MISSING'} ${agentDir}`);
 
   const extOk = (await fs.readdir(extDir).catch(() => null)) !== null;
@@ -773,7 +764,8 @@ async function runDoctor(): Promise<void> {
   const sharedState = path.join(extDir, 'shared', 'session-state.js');
   console.log(`  Shared session bridge: ${(await readTextIfExists(sharedState)) !== null ? 'installed' : 'MISSING'}`);
 
-  const configOk = (await readTextIfExists(configPath)) !== null;
+  const configText = await readTextIfExists(configPath);
+  const configOk = configText !== null;
   console.log(`  OMP config.yml: ${configOk ? 'ok' : 'MISSING'} ${configPath}`);
 
   // Ponytail
@@ -784,8 +776,7 @@ async function runDoctor(): Promise<void> {
   console.log(`  Ponytail package: ${ponytailInstalled ? 'installed' : 'MISSING'}`);
   console.log(`  Ponytail extension: ${ponytailExtInstalled ? 'installed' : 'MISSING'}`);
 
-  if (configOk) {
-    const configText = (await readTextIfExists(configPath))!;
+  if (configText) {
     const hasPonytailPath = configText.includes('ponytail') && configText.includes('pi-extension');
     console.log(`  Ponytail in config.yml: ${hasPonytailPath ? 'registered' : 'MISSING'}`);
   }
@@ -834,8 +825,7 @@ async function runDoctor(): Promise<void> {
   console.log(`  Mode reinforcement extension: ${(await readTextIfExists(modeReinforcement)) !== null ? 'installed' : 'MISSING'}`);
 
 
-  if (configOk) {
-    const configText = (await readTextIfExists(configPath))!;
+  if (configText) {
     const hasComboPath = configText.includes('combo-toggle');
     console.log(`  Combo in config.yml: ${hasComboPath ? 'registered' : 'MISSING'}`);
   }

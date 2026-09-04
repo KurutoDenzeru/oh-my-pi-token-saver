@@ -13,6 +13,7 @@ import path from 'node:path';
 import {
   CAVEMAN_REMOTE_RULE as CAVEMAN_REMOTE,
   RTK_RELEASE_API,
+  findFile,
   httpsGet,
   httpsDownload,
   sha256Hex,
@@ -230,7 +231,7 @@ async function updateRtk(ctx: AddonUpdaterCtx, dryRun = false): Promise<string> 
       try {
         execFileSync('tar', ['xzf', archivePath, '-C', extractDir], { encoding: 'utf8', shell: false });
       } catch (e) {
-        execFileSync('sh', ['-c', `gunzip < '${archivePath}' | tar xf - -C '${extractDir}'`], { encoding: 'utf8', shell: false });
+        throw new Error(`tar could not extract ${asset.name}: ${(e as Error).message}`);
       }
     } else {
       throw new Error(`Unknown archive format: ${asset.name}`);
@@ -277,29 +278,6 @@ async function updateRtk(ctx: AddonUpdaterCtx, dryRun = false): Promise<string> 
   } finally {
     fs.rm(tmp, { recursive: true, force: true }).catch(() => {});
   }
-}
-
-async function findFile(dir: string, name: string): Promise<string | null> {
-  try {
-    const ents = await fs.readdir(dir, { withFileTypes: true });
-    for (const e of ents) {
-      const full = path.join(dir, e.name);
-      if (e.isDirectory()) {
-        const r = await findFile(full, name);
-        if (r) return r;
-      } else if (e.isFile()) {
-        if (e.name === name) return full;
-        // Match rtk-* asset names (e.g. rtk-x86_64-unknown-linux-musl)
-        if (name === 'rtk' || name === 'rtk.exe') {
-          const base = e.name.toLowerCase();
-          if (!/\.(txt|md|json|sha256|sig|asc|pem|crt|license)$/i.test(base)) {
-            if (base === 'rtk' || base === 'rtk.exe' || /^rtk[-_.]/.test(base)) return full;
-          }
-        }
-      }
-    }
-  } catch { /* ignore */ }
-  return null;
 }
 
 async function updateCaveman(ctx: AddonUpdaterCtx, dryRun = false): Promise<string> {

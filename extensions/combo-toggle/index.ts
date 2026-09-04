@@ -11,11 +11,12 @@ import {
   isOmpSubagentPrompt,
   normalizeComboLevel,
   reconcileSharedComboEntries,
+  sessionEntries,
   setSharedComboLevel,
   setSharedComboListener,
 } from '../shared/session-state.ts';
 import { readComboDefault } from '../shared/plugin-settings.ts';
-import type { ComboState, ExtensionApi, ExtensionCtx, SessionEntry, SystemPromptEvent } from '../shared/types.ts';
+import type { ComboState, ExtensionApi, ExtensionCtx, SystemPromptEvent } from '../shared/types.ts';
 
 const require = createRequire(import.meta.url);
 
@@ -26,10 +27,6 @@ function ponytailFallback(mode: string): string {
       ? 'Review only for avoidable complexity; recommend the smallest correct replacement.'
       : 'Use the minimum correct solution. Delete or reuse before adding.';
   return `🦥 PONYTAIL MODE ACTIVE — level: ${mode}\n${intensity} Understand the path first and fix root causes, not symptoms. Prefer the standard library and YAGNI. Avoid speculative abstractions and dependencies. Preserve correctness. Verify changed behavior.`;
-}
-
-function entriesFrom(ctx: ExtensionCtx | undefined): SessionEntry[] {
-  return ctx?.sessionManager?.getBranch?.() || ctx?.sessionManager?.getEntries?.() || [];
 }
 
 function levelSummary(state: ComboState): string {
@@ -108,7 +105,7 @@ export default function comboToggleExtension(pi: ExtensionApi): void {
 
   function reconcile(ctx?: ExtensionCtx): Readonly<ComboState> {
     if (!ctx?.hasUI) return currentState;
-    return useState(reconcileSharedComboEntries(entriesFrom(ctx)), ctx);
+    return useState(reconcileSharedComboEntries(sessionEntries(ctx)), ctx);
   }
   function listen(ctx?: ExtensionCtx): void {
     if (ctx?.hasUI) setSharedComboListener((state) => useState(state));
@@ -167,7 +164,7 @@ export default function comboToggleExtension(pi: ExtensionApi): void {
     else syncStatus(ctx);
     // Installer/user-configured default applies only to a fresh session with
     // no persisted state — real session state always wins.
-    if (getSharedComboState().level === 'off' && !entriesFrom(ctx).length) {
+    if (getSharedComboState().level === 'off' && !sessionEntries(ctx).length) {
       const fallback = readComboDefault();
       if (fallback !== 'off') {
         persistPreset(fallback);

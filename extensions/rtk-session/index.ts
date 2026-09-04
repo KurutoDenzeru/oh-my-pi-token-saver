@@ -1,6 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
-import { getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, setSharedComboMode } from '../shared/session-state.ts';
+import { getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
 import { readRtkDefault } from '../shared/plugin-settings.ts';
 import type { ExtensionApi, ExtensionCtx, InputEvent, SessionEntry, SystemPromptEvent } from '../shared/types.ts';
 
@@ -124,7 +124,7 @@ export default function rtkSessionExtension(pi: ExtensionApi): void {
     if (t === 'rtk off' || t === 'stop rtk') setEnabled(false);
   });
   function restoreEnabled(ctx?: ExtensionCtx): void {
-    const entries = ctx?.sessionManager?.getBranch?.() || ctx?.sessionManager?.getEntries?.() || [];
+    const entries = sessionEntries(ctx);
     // Persisted session state wins; a fresh session falls back to the
     // installer/user-configured default (off unless configured).
     const persisted = resolveEnabled(entries);

@@ -1,11 +1,7 @@
-import { reconcileSharedComboEntries } from './session-state.ts';
-import type { ExtensionApi, ExtensionCtx, SystemPromptEvent } from './types.ts';
+import { reconcileSharedComboEntries, sessionEntries } from './session-state.ts';
+import type { ExtensionApi, SystemPromptEvent } from './types.ts';
 
 const MARKER = 'SUPREME TOKEN SAVER MODES ACTIVE';
-
-function entriesFrom(ctx: ExtensionCtx | undefined) {
-  return ctx?.sessionManager?.getBranch?.() || ctx?.sessionManager?.getEntries?.() || [];
-}
 
 function instruction(state: { caveman: string; rtk: string; ponytail: string }): string | null {
   const modes = [
@@ -23,7 +19,7 @@ export default function modeReinforcementExtension(pi: ExtensionApi): void {
 
   pi.on('before_agent_start', async (event: SystemPromptEvent, ctx) => {
     if (!ctx?.hasUI) return;
-    const text = instruction(reconcileSharedComboEntries(entriesFrom(ctx)));
+    const text = instruction(reconcileSharedComboEntries(sessionEntries(ctx)));
     if (!text) return;
 
     const base = Array.isArray(event.systemPrompt) ? event.systemPrompt : [event.systemPrompt];

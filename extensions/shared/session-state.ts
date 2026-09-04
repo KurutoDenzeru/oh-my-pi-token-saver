@@ -1,4 +1,4 @@
-import type { ComboLevel, ComboState, SessionEntry } from './types.ts';
+import type { ComboLevel, ComboState, ExtensionCtx, SessionEntry } from './types.ts';
 
 const BRIDGE_KEY = Symbol.for('tersio/combo-session-state');
 
@@ -78,6 +78,10 @@ export function isOmpSubagentPrompt(systemPrompt: string | string[]): boolean {
 export function normalizeComboLevel(value: unknown): ComboLevel | null {
   const level = String(value || '').trim().toLowerCase();
   return Object.prototype.hasOwnProperty.call(COMBO_LEVELS, level) ? (level as ComboLevel) : null;
+}
+
+export function sessionEntries(ctx: ExtensionCtx | undefined): SessionEntry[] {
+  return ctx?.sessionManager?.getBranch?.() || ctx?.sessionManager?.getEntries?.() || [];
 }
 
 export function getSharedComboState(): Readonly<ComboState> {

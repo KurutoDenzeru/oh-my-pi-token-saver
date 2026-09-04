@@ -15,6 +15,7 @@ import { createRequire } from 'node:module';
 import {
   CAVEMAN_REMOTE_RULE,
   RTK_RELEASE_API,
+  findFile,
   httpsGet,
   httpsDownload,
   sha256File,
@@ -80,8 +81,9 @@ function parseEnum(value: string | undefined, valid: Set<string>, flag: string):
 
 function flagValue(name: string): string | undefined {
   const i = args.indexOf(name);
-  if (i === -1) return undefined;
-  return args[i + 1];
+  if (i !== -1) return args[i + 1];
+  const prefix = `${name}=`;
+  return args.find((arg) => arg.startsWith(prefix))?.slice(prefix.length);
 }
 
 // --- CLI flags ---
@@ -373,7 +375,9 @@ async function stepPonytail(pluginsDir: string, userDir: string, options: Instal
   const pkgPath = path.join(pluginsDir, 'package.json');
   let pkg: PluginsPackage = {};
   const existing = await readTextIfExists(pkgPath);
-  if (existing) pkg = JSON.parse(existing);
+  if (existing) {
+    try { pkg = JSON.parse(existing); } catch { pkg = {}; }
+  }
 
   pkg.name = pkg.name || 'omp-plugins';
   pkg.private = true;
@@ -590,12 +594,9 @@ async function extractRtkArchive(archivePath: string, extractDir: string): Promi
       debug('tar xzf ok');
     } catch (e) {
       debug(`tar xzf failed: ${shortError(e)}`);
-      try {
-        await execP('sh', ['-c', `gunzip < '${archivePath}' | tar xf - -C '${extractDir}'`], { timeout: 60000 });
-        debug('gunzip|tar fallback ok');
-      } catch (e2) {
-        debug(`gunzip|tar fallback failed: ${shortError(e2)}`);
-      }
+      console.log(`  [fail] tar could not extract ${path.basename(archivePath)}`);
+      console.log('  [hint] Manual: https://github.com/rtk-ai/rtk/releases');
+      return false;
     }
     return true;
   }
@@ -622,43 +623,39 @@ async function stepRtk(binDir: string, options: InstallOptions): Promise<void> {
 
     const checksumsText = await downloadRtkChecksums(release);
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'omp-rtk-'));
-    const archivePath = path.join(tmpDir, asset.name);
-    await httpsDownload(asset.browser_download_url, archivePath);
-    if (!await verifyRtkArchive(archivePath, asset.name, checksumsText, tmpDir)) return;
-
-    const extractDir = path.join(tmpDir, 'extracted');
-    if (!await extractRtkArchive(archivePath, extractDir)) {
-      await fs.rm(tmpDir, { recursive: true, force: true });
-      return;
-    }
-
-    const binaryName = IS_WINDOWS ? 'rtk.exe' : 'rtk';
-    const entries = await fs.readdir(extractDir, { recursive: true });
-    debug(`extracted entries: ${entries.join(', ')}`);
-    const found = entries.find((e) => path.basename(e) === binaryName);
-    if (!found) {
-      console.log(`  [fail] Could not find ${binaryName} in extracted archive`);
-      await fs.rm(tmpDir, { recursive: true, force: true });
-      return;
-    }
-
-    await fs.mkdir(path.dirname(binDest), { recursive: true });
-    await fs.copyFile(path.join(extractDir, found), binDest);
-    console.log(`  [write] ${binDest}`);
-
-    if (!IS_WINDOWS) {
-      await fs.chmod(binDest, 0o755);
-      debug(`chmod 755 ${binDest}`);
-    }
-
     try {
-      const v = (await execP(binDest, ['--version'], { timeout: 10000, shell: false })).stdout.trim();
-      console.log(`  [ok] ${binDest} → ${v}`);
-    } catch {
-      console.log(`  [hint] Verify manually: ${binDest} --version`);
-    }
+      const archivePath = path.join(tmpDir, asset.name);
+      await httpsDownload(asset.browser_download_url, archivePath);
+      if (!await verifyRtkArchive(archivePath, asset.name, checksumsText, tmpDir)) return;
 
-    await fs.rm(tmpDir, { recursive: true, force: true });
+      const extractDir = path.join(tmpDir, 'extracted');
+      if (!await extractRtkArchive(archivePath, extractDir)) return;
+
+      const binaryName = IS_WINDOWS ? 'rtk.exe' : 'rtk';
+      const found = await findFile(extractDir, binaryName);
+      if (!found) {
+        console.log(`  [fail] Could not find ${binaryName} in extracted archive`);
+        return;
+      }
+
+      await fs.mkdir(path.dirname(binDest), { recursive: true });
+      await fs.copyFile(found, binDest);
+      console.log(`  [write] ${binDest}`);
+
+      if (!IS_WINDOWS) {
+        await fs.chmod(binDest, 0o755);
+        debug(`chmod 755 ${binDest}`);
+      }
+
+      try {
+        const v = (await execP(binDest, ['--version'], { timeout: 10000, shell: false })).stdout.trim();
+        console.log(`  [ok] ${binDest} → ${v}`);
+      } catch {
+        console.log(`  [hint] Verify manually: ${binDest} --version`);
+      }
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+    }
   } catch (e) {
     console.log(`  [fail] RTK: ${(e as Error).message}`);
     console.log('  [hint] Manual: https://github.com/rtk-ai/rtk/releases');
@@ -735,7 +732,7 @@ async function runDoctor(): Promise<void> {
   console.log('\n=== Tersio Doctor ===\n');
 
   // Node
-  console.log(`  Node: ok v${process.version}`);
+  console.log(`  Node: ok ${process.version}`);
 
   // OMP CLI
   try {

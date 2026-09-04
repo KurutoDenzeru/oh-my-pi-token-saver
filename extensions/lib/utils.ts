@@ -108,6 +108,29 @@ export function parseChecksum(checksumsText: string, assetName: string): string 
   return null;
 }
 
+export async function findFile(dir: string, name: string): Promise<string | null> {
+  try {
+    const ents = await fs.readdir(dir, { withFileTypes: true });
+    for (const e of ents) {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        const found = await findFile(full, name);
+        if (found) return found;
+      } else if (e.isFile()) {
+        if (e.name === name) return full;
+        // Match rtk-* asset names (e.g. rtk-x86_64-unknown-linux-musl).
+        if (name === 'rtk' || name === 'rtk.exe') {
+          const base = e.name.toLowerCase();
+          if (!/\.(txt|md|json|sha256|sig|asc|pem|crt|license)$/i.test(base)) {
+            if (base === 'rtk' || base === 'rtk.exe' || /^rtk[-_.]/.test(base)) return full;
+          }
+        }
+      }
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
 export async function readTextIfExists(p: string): Promise<string | null> {
   try { return await fs.readFile(p, 'utf8'); } catch { return null; }
 }

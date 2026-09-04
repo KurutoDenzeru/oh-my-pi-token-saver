@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, setSharedComboMode } from '../shared/session-state.ts';
+import { getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
 import { readCavemanDefault } from '../shared/plugin-settings.ts';
 import type { ExtensionApi, ExtensionCtx, InputEvent, SessionEntry, SystemPromptEvent } from '../shared/types.ts';
 
@@ -119,7 +119,7 @@ export default function cavemanSessionExtension(pi: ExtensionApi): void {
   });
 
   function restoreMode(ctx?: ExtensionCtx): void {
-    const entries = ctx?.sessionManager?.getBranch?.() || ctx?.sessionManager?.getEntries?.() || [];
+    const entries = sessionEntries(ctx);
     // Persisted session state wins; a fresh session falls back to the
     // installer/user-configured default (off unless configured).
     const persisted = resolveMode(entries, '');

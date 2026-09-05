@@ -2,20 +2,20 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 
-import cavemanSessionExtension from "../extensions/caveman-session/index.js";
-import comboToggleExtension from "../extensions/combo-toggle/index.js";
-import modeReinforcementExtension from "../extensions/shared/mode-reinforcement.js";
-import rtkSessionExtension from "../extensions/rtk-session/index.js";
+import cavemanSessionExtension from "../../extensions/caveman-session/index.js";
+import comboToggleExtension from "../../extensions/combo-toggle/index.js";
+import modeReinforcementExtension from "../../extensions/shared/mode-reinforcement.js";
+import rtkSessionExtension from "../../extensions/rtk-session/index.js";
 import {
   OMP_SUBAGENT_MARKER,
   getSharedComboState,
   resetSharedComboState,
-} from "../extensions/shared/session-state.js";
-import type { ExtensionApi, ExtensionCtx, SessionEntry } from "../extensions/shared/types.js";
+} from "../../extensions/shared/session-state.js";
+import type { ExtensionApi, ExtensionCtx, SessionEntry } from "../../extensions/shared/types.js";
 
 // ponytail: hermetic HOME — session-start fallbacks read the real lock file,
 // so without this the suite depends on the developer's own defaults.
-process.env.HOME = new URL("./definitely-missing-home", import.meta.url).pathname;
+process.env.HOME = new URL("../definitely-missing-home", import.meta.url).pathname;
 process.env.USERPROFILE = process.env.HOME;
 
 const MARKED_PROMPT = `System instructions.\n${OMP_SUBAGENT_MARKER}`;
@@ -106,7 +106,7 @@ function instruction(result: { systemPrompt?: string[] } | undefined) {
 }
 
 async function withoutInstalledPonytail<T>(callback: () => Promise<T>): Promise<T> {
-  const missingHome = fileURLToPath(new URL("./definitely-missing-home", import.meta.url));
+  const missingHome = fileURLToPath(new URL("../definitely-missing-home", import.meta.url));
   const previous = { HOME: process.env.HOME, USERPROFILE: process.env.USERPROFILE };
   process.env.HOME = missingHome;
   process.env.USERPROFILE = missingHome;

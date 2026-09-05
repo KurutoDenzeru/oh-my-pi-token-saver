@@ -115,3 +115,15 @@ test("/ai-addons update ponytail invokes npm install @dietrichgebert/ponytail@la
   assert.match(String(result), /ponytail/i);
   assert.match(String(result), /finished|complete|done|updated/i);
 });
+test("/ai-addons update ponytail without host exec reports failure instead of throwing", async () => {
+  const fakePi = createFakePi(async () => ({ stdout: "", stderr: "", code: 0 }));
+  delete (fakePi as Partial<FakePi>).exec;
+  const fakeCtx = createFakeCtx();
+
+  updaterExtension(fakePi);
+  const handler = fakePi.getHandler();
+  assert.ok(handler, "ai-addons command handler not registered via registerCommand");
+
+  const result = await handler("update ponytail", fakeCtx);
+  assert.match(result, /does not provide exec/);
+});

@@ -8,7 +8,7 @@ export interface ComboState {
   ponytail: string;
 }
 
-export type ComboLevel = "off" | "medium" | "balanced" | "max" | "custom";
+export type ComboLevel = 'off' | 'medium' | 'balanced' | 'max' | 'custom';
 
 export type SessionEntry = {
   type: string;

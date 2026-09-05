@@ -7,7 +7,7 @@
 [![CI](https://github.com/KurutoDenzeru/tersio/actions/workflows/ci.yml/badge.svg)](https://github.com/KurutoDenzeru/tersio/actions)
 [![issues](https://img.shields.io/github/issues/KurutoDenzeru/tersio?color=d97706)](https://github.com/KurutoDenzeru/tersio/issues)
 
-Terse replies, compact shell output, and minimal code decisions for [Oh My Pi (OMP)](https://github.com/can1357/oh-my-pi) — plus a passive Amanai reward detector.
+Terse replies, compact shell output, and minimal code decisions for [Oh My Pi (OMP)](https://github.com/can1357/oh-my-pi).
 
 ## Install
 
@@ -56,9 +56,21 @@ Defaults apply to fresh sessions only — anything persisted with `/combo`, `/ca
 | **Ponytail** | Minimal, YAGNI-oriented code decisions |
 | **Combo** | Toggles all three at once. Presets: `off`, `medium`, `balanced`, `max` |
 | **Updater** | `/ai-addons` checks and updates Ponytail, RTK, and Caveman in-session, with dry-run and backups |
-| **Amanai reward detector** | Local notice when a final response contains a footer-shaped `AMANAI-GACHA-…` key. Never alters output, stores or sends the key, redeems it, or makes requests — redeem keys yourself in the Amanai billing dashboard |
 
-User-level installs also register the package in `~/.omp/plugins` (visible in OMP **Settings → Plugins**), where the detector loads through the plugin manifest instead of a copied extension entry. Active modes reassert after Ponytail's prompt block on every top-level turn, including after history compaction. The package also ships a Pi-native adapter via `pi.extensions` (final settled response only); the OMP installer does not install it.
+User-level installs also register the package in `~/.omp/plugins` (visible in OMP **Settings → Plugins**), directly through the plugin manifest. Active modes reassert after Ponytail's prompt block on every top-level turn, including after history compaction.
+
+## Benchmarks
+
+Measured before/after — real `o200k_base` token counts, samples and run protocol in [BENCHMARK.md](./BENCHMARK.md). Overhead is paid once per session; savings accumulate per reply, command, or task.
+
+| Mode | Overhead (once) | Before | After | Saving | Pays off after |
+|---|---:|---:|---:|---:|---|
+| `/caveman lite` | 46 tok | 146 tok/reply | 67 | −55% | 1 reply |
+| `/caveman full` | 172 tok | 146 tok/reply | 61 | −58% | ~2 replies |
+| `/caveman ultra` | 68 tok | 146 tok/reply | 34 | −77% | 1 reply |
+| `/rtk on` | 165 tok | 537 tok (grep) | 469 | −13% (−34% on `git status`) | varies |
+| `/ponytail full` | 76 tok | 261–481 tok/task | 108–143 | −59 to −70% | first task |
+| `/combo balanced` | 480 tok | 944 tok mixed turn | 638 | −32%/turn | first turn |
 
 ## CLI
 
@@ -71,7 +83,7 @@ User-level installs also register the package in `~/.omp/plugins` (visible in OM
 | `tersio uninstall` | Remove extensions and registration (`--remove-rtk`, `--remove-ponytail` for more) |
 | `tersio version` | Print version |
 
-Flags: `--dry-run`, `--yes`/`-y`, `--verbose`, `--scope`, `--combo-default`/`--caveman-default`/`--rtk-default`. Legacy `--doctor` / `--uninstall` forms still work.
+Flags: `--dry-run`, `--yes`/`-y`, `--verbose`, `--scope`, `--combo-default`/`--caveman-default`/`--rtk-default`/`--ponytail-default`. Legacy `--doctor` / `--uninstall` forms still work.
 
 ## Commands reference
 
@@ -137,7 +149,7 @@ Covers noisy commands (`git status`, `git diff`, `read`, `grep`, test, `tsc`, li
 
 | What | Path |
 |---|---|
-| Caveman / RTK / Updater / Combo / Amanai extensions | `~/.omp/agent/extensions/{caveman-session,rtk-session,ai-addons-updater,combo-toggle,amanai-reward}/` |
+| Caveman / RTK / Updater / Combo extensions | `~/.omp/agent/extensions/{caveman-session,rtk-session,ai-addons-updater,combo-toggle}/` |
 | Ponytail package | `~/.omp/plugins/node_modules/@dietrichgebert/ponytail/` |
 | RTK binary | `~/.bun/bin/rtk` (`rtk.exe` on Windows) |
 | Extension registrations | `~/.omp/agent/config.yml` |

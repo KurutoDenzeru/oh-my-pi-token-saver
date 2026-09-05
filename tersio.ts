@@ -764,21 +764,8 @@ async function stepCombo(extDir: string, options: WriteOptions): Promise<void> {
 
 // --- Doctor ---
 
-function presence(label: string, text: string | null): void {
-  console.log(`  ${label}: ${text !== null ? 'installed' : 'MISSING'}`);
-}
-
-function locationLine(label: string, ok: boolean, loc: string): void {
-  console.log(`  ${label}: ${ok ? 'ok' : 'MISSING'} ${loc}`);
-}
-
 async function runDoctor(): Promise<void> {
-  console.log('\n=== Tersio Doctor ===\n');
-
-  // Node
-  console.log(`  Node: ok ${process.version}`);
-
-  // OMP CLI version joins FS probes below; logs keep fixed order.
+  console.log('\n=== Tersio Doctor ===');
 
   // Directories
   const agentDir = OMP_AGENT_DIR;
@@ -835,62 +822,68 @@ async function runDoctor(): Promise<void> {
     readTextIfExists(modeReinforcement),
   ]);
 
-  console.log(ompVersion !== null ? `  OMP CLI: ok ${ompVersion}` : '  OMP CLI: MISSING');
+  // Categorized output with a tally; section headers group related probes.
+  const tally = { ok: 0, missing: 0, warn: 0 };
+  function check(label: string, ok: boolean, detail = ''): void {
+    if (ok) { tally.ok++; console.log(`  ${label}: ok${detail ? ` ${detail}` : ''}`); }
+    else { tally.missing++; console.log(`  ${label}: MISSING${detail ? ` ${detail}` : ''}`); }
+  }
+  function warnLine(label: string, detail: string): void {
+    tally.warn++;
+    console.log(`  ${label}: warn ${detail}`);
+  }
+
+  section('Environment');
+  check('Node', true, process.version);
+  check('OMP CLI', ompVersion !== null, ompVersion ?? '');
   console.log(`  Home: ${HOME}`);
 
-  locationLine('OMP agent dir', agentEntries !== null, agentDir);
+  section('Installation');
+  check('OMP agent dir', agentEntries !== null, agentDir);
+  check('OMP extensions dir', extEntries !== null, extDir);
+  check('OMP config.yml', configText !== null, configPath);
+  check('Shared session bridge', sharedStateText !== null);
 
-  locationLine('OMP extensions dir', extEntries !== null, extDir);
+  section('Extensions');
+  check('Caveman extension', cavemanIndexText !== null);
+  check('Caveman rule.md', cavemanRuleText !== null);
+  check('RTK extension', rtkIndexText !== null);
+  check('Updater extension', updaterIndexText !== null);
+  check('Combo extension', comboIndexText !== null);
+  check('Mode reinforcement extension', modeReinforcementText !== null);
 
-  console.log(`  Shared session bridge: ${sharedStateText !== null ? 'installed' : 'MISSING'}`);
-
-  locationLine('OMP config.yml', configText !== null, configPath);
-
-  presence('Ponytail package', ponytailPkgText);
-  presence('Ponytail extension', ponytailExtText);
-
+  section('Plugins');
+  check('Ponytail package', ponytailPkgText !== null);
+  check('Ponytail extension', ponytailExtText !== null);
   if (configText) {
-    const hasPonytailPath = configText.includes('ponytail') && configText.includes('pi-extension');
-    console.log(`  Ponytail in config.yml: ${hasPonytailPath ? 'registered' : 'MISSING'}`);
+    check('Ponytail in config.yml', configText.includes('ponytail') && configText.includes('pi-extension'));
+    check('Combo in config.yml', configText.includes('combo-toggle'));
   }
-
-  // Self plugin registration (Settings → Plugins listing)
+  check('Self plugin package', selfPkgText !== null);
   const selfDep = PACKAGE_NAME in (parseJsonObject<{ dependencies?: Record<string, string> }>(pluginsPkgRaw)?.dependencies || {});
-  console.log(`  Self plugin in plugins/package.json: ${selfDep ? 'registered' : 'MISSING'}`);
-  console.log(`  Self plugin package: ${selfPkgText !== null ? 'installed' : 'MISSING'}`);
+  check('Self plugin in plugins/package.json', selfDep);
 
-  // RTK
-  const rtkExists = rtkBinText !== null;
-  console.log(`  RTK binary: ${rtkExists ? 'installed' : 'MISSING'} ${rtkBin}`);
-  if (rtkExists) {
-    try {
-      const v = (await execP(rtkBin, ['--version'], { timeout: 5000 })).stdout.trim();
-      console.log(`  RTK version: ${v}`);
-    } catch {
-      console.log('  RTK version: unavailable (may not be executable)');
-    }
+  section('RTK');
+  check('RTK binary', rtkBinText !== null, rtkBin);
+  if (rtkBinText !== null) {
+    // rtk may exit non-zero while still printing its version — accept either stream.
+    const version = await execP(rtkBin, ['--version'], { timeout: 5000 }).then(
+      (r) => r.stdout.trim() || r.stderr.trim() || null,
+      (e) => {
+        const err = e as { stdout?: string; stderr?: string };
+        return err.stdout?.trim() || err.stderr?.trim() || null;
+      },
+    );
+    if (version) check('RTK version', true, version);
+    else warnLine('RTK version', 'unavailable — binary may not be executable');
   }
 
-  // Caveman
-  presence('Caveman extension', cavemanIndexText);
-  presence('Caveman rule.md', cavemanRuleText);
+  const total = tally.ok + tally.missing + tally.warn;
+  console.log(`\n  Summary: ${total} checks — ${tally.ok} ok, ${tally.warn} warn, ${tally.missing} missing`);
+}
 
-  // RTK extension
-  presence('RTK extension', rtkIndexText);
-
-  // Updater
-  presence('Updater extension', updaterIndexText);
-
-  // Combo
-  presence('Combo extension', comboIndexText);
-
-  presence('Mode reinforcement extension', modeReinforcementText);
-
-
-  if (configText) {
-    const hasComboPath = configText.includes('combo-toggle');
-    console.log(`  Combo in config.yml: ${hasComboPath ? 'registered' : 'MISSING'}`);
-  }
+function section(name: string): void {
+  console.log(`\n${name}`);
 }
 
 // --- Uninstall ---

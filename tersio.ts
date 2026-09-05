@@ -134,7 +134,7 @@ function printHelp(): void {
 
 Commands:
   install      Install the add-ons (user scope by default)
-  update       Run the latest published installer
+  update       Refresh the CLI and add-ons (RTK binary, Caveman rule, Ponytail)
   reinstall    Clean and reinstall the user-scope add-ons
   doctor       Check the current installation
   uninstall    Remove the managed extensions
@@ -1066,6 +1066,7 @@ async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
 }
 
 const SCOPE_MAP: Record<string, string> = { user: '1', project: '2', both: '3' };
+const COMBO_MENU: Record<string, string> = { '1': 'off', '2': 'medium', '3': 'balanced', '4': 'max' };
 
 async function runLatestUpdate(): Promise<void> {
   const updateScope = scopeFlag || 'user';
@@ -1095,6 +1096,28 @@ async function runLatestUpdate(): Promise<void> {
 
   console.log('=== Updating Tersio ===');
   console.log(`  Running the latest ${PACKAGE_NAME} installer...\n`);
+
+  // The npx delegation below only refreshes the OMP-side files; the globally
+  // installed CLI keeps its old version until npm -g runs. Refresh both.
+  if (dryRun) {
+    console.log(`  [dry-run] would run: npm install -g ${PACKAGE_NAME}@latest --no-audit --no-fund`);
+  } else {
+    try {
+      const globalArgs = IS_WINDOWS ? ['/d', '/s', '/c', 'npm', 'install', '-g', `${PACKAGE_NAME}@latest`, '--no-audit', '--no-fund'] : ['install', '-g', `${PACKAGE_NAME}@latest`, '--no-audit', '--no-fund'];
+      const globalResult = await execP(npmCommand, globalArgs, {
+        timeout: 300000,
+        maxBuffer: 10 * 1024 * 1024,
+        windowsHide: true,
+        shell: false,
+      });
+      if (globalResult.stdout) process.stdout.write(globalResult.stdout);
+      if (globalResult.stderr) process.stderr.write(globalResult.stderr);
+      console.log(`  [ok] CLI updated to ${PACKAGE_NAME}@latest`);
+    } catch (e) {
+      console.log(`  [warn] Global CLI update skipped: ${(e as Error).message}`);
+      console.log(`  [hint] Manual: npm install -g ${PACKAGE_NAME}@latest`);
+    }
+  }
 
   try {
     const result = await execP(npmCommand, npmCommandArgs, {
@@ -1165,11 +1188,21 @@ async function resolveProfile(): Promise<Profile> {
   const profile = defaultProfile();
 
   // Single interactive prompt: the Combo preset implies all three modes.
+  // Numbered menu, same pattern as the scope prompt — no typing preset names.
   // Only for a real user at a terminal, only when no default flags were
   // given, and never for --apply-update runs.
   if (tty() && !profileFlagsGiven && !applyUpdate && (install || reinstall)) {
-    const comboAnswer = (await ask('  Default Combo preset on session start? [off/medium/balanced/max] (off): ')).trim().toLowerCase();
-    if (comboAnswer && COMBO_DEFAULTS.has(comboAnswer)) profile.comboDefault = comboAnswer;
+    console.log('  Session-start defaults — Combo preset:');
+    console.log('    1) off');
+    console.log('    2) medium   (caveman=lite, rtk=on, ponytail=lite)');
+    console.log('    3) balanced (caveman=full, rtk=on, ponytail=full)');
+    console.log('    4) max      (caveman=ultra, rtk=on, ponytail=ultra)');
+    for (;;) {
+      const answer = (await ask('  Choose [1-4] (default 1): ')).trim();
+      if (!answer) { profile.comboDefault = 'off'; break; }
+      if (COMBO_MENU[answer]) { profile.comboDefault = COMBO_MENU[answer]; break; }
+      console.log(`  [fail] Invalid choice: ${answer}. Choose 1, 2, 3, or 4.`);
+    }
   }
 
   // Explicit flags always win over the Combo preset.
@@ -1298,7 +1331,10 @@ async function main(): Promise<void> {
   const userExtDir = path.join(userDir, 'extensions');
   const projectExtDir = path.join(process.cwd(), '.omp', 'extensions');
 
-  const options: InstallOptions = { dryRun, verbose, yes, scope, reinstall };
+  // apply-update is `tersio update`'s payload run: treat it like reinstall so
+  // the add-ons refresh too — Ponytail package via npm, self plugin, RTK
+  // binary (always re-downloaded), and the Caveman rule (always re-fetched).
+  const options: InstallOptions = { dryRun, verbose, yes, scope, reinstall: reinstall || applyUpdate };
 
   // Check prerequisites
   console.log('\nPrerequisites:');

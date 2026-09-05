@@ -79,7 +79,7 @@ Break-even math, balanced preset (caveman full + rtk + ponytail): `âŒˆoverhead Ã
 | Command | Purpose |
 |---|---|
 | `tersio install` | Install (user scope by default; `--scope project\|both` for more) |
-| `tersio update` | Refresh from the latest release |
+| `tersio update` | Refresh the CLI, extensions, and add-ons (RTK binary, Caveman rule, Ponytail) |
 | `tersio reinstall` | Fresh install, preserving the Ponytail package |
 | `tersio doctor` | Check OMP, extension, Ponytail, and RTK health |
 | `tersio uninstall` | Remove extensions, registration, and the Ponytail plugin (`--keep-ponytail` keeps Ponytail; `--remove-rtk` also removes the RTK binary) |

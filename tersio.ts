@@ -716,18 +716,23 @@ async function stepRtkSession(extDir: string, options: WriteOptions): Promise<vo
   await copySources(extDir, [[RTK_SESSION_INDEX, path.join('rtk-session', 'index.js')]], 'rtk-session/index.js', options);
 }
 
-async function stepCaveman(extDir: string, options: WriteOptions): Promise<void> {
+// One rule fetch serves user- and project-level installs; dry runs stay offline
+// and fall back to the bundled rule to preview its destination.
+async function fetchCavemanRule(options: WriteOptions): Promise<string | null> {
+  if (options.dryRun) return (await readTextIfExists(path.join(path.dirname(CAVEMAN_INDEX), 'rule.md'))) || '';
+  try {
+    return await httpsGet(CAVEMAN_REMOTE_RULE);
+  } catch (e) {
+    console.log(`  [warn] Could not fetch caveman rule: ${(e as Error).message}`);
+    return null;
+  }
+}
+
+async function stepCaveman(extDir: string, rule: string | null, options: WriteOptions): Promise<void> {
   console.log('\n[5/7] Installing Caveman session extension...');
   const cavemanDir = path.join(extDir, 'caveman-session');
   if (!options.dryRun) await fs.mkdir(cavemanDir, { recursive: true });
 
-  // Dry runs stay offline; the bundled rule is enough to preview its destination.
-  let rule: string | null = null;
-  try {
-    rule = options.dryRun ? await readTextIfExists(path.join(path.dirname(CAVEMAN_INDEX), 'rule.md')) || '' : await httpsGet(CAVEMAN_REMOTE_RULE);
-  } catch (e) {
-    console.log(`  [warn] Could not fetch caveman rule: ${(e as Error).message}`);
-  }
   const ruleDest = path.join(cavemanDir, 'rule.md');
   if (rule === null && (await readTextIfExists(ruleDest)) !== null) {
     console.log('  [info] Keeping existing rule.md');
@@ -1301,6 +1306,8 @@ async function main(): Promise<void> {
     console.log('  [fail] omp not found — ensure it\'s installed');
   }
 
+  const cavemanRule = await fetchCavemanRule(options);
+
   if (scope === '1' || scope === '3') {
     console.log('\n--- User-level install ---');
     await stepSharedSessionState(userExtDir, options);
@@ -1309,7 +1316,7 @@ async function main(): Promise<void> {
     const ponytailExtPath = path.join(OMP_PLUGINS_DIR, 'node_modules', '@dietrichgebert', 'ponytail', 'pi-extension', 'index.js');
     await stepRtk(BUN_BIN_DIR, options);
     await stepRtkSession(userExtDir, options);
-    await stepCaveman(userExtDir, options);
+    await stepCaveman(userExtDir, cavemanRule, options);
     await stepCombo(userExtDir, options);
     await stepModeReinforcement(userExtDir, ponytailExtPath, options);
     await stepUpdater(userExtDir, options);
@@ -1321,7 +1328,7 @@ async function main(): Promise<void> {
     console.log('\n--- Project-level install ---');
     await stepSharedSessionState(projectExtDir, options);
     await stepRtkSession(projectExtDir, options);
-    await stepCaveman(projectExtDir, options);
+    await stepCaveman(projectExtDir, cavemanRule, options);
     await stepUpdater(projectExtDir, options);
     console.log('  [note] Ponytail, RTK binary, and Combo toggle require user-level (global) install');
   }

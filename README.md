@@ -61,15 +61,16 @@ User-level installs also register the package in `~/.omp/plugins` (visible in OM
 
 ## Benchmarks
 
-Measured on darwin/arm64, Node 26 — method, run counts, and full tables in [BENCHMARK.md](./BENCHMARK.md).
+Token savings per mode — method and full tables in [BENCHMARK.md](./BENCHMARK.md). Overhead is paid once per session; savings accumulate per reply or task.
 
-| Metric | main | PR #6 | Δ |
-|---|---:|---:|---:|
-| Install dry-run, both scopes (median wall) | 0.910 s | 0.687 s | **−24.5%** |
-| `tersio doctor` (median wall) | 0.460 s | 0.405 s | **−12.0%** |
-| Peak RSS (either command) | ~142 MiB | ~142 MiB | flat (Node baseline) |
-| Source TS LOC | 2,818 | 2,717 | −101 |
-| RTK shell output (noisy commands) | raw | via RTK | up to −97% tokens |
+| Mode | Session overhead | Typical saving |
+|---|---:|---|
+| `/caveman lite` | ~50 tok | ~60 tok/reply (−15%) |
+| `/caveman full` | ~163 tok | ~150 tok/reply (−35%) |
+| `/caveman ultra` | ~79 tok | ~200 tok/reply (−50%) |
+| `/rtk on` | ~157 tok | up to −97% tokens on noisy shell output |
+| `/ponytail full` | ~75 tok | ~300–700 tok per code task |
+| `/combo balanced` | ~470 tok | all three — overhead repaid by the first noisy command |
 
 ## CLI
 

@@ -59,6 +59,18 @@ Defaults apply to fresh sessions only — anything persisted with `/combo`, `/ca
 
 User-level installs also register the package in `~/.omp/plugins` (visible in OMP **Settings → Plugins**), directly through the plugin manifest. Active modes reassert after Ponytail's prompt block on every top-level turn, including after history compaction.
 
+## Benchmarks
+
+Measured on darwin/arm64, Node 26 — method, run counts, and full tables in [BENCHMARK.md](./BENCHMARK.md).
+
+| Metric | main | PR #6 | Δ |
+|---|---:|---:|---:|
+| Install dry-run, both scopes (median wall) | 0.910 s | 0.687 s | **−24.5%** |
+| `tersio doctor` (median wall) | 0.460 s | 0.405 s | **−12.0%** |
+| Peak RSS (either command) | ~142 MiB | ~142 MiB | flat (Node baseline) |
+| Source TS LOC | 2,818 | 2,717 | −101 |
+| RTK shell output (noisy commands) | raw | via RTK | up to −97% tokens |
+
 ## CLI
 
 | Command | Purpose |

@@ -61,19 +61,18 @@ User-level installs also register the package in `~/.omp/plugins` (visible in OM
 
 ## Benchmarks
 
-Measured deltas against the same workload without Tersio. Token counts are real `o200k_base` BPE tokens (js-tiktoken), not chars÷4 estimates; wall clock is p50 of 5 runs. Sample protocol, per-sample data, and caveats in [BENCHMARK.md](./BENCHMARK.md).
+Measured savings against the same workload without the modes. Token counts are real `o200k_base` BPE tokens (js-tiktoken), not chars÷4 estimates. Sample protocol, per-sample data, and caveats in [BENCHMARK.md](./BENCHMARK.md).
 
 | Measured surface (n) | Baseline → Tersio | Δ |
 |---|---|---|
-| Install dry-run, both scopes — wall clock (5 runs) | 910 → 687 ms | **−24.5%** |
-| `tersio doctor` — wall clock (5 runs) | 460 → 405 ms | **−12.0%** |
+| Terse reply, caveman lite — BPE tok (3 samples, p50) | 146 → 73 tok | **−52.6%** |
 | Terse reply, caveman full — BPE tok (3 samples, p50) | 154 → 58 tok | **−62.3%** |
 | Terse reply, caveman ultra — BPE tok (3 samples, p50) | 146 → 33 tok | **−78.6%** |
 | Code diff, ponytail minimal-ladder — BPE tok (2 tasks) | 261–481 → 108–143 tok | **−58.6…−70.3%** |
 | Shell output, rtk — `git status` — BPE tok | 32 → 21 tok | **−34.4%** |
-| One-time session overhead, balanced preset | 0 → 480 tok | paid once |
+| Shell output, rtk — repo `grep` — BPE tok | 537 → 469 tok | **−12.7%** |
 
-Break-even math, balanced preset: `⌈overhead ÷ saving-per-turn⌉ = ⌈480 ÷ 306⌉ = 2 turns`, where a mixed turn (reply + `git status`-class command + code task) costs 944 tok baseline vs 638 tok with Tersio — a 0.68× ratio. Every turn after turn 2 nets ≈ −32%. RTK keeps diffs and failing-test output exact by design (−0.4% and −1.5% there), concentrating savings where noise lives.
+Break-even math, balanced preset (caveman full + rtk + ponytail): `⌈overhead ÷ saving-per-turn⌉ = ⌈480 ÷ 306⌉ = 2 turns`, where a mixed turn (reply + `git status`-class command + code task) costs 944 tok baseline vs 638 tok with Tersio — a 0.68× ratio. Every turn after turn 2 nets ≈ −32%. RTK keeps diffs and failing-test output exact by design (−0.4% and −1.5% there), concentrating savings where noise lives.
 
 ## CLI
 

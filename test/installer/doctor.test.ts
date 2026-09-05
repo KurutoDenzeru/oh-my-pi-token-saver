@@ -20,4 +20,9 @@ test("doctor reports MISSING components against an empty home", () => {
   for (const line of ["OMP extensions dir: MISSING", "Shared session bridge: MISSING", "Caveman extension: MISSING", "RTK extension: MISSING", "Combo extension: MISSING", "RTK binary: MISSING"]) {
     assert.match(result.stdout, new RegExp(line.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
+  // Categorized output: section headers plus a closing tally.
+  for (const section of ["Environment", "Installation", "Extensions", "Plugins", "RTK"]) {
+    assert.match(result.stdout, new RegExp(`\\n${section}\\n`));
+  }
+  assert.match(result.stdout, /Summary: \d+ checks — \d+ ok, \d+ warn, \d+ missing/);
 });

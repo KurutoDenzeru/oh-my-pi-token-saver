@@ -61,16 +61,16 @@ User-level installs also register the package in `~/.omp/plugins` (visible in OM
 
 ## Benchmarks
 
-Token savings per mode — method and full tables in [BENCHMARK.md](./BENCHMARK.md). Overhead is paid once per session; savings accumulate per reply or task.
+Measured before/after — real `o200k_base` token counts, samples and run protocol in [BENCHMARK.md](./BENCHMARK.md). Overhead is paid once per session; savings accumulate per reply, command, or task.
 
-| Mode | Session overhead | Typical saving |
-|---|---:|---|
-| `/caveman lite` | ~50 tok | ~60 tok/reply (−15%) |
-| `/caveman full` | ~163 tok | ~150 tok/reply (−35%) |
-| `/caveman ultra` | ~79 tok | ~200 tok/reply (−50%) |
-| `/rtk on` | ~157 tok | up to −97% tokens on noisy shell output |
-| `/ponytail full` | ~75 tok | ~300–700 tok per code task |
-| `/combo balanced` | ~470 tok | all three — overhead repaid by the first noisy command |
+| Mode | Overhead (once) | Before | After | Saving | Pays off after |
+|---|---:|---:|---:|---:|---|
+| `/caveman lite` | 46 tok | 146 tok/reply | 67 | −55% | 1 reply |
+| `/caveman full` | 172 tok | 146 tok/reply | 61 | −58% | ~2 replies |
+| `/caveman ultra` | 68 tok | 146 tok/reply | 34 | −77% | 1 reply |
+| `/rtk on` | 165 tok | 537 tok (grep) | 469 | −13% (−34% on `git status`) | varies |
+| `/ponytail full` | 76 tok | 261–481 tok/task | 108–143 | −59 to −70% | first task |
+| `/combo balanced` | 480 tok | 944 tok mixed turn | 638 | −32%/turn | first turn |
 
 ## CLI
 

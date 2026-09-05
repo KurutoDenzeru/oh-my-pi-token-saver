@@ -61,16 +61,18 @@ User-level installs also register the package in `~/.omp/plugins` (visible in OM
 
 ## Benchmarks
 
-Measured before/after — real `o200k_base` token counts, samples and run protocol in [BENCHMARK.md](./BENCHMARK.md). Overhead is paid once per session; savings accumulate per reply, command, or task.
+Measured savings against the same workload without the modes. Token counts are real `o200k_base` BPE tokens (js-tiktoken), not chars÷4 estimates. Sample protocol, per-sample data, and caveats in [BENCHMARK.md](./BENCHMARK.md).
 
-| Mode | Overhead (once) | Before | After | Saving | Pays off after |
-|---|---:|---:|---:|---:|---|
-| `/caveman lite` | 46 tok | 146 tok/reply | 67 | −55% | 1 reply |
-| `/caveman full` | 172 tok | 146 tok/reply | 61 | −58% | ~2 replies |
-| `/caveman ultra` | 68 tok | 146 tok/reply | 34 | −77% | 1 reply |
-| `/rtk on` | 165 tok | 537 tok (grep) | 469 | −13% (−34% on `git status`) | varies |
-| `/ponytail full` | 76 tok | 261–481 tok/task | 108–143 | −59 to −70% | first task |
-| `/combo balanced` | 480 tok | 944 tok mixed turn | 638 | −32%/turn | first turn |
+| Measured surface (n) | Baseline → Tersio | Δ |
+|---|---|---|
+| Terse reply, caveman lite — BPE tok (3 samples, p50) | 146 → 73 tok | **−52.6%** |
+| Terse reply, caveman full — BPE tok (3 samples, p50) | 154 → 58 tok | **−62.3%** |
+| Terse reply, caveman ultra — BPE tok (3 samples, p50) | 146 → 33 tok | **−78.6%** |
+| Code diff, ponytail minimal-ladder — BPE tok (2 tasks) | 261–481 → 108–143 tok | **−58.6…−70.3%** |
+| Shell output, rtk — `git status` — BPE tok | 32 → 21 tok | **−34.4%** |
+| Shell output, rtk — repo `grep` — BPE tok | 537 → 469 tok | **−12.7%** |
+
+Break-even math, balanced preset (caveman full + rtk + ponytail): `⌈overhead ÷ saving-per-turn⌉ = ⌈480 ÷ 306⌉ = 2 turns`, where a mixed turn (reply + `git status`-class command + code task) costs 944 tok baseline vs 638 tok with Tersio — a 0.68× ratio. Every turn after turn 2 nets ≈ −32%. RTK keeps diffs and failing-test output exact by design (−0.4% and −1.5% there), concentrating savings where noise lives.
 
 ## CLI
 
@@ -80,7 +82,7 @@ Measured before/after — real `o200k_base` token counts, samples and run protoc
 | `tersio update` | Refresh from the latest release |
 | `tersio reinstall` | Fresh install, preserving the Ponytail package |
 | `tersio doctor` | Check OMP, extension, Ponytail, and RTK health |
-| `tersio uninstall` | Remove extensions and registration (`--remove-rtk`, `--remove-ponytail` for more) |
+| `tersio uninstall` | Remove extensions, registration, and the Ponytail plugin (`--keep-ponytail` keeps Ponytail; `--remove-rtk` also removes the RTK binary) |
 | `tersio version` | Print version |
 
 Flags: `--dry-run`, `--yes`/`-y`, `--verbose`, `--scope`, `--combo-default`/`--caveman-default`/`--rtk-default`/`--ponytail-default`. Legacy `--doctor` / `--uninstall` forms still work.

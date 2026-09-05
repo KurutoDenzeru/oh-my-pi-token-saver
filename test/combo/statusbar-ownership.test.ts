@@ -78,6 +78,32 @@ test("combo balanced suppresses the individual caveman and rtk bars", async () =
   resetSharedComboState();
 });
 
+test("fresh host suppresses individual bars from persisted entries before combo reconciles", async () => {
+  // Real OMP regression: caveman/rtk load before combo and restore their modes
+  // from persisted entries, but the combo bar never appeared because the
+  // suppression check reads the in-process bridge, which only combo's
+  // (UI-gated) reconcile populated. Persisted combo entries alone must drive
+  // suppression, with or without combo's session_start having run.
+  resetSharedComboState();
+  const { statuses, pi, ctx, entries } = harness();
+  entries.push(
+    { type: "custom", customType: "caveman-mode", data: { mode: "full" } } as SessionEntry,
+    { type: "custom", customType: "rtk-mode", data: { enabled: true } } as SessionEntry,
+    { type: "custom", customType: "ponytail-mode", data: { mode: "full" } } as SessionEntry,
+    { type: "custom", customType: "combo-level", data: { level: "balanced" } } as SessionEntry,
+  );
+  // Post-reload session_start: UI objects exist, but hasUI is not yet truthy.
+  const noUiCtx = { ...ctx, hasUI: false } as ExtensionCtx;
+  await pi.caveman.handlers.get("session_start")!({}, noUiCtx);
+  await pi.rtk.handlers.get("session_start")!({}, noUiCtx);
+  assert.ok(!statuses.has("caveman"), "caveman bar suppressed from persisted combo-level");
+  assert.ok(!statuses.has("rtk"), "rtk bar suppressed from persisted combo-level");
+  await pi.combo.handlers.get("session_start")!({}, noUiCtx);
+  assert.match(statuses.get("combo") || "", /BALANCED/, "combo bar painted from persisted state");
+  assert.deepEqual([...statuses.keys()], ["combo"]);
+  resetSharedComboState();
+});
+
 test("every preset suppresses individual bars; off and custom behave correctly", async () => {
   for (const preset of ["medium", "balanced", "max"] as const) {
     resetSharedComboState();

@@ -34,10 +34,12 @@ Same question answered plain vs ruleset-compressed. 3 samples, tokens per reply.
 |---|---:|---:|---:|---:|---:|---|
 | plain | 121 | 162 | 154 | 146 | — | — |
 | `/caveman lite` | 44 | 85 | 73 | 67 | 46 | 1 reply |
-| `/caveman full` | 37 | 88 | 58 | 61 | 172 | ~2 replies |
+| `/caveman full` | 37 | 88 | 58 | 61 | 172 | 3 replies |
 | `/caveman ultra` | 27 | 42 | 33 | 34 | 68 | 1 reply |
 
-Mean saving vs plain: **lite −55% · full −58% · ultra −77%**.
+Mean saving vs plain: **lite −53.8% (0.46×) · full −58.1% (0.42×) · ultra −76.7% (0.23×)**. Median (p50) vs plain 154: lite 73 (−52.6%) · full 58 (−62.3%) · ultra 33 (−78.6%).
+
+Pays-off math, `⌈overhead ÷ mean saving⌉`: lite `⌈46 ÷ 78.3⌉ = 1 reply` · full `⌈172 ÷ 84.7⌉ = 3 replies` · ultra `⌈68 ÷ 111.7⌉ = 1 reply`.
 
 ## 3. Before/after: Ponytail code tasks
 
@@ -45,8 +47,10 @@ Same task implemented bloated vs minimal-ladder. Tokens per diff.
 
 | Task | Bloated | Ponytail | Saving | Overhead | Pays off after |
 |---|---:|---:|---:|---:|---|
-| add retry logic to fetch helper | 481 | 143 | −70% | 76 | first task |
-| add configurable request timeout | 261 | 108 | −59% | (same) | first task |
+| add retry logic to fetch helper | 481 | 143 | −70.3% | 76 | first task |
+| add configurable request timeout | 261 | 108 | −58.6% | (same) | first task |
+
+Ratio: mean bloated 371 tok vs mean minimal 125.5 tok = **0.34×**. Overhead 76 tok vs mean saving 245.5 tok per task → repaid inside the first task (`76 ÷ 245.5 = 0.31`).
 
 ## 4. Before/after: RTK shell output
 
@@ -74,6 +78,8 @@ Example mixed turn (one reply + one grep + one code task), balanced preset:
 | one-time session overhead | | 480 tok |
 
 First mixed turn nets ≈ −2%, every turn after nets ≈ −32%.
+
+Break-even math: `⌈480 ÷ 306⌉ = 2 turns` to repay overhead; steady-state ratio `638 ÷ 944 = 0.68×` per mixed turn.
 
 ## 6. Runtime + memory delta (main vs current branch)
 

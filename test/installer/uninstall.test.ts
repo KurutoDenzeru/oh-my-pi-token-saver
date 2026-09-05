@@ -68,9 +68,28 @@ test("uninstall removes extension dirs, self registration, and combo config entr
     assert.doesNotMatch(config, /combo-toggle/);
     assert.doesNotMatch(config, /mode-reinforcement/);
     assert.match(config, /caveman-session/);
-    // Defaults keep ponytail and the rtk binary.
-    assert.ok(existsSync(path.join(home, ".omp", "plugins", "node_modules", PONYTAIL)), "ponytail kept");
+    // Ponytail ships with the presets, so a full uninstall removes it; the rtk binary stays.
+    assert.ok(!existsSync(path.join(home, ".omp", "plugins", "node_modules", PONYTAIL)), "ponytail removed by default");
     assert.ok(existsSync(path.join(home, ".bun", "bin", "rtk")), "rtk binary kept");
+    assert.doesNotMatch(config, /ponytail/);
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("uninstall --keep-ponytail keeps the plugin, dep, lock entry, and config line", () => {
+  const home = mkdtempSync(path.join(os.tmpdir(), "tersio-uninstall-"));
+  try {
+    seed(home);
+    const result = run(home, "uninstall", "--yes", "--keep-ponytail");
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.ok(existsSync(path.join(home, ".omp", "plugins", "node_modules", PONYTAIL)), "ponytail package kept");
+    const pkg = JSON.parse(readFileSync(path.join(home, ".omp", "plugins", "package.json"), "utf8"));
+    assert.ok(PONYTAIL in pkg.dependencies, "ponytail dep kept");
+    const lock = JSON.parse(readFileSync(path.join(home, ".omp", "plugins", "omp-plugins.lock.json"), "utf8"));
+    assert.ok(PONYTAIL in lock.plugins, "ponytail lock entry kept");
+    const config = readFileSync(path.join(home, ".omp", "agent", "config.yml"), "utf8");
     assert.match(config, /ponytail/);
   } finally {
     rmSync(home, { recursive: true, force: true });

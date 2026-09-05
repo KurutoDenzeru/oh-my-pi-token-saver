@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { asPromptArray, getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, lastCustomValue, normalizeInputCommand, normalizeMode, paintStatusBar, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
+import { asPromptArray, getSharedComboState, isComboPresetActive, isOmpSubagentPrompt, lastCustomValue, normalizeInputCommand, normalizeMode, paintStatusBar, reconcileSharedComboEntries, sessionEntries, setSharedComboMode } from '../shared/session-state.ts';
 import { readCavemanDefault } from '../shared/plugin-settings.ts';
 import type { ExtensionApi, ExtensionCtx, InputEvent, SessionEntry, SystemPromptEvent } from '../shared/types.ts';
 
@@ -100,6 +100,11 @@ export default function cavemanSessionExtension(pi: ExtensionApi): void {
 
   function restoreMode(ctx?: ExtensionCtx): void {
     const entries = sessionEntries(ctx);
+    // Publish the persisted combo state (incl. combo-level) before painting:
+    // bar suppression reads the in-process bridge, which is empty in a fresh
+    // host until the combo extension reconciles — and its reconcile is
+    // UI-gated. Deriving it here makes suppression independent of load order.
+    reconcileSharedComboEntries(entries);
     // Persisted session state wins; a fresh session falls back to the
     // installer/user-configured default (off unless configured).
     const persisted = resolveMode(entries, '');

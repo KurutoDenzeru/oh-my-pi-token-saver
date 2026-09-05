@@ -80,7 +80,7 @@ Measured before/after — real `o200k_base` token counts, samples and run protoc
 | `tersio update` | Refresh from the latest release |
 | `tersio reinstall` | Fresh install, preserving the Ponytail package |
 | `tersio doctor` | Check OMP, extension, Ponytail, and RTK health |
-| `tersio uninstall` | Remove extensions and registration (`--remove-rtk`, `--remove-ponytail` for more) |
+| `tersio uninstall` | Remove extensions, registration, and the Ponytail plugin (`--keep-ponytail` keeps Ponytail; `--remove-rtk` also removes the RTK binary) |
 | `tersio version` | Print version |
 
 Flags: `--dry-run`, `--yes`/`-y`, `--verbose`, `--scope`, `--combo-default`/`--caveman-default`/`--rtk-default`/`--ponytail-default`. Legacy `--doctor` / `--uninstall` forms still work.

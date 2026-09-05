@@ -148,21 +148,23 @@ test("uninstall dry-run with --remove-ponytail previews full ponytail removal", 
   }
 });
 
-test("uninstall dry-run without the flag keeps ponytail", () => {
+test("uninstall dry-run includes ponytail by default; --keep-ponytail omits it", () => {
   const missingHome = path.join(root, "test", "definitely-missing-home");
-  const result = spawnSync(
-    process.execPath,
-    [installer, "uninstall", "--dry-run", "--yes"],
-    {
+  const spawn = (args: string[]) =>
+    spawnSync(process.execPath, [installer, ...args], {
       cwd: root,
       encoding: "utf8",
       timeout: 10000,
       env: { ...process.env, HOME: missingHome, USERPROFILE: missingHome },
-    }
-  );
+    });
 
-  assert.equal(result.status, 0, result.stderr);
-  assert.doesNotMatch(result.stdout, /dietrichgebert/);
+  const def = spawn(["uninstall", "--dry-run", "--yes"]);
+  assert.equal(def.status, 0, def.stderr);
+  assert.match(def.stdout, /dietrichgebert/, "ponytail removal is part of the default dry-run plan");
+
+  const keep = spawn(["uninstall", "--dry-run", "--yes", "--keep-ponytail"]);
+  assert.equal(keep.status, 0, keep.stderr);
+  assert.doesNotMatch(keep.stdout, /dietrichgebert/);
 });
 
 test("uninstall dry-run never prompts for confirmation", () => {

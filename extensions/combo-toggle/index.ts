@@ -57,7 +57,6 @@ function loadPonytailInstructions(mode: string): string {
 export default function comboToggleExtension(pi: ExtensionApi): void {
   pi.setLabel?.('Combo session toggle (all 3 add-ons)');
 
-  let currentState: Readonly<ComboState> = getSharedComboState();
   let lastCtx: ExtensionCtx | undefined = undefined;
 
   function syncStatus(ctx?: ExtensionCtx): void {
@@ -70,11 +69,14 @@ export default function comboToggleExtension(pi: ExtensionApi): void {
       c.ui.setStatus('combo', undefined);
       return;
     }
+    // Read the live bridge, not cached extension state: sibling extensions
+    // reconcile it from persisted entries before this one runs.
+    const state = getSharedComboState();
     const theme = c.ui.theme;
-    const c0 = currentState.caveman.toUpperCase();
-    const r = currentState.rtk.toUpperCase();
-    const p = currentState.ponytail.toUpperCase();
-    const lvl = currentState.level.toUpperCase();
+    const c0 = state.caveman.toUpperCase();
+    const r = state.rtk.toUpperCase();
+    const p = state.ponytail.toUpperCase();
+    const lvl = state.level.toUpperCase();
     const label = `combo ${lvl}: 🪨caveman=${c0} ⚡rtk=${r} 🦥ponytail=${p}`;
     c.ui.setStatus('combo', theme?.fg ? `${theme.fg('accent', '🧩')} ${theme.fg('muted', label)}` : `🧩 ${label}`);
     // Clobber any sibling bars another extension may have painted in a race
@@ -96,13 +98,12 @@ export default function comboToggleExtension(pi: ExtensionApi): void {
   }
 
   function useState(state: Readonly<ComboState>, ctx?: ExtensionCtx): Readonly<ComboState> {
-    currentState = state;
     syncStatus(ctx);
     return state;
   }
 
   function reconcile(ctx?: ExtensionCtx): Readonly<ComboState> {
-    if (!ctx?.hasUI) return currentState;
+    if (!ctx?.hasUI) return getSharedComboState();
     return useState(reconcileSharedComboEntries(sessionEntries(ctx)), ctx);
   }
   function listen(ctx?: ExtensionCtx): void {
@@ -153,7 +154,7 @@ export default function comboToggleExtension(pi: ExtensionApi): void {
       useState(setSharedComboLevel(level), ctx);
 
       ctx?.ui?.notify?.(
-        `Combo ${level} applied: ${levelSummary(currentState)}`,
+        `Combo ${level} applied: ${levelSummary(getSharedComboState())}`,
         'info'
       );
 

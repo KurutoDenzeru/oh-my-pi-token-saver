@@ -114,6 +114,7 @@ const verbose = args.includes('--verbose');
 const doctor = command === 'doctor' || args.includes('--doctor');
 const uninstall = command === 'uninstall' || args.includes('--uninstall');
 const removePonytail = args.includes('--remove-ponytail');
+const keepPonytail = args.includes('--keep-ponytail');
 const removeRtk = args.includes('--remove-rtk');
 
 const scopeFlag = flagValue('--scope')?.toLowerCase() ?? null;
@@ -142,7 +143,7 @@ Commands:
 
 Options:
   --scope user|project|both
-  --remove-ponytail (uninstall: also remove the Ponytail plugin)
+  --keep-ponytail (uninstall: keep the Ponytail plugin — removed by default)
   --remove-rtk (uninstall: also remove the RTK binary)
   --combo-default off|medium|balanced|max (implies caveman, rtk, ponytail)
   --caveman-default off|lite|full|ultra|wenyan (override; default follows combo)
@@ -953,7 +954,9 @@ async function removeUninstallTarget(target: string, shouldDryRun: boolean, recu
 async function runUninstall(options: UninstallOptions = {}): Promise<boolean> {
   const shouldDryRun = options.dryRun ?? dryRun;
   const confirmed = (options.yes ?? yes) || shouldDryRun;
-  const shouldRemovePonytail = options.removePonytail ?? removePonytail;
+  // Ponytail ships with Tersio's presets, so a full uninstall removes it too;
+  // --keep-ponytail opts out and reinstall always preserves it.
+  const shouldRemovePonytail = options.removePonytail ?? (removePonytail || !keepPonytail);
   const shouldRemoveRtk = options.removeRtk ?? removeRtk;
 
   console.log('\n=== Tersio Uninstall ===\n');
